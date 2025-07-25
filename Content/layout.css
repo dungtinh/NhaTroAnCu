@@ -1,0 +1,404 @@
+﻿/* ========================================
+   MODERN LAYOUT STYLES FOR NHÀ TRỌ AN CƯ
+   ======================================== */
+
+/* Reset và Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+    --danger-color: #e74c3c;
+    --light-color: #ecf0f1;
+    --dark-color: #34495e;
+    --border-radius: 12px;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-hover: 0 8px 15px rgba(0, 0, 0, 0.2);
+    --transition: all 0.3s ease;
+}
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* ========================================
+   HEADER / NAVBAR STYLES
+   ======================================== */
+.navbar {
+    background: linear-gradient(135deg, #1a5490 0%, #2980b9 100%) !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 0;
+    min-height: 70px;
+    position: relative;
+    overflow: hidden;
+}
+
+    /* Decorative background pattern */
+    .navbar::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 60%;
+        height: 200%;
+        background: rgba(255,255,255,0.05);
+        transform: rotate(35deg);
+        pointer-events: none;
+    }
+
+    /* Container adjustments */
+    .navbar .container {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        min-height: 70px;
+    }
+
+/* Brand styling */
+.navbar-brand {
+    color: white !important;
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    text-decoration: none !important;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 !important;
+    transition: all 0.3s ease;
+}
+
+    .navbar-brand::before {
+        content: '\f1ad';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        font-size: 28px;
+        color: rgba(255,255,255,0.9);
+    }
+
+    .navbar-brand:hover {
+        transform: translateX(5px);
+        text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+
+/* Navigation links */
+.navbar-nav {
+    margin-left: 2rem;
+}
+
+    .navbar-nav .nav-link {
+        color: rgba(255,255,255,0.9) !important;
+        font-weight: 500;
+        padding: 0.8rem 1.2rem !important;
+        margin: 0 0.2rem;
+        border-radius: 25px;
+        transition: all 0.3s ease;
+        position: relative;
+        background: transparent;
+    }
+
+        .navbar-nav .nav-link:hover {
+            color: white !important;
+            background: rgba(255,255,255,0.15);
+            transform: translateY(-2px);
+        }
+
+        .navbar-nav .nav-link::before {
+            content: '\f007';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            margin-right: 8px;
+            font-size: 14px;
+        }
+
+/* Login partial styles */
+.navbar-right {
+    margin-left: auto !important;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+    .navbar-right .nav-link {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        backdrop-filter: blur(10px);
+    }
+
+        .navbar-right .nav-link:hover {
+            background: rgba(255,255,255,0.25);
+            border-color: rgba(255,255,255,0.4);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+/* Toggler button */
+.navbar-toggler {
+    border: 1px solid rgba(255,255,255,0.3) !important;
+    padding: 4px 12px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+    .navbar-toggler:hover {
+        background: rgba(255,255,255,0.1);
+    }
+
+.navbar-toggler-icon {
+    width: 22px;
+    height: 20px;
+}
+
+/* ========================================
+   MAIN CONTENT STYLES
+   ======================================== */
+.body-content {
+    padding-top: 30px;
+    padding-bottom: 30px;
+    min-height: calc(100vh - 70px - 200px);
+}
+
+/* ========================================
+   FOOTER STYLES
+   ======================================== */
+footer {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: white;
+    padding: 40px 0;
+    margin-top: 50px;
+    position: relative;
+    overflow: hidden;
+}
+
+    footer::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #3498db, #2ecc71, #3498db);
+        background-size: 200% 100%;
+        animation: gradientMove 3s ease infinite;
+    }
+
+@keyframes gradientMove {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+footer h4 {
+    color: white !important;
+    font-size: 26px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+    footer h4::before {
+        content: '\f1ad';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        color: #3498db;
+    }
+
+footer p {
+    color: rgba(255,255,255,0.9) !important;
+    line-height: 1.8;
+    font-size: 15px;
+}
+
+footer br {
+    margin-bottom: 5px;
+}
+
+/* ========================================
+   RESPONSIVE STYLES
+   ======================================== */
+@media (max-width: 768px) {
+    .navbar {
+        min-height: 60px;
+    }
+
+        .navbar .container {
+            min-height: 60px;
+        }
+
+    .navbar-brand {
+        font-size: 20px !important;
+    }
+
+        .navbar-brand::before {
+            font-size: 24px;
+        }
+
+    .navbar-collapse {
+        background: rgba(0,0,0,0.1);
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+    .navbar-nav {
+        margin-left: 0;
+    }
+
+        .navbar-nav .nav-link {
+            margin: 5px 0;
+            text-align: center;
+        }
+
+    footer {
+        text-align: center;
+        padding: 30px 15px;
+    }
+
+        footer h4 {
+            justify-content: center;
+            font-size: 22px;
+        }
+
+        footer p {
+            font-size: 14px;
+        }
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+.shadow-sm {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
+.shadow {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+}
+
+.shadow-lg {
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Selection color */
+::selection {
+    background: #3498db;
+    color: white;
+}
+
+::-moz-selection {
+    background: #3498db;
+    color: white;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 5px;
+}
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
+/* ========================================
+   ANIMATION CLASSES
+   ======================================== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease;
+}
+
+/* Hover effects */
+a {
+    transition: all 0.3s ease;
+}
+
+button {
+    transition: all 0.3s ease;
+}
+
+/* ========================================
+   LOGIN PARTIAL SPECIFIC STYLES
+   ======================================== */
+.user-link::before {
+    content: '\f007' !important;
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    margin-right: 8px;
+}
+
+.logout-link {
+    background: rgba(255,71,87,0.1) !important;
+    border-color: rgba(255,71,87,0.3) !important;
+}
+
+    .logout-link:hover {
+        background: rgba(255,71,87,0.2) !important;
+        border-color: rgba(255,71,87,0.5) !important;
+    }
+
+.login-btn {
+    background: rgba(46,204,113,0.1) !important;
+    border-color: rgba(46,204,113,0.3) !important;
+}
+
+    .login-btn:hover {
+        background: rgba(46,204,113,0.2) !important;
+        border-color: rgba(46,204,113,0.5) !important;
+    }
+
+/* Loading animation */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(52, 152, 219, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(52, 152, 219, 0);
+    }
+}

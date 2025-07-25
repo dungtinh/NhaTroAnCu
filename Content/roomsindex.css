@@ -1,23 +1,7 @@
-﻿:root {
-    --primary-color: #2c3e50;
-    --secondary-color: #3498db;
-    --success-color: #27ae60;
-    --warning-color: #f39c12;
-    --danger-color: #e74c3c;
-    --light-color: #ecf0f1;
-    --dark-color: #34495e;
-    --border-radius: 12px;
-    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    --shadow-hover: 0 8px 15px rgba(0, 0, 0, 0.2);
-    --transition: all 0.3s ease;
-}
-
+﻿
 body {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
-
 .dashboard-header {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
@@ -408,3 +392,122 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+.summary-dashboard {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    padding: 25px;
+    margin: 20px 0;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    color: white;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.summary-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+    .summary-card:hover {
+        transform: translateY(-5px);
+        background: rgba(255, 255, 255, 0.15);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    }
+
+/* Tiêu đề cho từng card */
+.summary-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Số liệu chính */
+.summary-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 5px 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Các style khác nhau cho từng loại thống kê */
+.summary-card.occupied {
+    background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+}
+
+.summary-card.collected {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+}
+
+.summary-card.revenue {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+}
+
+.summary-card.efficiency {
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+}
+
+.summary-card.overdue {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+}
+
+/* Icon styling */
+.summary-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+    opacity: 0.9;
+}
+
+/* Alternative Light Theme */
+.summary-dashboard.light {
+    background: #f8f9fa;
+    color: #333;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+}
+
+    .summary-dashboard.light .summary-card {
+        background: white;
+        border: 1px solid #e0e0e0;
+        color: #333;
+    }
+
+    .summary-dashboard.light .summary-label {
+        color: #666;
+    }
+
+    .summary-dashboard.light .summary-value {
+        color: #333;
+    }
+
+    .summary-dashboard.light .summary-card.occupied {
+        border-left: 4px solid #2ecc71;
+    }
+
+    .summary-dashboard.light .summary-card.collected {
+        border-left: 4px solid #3498db;
+    }
+
+    .summary-dashboard.light .summary-card.revenue {
+        border-left: 4px solid #f39c12;
+    }
+
+    .summary-dashboard.light .summary-card.efficiency {
+        border-left: 4px solid #9b59b6;
+    }
+
+    .summary-dashboard.light .summary-card.overdue {
+        border-left: 4px solid #e74c3c;
+    }
