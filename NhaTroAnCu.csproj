@@ -317,6 +317,7 @@
     <Content Include="Content\CSS\font-awesome.css" />
     <Content Include="Content\CSS\font-awesome.min.css" />
     <Content Include="Content\Fonts\fontawesome-webfont.svg" />
+    <Content Include="Content\roomsindex.css" />
     <Content Include="favicon.ico" />
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
