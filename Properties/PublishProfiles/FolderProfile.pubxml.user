@@ -5,7 +5,7 @@ https://go.microsoft.com/fwlink/?LinkID=208121.
 <Project>
   <PropertyGroup>
     <_PublishTargetUrl>D:\MVC\NhaTroAnCu\bin\app.publish\</_PublishTargetUrl>
-    <History>True|2025-07-24T11:16:02.8481827Z;True|2025-07-24T18:07:55.8652707+07:00;True|2025-07-24T18:04:30.2161093+07:00;True|2025-07-24T16:48:32.8572908+07:00;True|2025-07-24T15:51:09.6968954+07:00;True|2025-07-19T20:31:23.1280782+07:00;True|2025-07-17T22:09:53.9377250+07:00;True|2025-07-16T15:49:46.3667521+07:00;True|2025-07-16T15:31:41.7176227+07:00;True|2025-07-15T18:06:27.3188444+07:00;True|2025-07-15T18:02:56.8681507+07:00;True|2025-07-15T18:00:37.1984218+07:00;True|2025-07-15T16:51:23.4523127+07:00;True|2025-07-15T11:43:27.6489772+07:00;True|2025-07-14T21:38:21.9173471+07:00;True|2025-07-14T21:37:01.6452484+07:00;True|2025-07-14T21:29:18.0512205+07:00;True|2025-07-14T21:27:18.5839767+07:00;True|2025-07-14T21:21:00.1793024+07:00;True|2025-07-14T21:18:16.6971193+07:00;True|2025-07-14T08:34:52.2604410+07:00;True|2025-07-12T21:22:20.4131832+07:00;True|2025-07-12T21:17:04.6746254+07:00;True|2025-07-12T21:08:37.0290242+07:00;True|2025-07-12T21:04:57.7408404+07:00;True|2025-07-12T20:28:30.4034662+07:00;</History>
+    <History>True|2025-07-25T03:47:56.4200632Z;True|2025-07-25T10:43:40.0311981+07:00;True|2025-07-24T18:16:02.8481827+07:00;True|2025-07-24T18:07:55.8652707+07:00;True|2025-07-24T18:04:30.2161093+07:00;True|2025-07-24T16:48:32.8572908+07:00;True|2025-07-24T15:51:09.6968954+07:00;True|2025-07-19T20:31:23.1280782+07:00;True|2025-07-17T22:09:53.9377250+07:00;True|2025-07-16T15:49:46.3667521+07:00;True|2025-07-16T15:31:41.7176227+07:00;True|2025-07-15T18:06:27.3188444+07:00;True|2025-07-15T18:02:56.8681507+07:00;True|2025-07-15T18:00:37.1984218+07:00;True|2025-07-15T16:51:23.4523127+07:00;True|2025-07-15T11:43:27.6489772+07:00;True|2025-07-14T21:38:21.9173471+07:00;True|2025-07-14T21:37:01.6452484+07:00;True|2025-07-14T21:29:18.0512205+07:00;True|2025-07-14T21:27:18.5839767+07:00;True|2025-07-14T21:21:00.1793024+07:00;True|2025-07-14T21:18:16.6971193+07:00;True|2025-07-14T08:34:52.2604410+07:00;True|2025-07-12T21:22:20.4131832+07:00;True|2025-07-12T21:17:04.6746254+07:00;True|2025-07-12T21:08:37.0290242+07:00;True|2025-07-12T21:04:57.7408404+07:00;True|2025-07-12T20:28:30.4034662+07:00;</History>
     <LastFailureDetails />
   </PropertyGroup>
   <ItemGroup>
@@ -94,10 +94,10 @@ https://go.microsoft.com/fwlink/?LinkID=208121.
       <publishTime>04/22/2019 01:06:16</publishTime>
     </File>
     <File Include="bin/NhaTroAnCu.dll">
-      <publishTime>07/24/2025 18:15:57</publishTime>
+      <publishTime>07/25/2025 10:47:52</publishTime>
     </File>
     <File Include="bin/NhaTroAnCu.pdb">
-      <publishTime>07/24/2025 18:15:57</publishTime>
+      <publishTime>07/25/2025 10:47:52</publishTime>
     </File>
     <File Include="bin/Owin.dll">
       <publishTime>11/13/2012 12:19:34</publishTime>
@@ -1009,7 +1009,7 @@ https://go.microsoft.com/fwlink/?LinkID=208121.
       <publishTime>07/12/2025 13:53:52</publishTime>
     </File>
     <File Include="Views/TenantContracts/Index.cshtml">
-      <publishTime>07/24/2025 18:07:47</publishTime>
+      <publishTime>07/25/2025 10:42:48</publishTime>
     </File>
     <File Include="Views/Tenants/Create.cshtml">
       <publishTime>07/12/2025 14:41:04</publishTime>
@@ -1021,7 +1021,7 @@ https://go.microsoft.com/fwlink/?LinkID=208121.
       <publishTime>07/12/2025 13:53:46</publishTime>
     </File>
     <File Include="Web.config">
-      <publishTime>07/24/2025 18:16:02</publishTime>
+      <publishTime>07/25/2025 10:47:56</publishTime>
     </File>
   </ItemGroup>
 </Project>

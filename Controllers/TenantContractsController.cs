@@ -467,5 +467,360 @@ namespace NhaTroAnCu.Controllers
             placeholderTable.AddCell(placeholderCell);
             cell.AddElement(placeholderTable);
         }
+        // Thêm method này vào TenantContractsController.cs
+
+        // Thêm method này vào TenantContractsController.cs
+
+        // Thêm method này vào TenantContractsController.cs
+
+        public ActionResult ExportToWord(
+            string searchName = "",
+            string searchCard = "",
+            string searchAddress = "",
+            string sortField = "ContractSignedDate",
+            string sortDirection = "desc",
+            string fromDate = null,
+            string toDate = null)
+        {
+            DateTime? from = null, to = null;
+            if (!string.IsNullOrEmpty(fromDate))
+                from = DateTime.ParseExact(fromDate, "dd/MM/yyyy", CultureInfo.InvariantCulture);
+            if (!string.IsNullOrEmpty(toDate))
+                to = DateTime.ParseExact(toDate, "dd/MM/yyyy", CultureInfo.InvariantCulture);
+
+            var query = from ct in db.ContractTenants
+                        join t in db.Tenants on ct.TenantId equals t.Id
+                        join c in db.Contracts on ct.ContractId equals c.Id
+                        join r in db.Rooms on c.RoomId equals r.Id
+                        select new
+                        {
+                            FullName = t.FullName ?? "",
+                            IdentityCard = t.IdentityCard ?? "",
+                            Gender = t.Gender ?? "",
+                            PermanentAddress = t.PermanentAddress ?? "",
+                            PhoneNumber = t.PhoneNumber ?? "",
+                            Photo = t.Photo,
+                            RoomName = r.Name ?? "",
+                            ContractSignedDate = c.StartDate,
+                            MoveInDate = ct.Contract.MoveInDate
+                        };
+
+            if (!string.IsNullOrEmpty(searchName))
+                query = query.Where(x => x.FullName.Contains(searchName));
+            if (!string.IsNullOrEmpty(searchCard))
+                query = query.Where(x => x.IdentityCard.Contains(searchCard));
+            if (!string.IsNullOrEmpty(searchAddress))
+                query = query.Where(x => x.PermanentAddress.Contains(searchAddress));
+
+            if (from.HasValue)
+                query = query.Where(x => x.ContractSignedDate >= from.Value);
+            if (to.HasValue)
+                query = query.Where(x => x.ContractSignedDate <= to.Value);
+
+            switch (sortField)
+            {
+                case "FullName":
+                    query = sortDirection == "asc" ? query.OrderBy(x => x.FullName) : query.OrderByDescending(x => x.FullName);
+                    break;
+                case "ContractSignedDate":
+                    query = sortDirection == "asc" ? query.OrderBy(x => x.ContractSignedDate) : query.OrderByDescending(x => x.ContractSignedDate);
+                    break;
+                case "MoveInDate":
+                    query = sortDirection == "asc" ? query.OrderBy(x => x.MoveInDate) : query.OrderByDescending(x => x.MoveInDate);
+                    break;
+                default:
+                    query = sortDirection == "asc" ? query.OrderBy(x => x.ContractSignedDate) : query.OrderByDescending(x => x.ContractSignedDate);
+                    break;
+            }
+
+            var items = query.ToList();
+
+            // Tạo document Word
+            var doc = new Aspose.Words.Document();
+            var builder = new Aspose.Words.DocumentBuilder(doc);
+
+            // Thiết lập page setup - giảm margin để có nhiều không gian hơn
+            var pageSetup = builder.PageSetup;
+            pageSetup.LeftMargin = Aspose.Words.ConvertUtil.MillimeterToPoint(10); // 1cm thay vì mặc định 2.54cm
+            pageSetup.RightMargin = Aspose.Words.ConvertUtil.MillimeterToPoint(10); // 1cm
+            //pageSetup.TopMargin = Aspose.Words.ConvertUtil.CentimeterToPoint(1.5); // 1.5cm
+            //pageSetup.BottomMargin = Aspose.Words.ConvertUtil.CentimeterToPoint(1.5); // 1.5cm
+            pageSetup.Orientation = Aspose.Words.Orientation.Portrait; // Dọc
+
+            // Thiết lập font tiếng Việt
+            builder.Font.Name = "Times New Roman";
+            builder.Font.Size = 12;
+
+            // TRANG BÌA
+            builder.ParagraphFormat.Alignment = Aspose.Words.ParagraphAlignment.Center;
+            builder.Font.Size = 24;
+            builder.Font.Bold = true;
+            builder.Font.Color = System.Drawing.Color.FromArgb(0, 51, 102);
+            builder.Writeln("NHÀ TRỌ AN CƯ");
+
+            builder.Font.Size = 14;
+            builder.Font.Bold = false;
+            builder.Font.Color = System.Drawing.Color.Gray;
+            builder.Writeln("Thôn Đình Ngọ (Ấp), Xã Hồng Phong, Huyện An Dương, Hải Phòng");
+            builder.Writeln("");
+
+            builder.Font.Size = 18;
+            builder.Font.Bold = true;
+            builder.Font.Color = System.Drawing.Color.FromArgb(0, 51, 102);
+            builder.Writeln("DANH SÁCH NGƯỜI THUÊ PHÒNG");
+
+            builder.Font.Size = 12;
+            builder.Font.Bold = false;
+            builder.Font.Color = System.Drawing.Color.Black;
+            builder.Writeln($"Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm}");
+            builder.Writeln("");
+
+            // Reset alignment
+            builder.ParagraphFormat.Alignment = Aspose.Words.ParagraphAlignment.Left;
+
+            // BẢNG DANH SÁCH
+            var table = builder.StartTable();
+
+            // Header
+            string[] headers = { "STT", "Họ tên", "Số thẻ", "GT", "Địa chỉ", "SĐT", "Phòng", "Ngày ký", "Ngày vào" };
+            foreach (var header in headers)
+            {
+                builder.InsertCell();
+                builder.CellFormat.Shading.BackgroundPatternColor = System.Drawing.Color.FromArgb(0, 51, 102);
+                builder.Font.Color = System.Drawing.Color.White;
+                builder.Font.Bold = true;
+                builder.ParagraphFormat.Alignment = Aspose.Words.ParagraphAlignment.Center;
+                builder.Write(header);
+            }
+            builder.EndRow();
+
+            // Data rows
+            int orderNumber = 1;
+            foreach (var item in items)
+            {
+                // STT
+                builder.InsertCell();
+                builder.CellFormat.Shading.BackgroundPatternColor = orderNumber % 2 == 0 ?
+                    System.Drawing.Color.FromArgb(240, 240, 240) : System.Drawing.Color.White;
+                builder.Font.Color = System.Drawing.Color.Black;
+                builder.Font.Bold = false;
+                builder.ParagraphFormat.Alignment = Aspose.Words.ParagraphAlignment.Center;
+                builder.Write(orderNumber.ToString());
+
+                // Họ tên
+                builder.InsertCell();
+                builder.CellFormat.Shading.BackgroundPatternColor = orderNumber % 2 == 0 ?
+                    System.Drawing.Color.FromArgb(240, 240, 240) : System.Drawing.Color.White;
+                builder.ParagraphFormat.Alignment = Aspose.Words.ParagraphAlignment.Left;
+                builder.Write(item.FullName ?? "");
+
+                // Số thẻ
+                builder.InsertCell();
+                builder.CellFormat.Shading.BackgroundPatternColor = orderNumber % 2 == 0 ?
+                    System.Drawing.Color.FromArgb(240, 240, 240) : System.Drawing.Color.White;
+                builder.Write(item.IdentityCard ?? "");
+
+                // Giới tính
+                builder.InsertCell();
+                builder.CellFormat.Shading.BackgroundPatternColor = orderNumber % 2 == 0 ?
+                    System.Drawing.Color.FromArgb(240, 240, 240) : System.Drawing.Color.White;
+                builder.ParagraphFormat.Alignment = Aspose.Words.ParagraphAlignment.Center;
+                builder.Write(item.Gender ?? "");
+
+                // Địa chỉ
+                builder.InsertCell();
+                builder.CellFormat.Shading.BackgroundPatternColor = orderNumber % 2 == 0 ?
+                    System.Drawing.Color.FromArgb(240, 240, 240) : System.Drawing.Color.White;
+                builder.ParagraphFormat.Alignment = Aspose.Words.ParagraphAlignment.Left;
+                builder.Write(item.PermanentAddress ?? "");
+
+                // SĐT
+                builder.InsertCell();
+                builder.CellFormat.Shading.BackgroundPatternColor = orderNumber % 2 == 0 ?
+                    System.Drawing.Color.FromArgb(240, 240, 240) : System.Drawing.Color.White;
+                builder.Write(item.PhoneNumber ?? "");
+
+                // Phòng
+                builder.InsertCell();
+                builder.CellFormat.Shading.BackgroundPatternColor = orderNumber % 2 == 0 ?
+                    System.Drawing.Color.FromArgb(240, 240, 240) : System.Drawing.Color.White;
+                builder.ParagraphFormat.Alignment = Aspose.Words.ParagraphAlignment.Center;
+                builder.Write(item.RoomName ?? "");
+
+                // Ngày ký
+                builder.InsertCell();
+                builder.CellFormat.Shading.BackgroundPatternColor = orderNumber % 2 == 0 ?
+                    System.Drawing.Color.FromArgb(240, 240, 240) : System.Drawing.Color.White;
+                builder.Write(item.ContractSignedDate.ToString("dd/MM/yyyy"));
+
+                // Ngày vào
+                builder.InsertCell();
+                builder.CellFormat.Shading.BackgroundPatternColor = orderNumber % 2 == 0 ?
+                    System.Drawing.Color.FromArgb(240, 240, 240) : System.Drawing.Color.White;
+                builder.Write(item.MoveInDate.ToString("dd/MM/yyyy"));
+
+                builder.EndRow();
+                orderNumber++;
+            }
+
+            builder.EndTable();
+
+            // Footer thông tin
+            builder.Writeln("");
+            builder.ParagraphFormat.Alignment = Aspose.Words.ParagraphAlignment.Center;
+            builder.Font.Bold = true;
+            builder.Font.Size = 14;
+            builder.Font.Color = System.Drawing.Color.FromArgb(0, 51, 102);
+            builder.Writeln("NHÀ TRỌ AN CƯ");
+
+            builder.Font.Bold = false;
+            builder.Font.Size = 12;
+            builder.Font.Color = System.Drawing.Color.Black;
+            builder.Writeln("ĐỊA CHỈ: THÔN ĐÌNH NGỌ (ẤP), XÃ HỒNG PHONG, HUYỆN AN DƯƠNG, HẢI PHÒNG");
+            builder.Writeln("CHỦ NHÀ TRỌ: TẠ NGỌC DUY - CCCD: 034082002422");
+            builder.Writeln("ĐIỆN THOẠI: 0975092833");
+
+            // PHẦN CHI TIẾT TỪNG NGƯỜI (nếu có ảnh)
+            int tenantIndex = 1;
+            foreach (var item in items.Where(x => !string.IsNullOrEmpty(x.Photo)))
+            {
+                builder.InsertBreak(Aspose.Words.BreakType.PageBreak);
+
+                // Header trang chi tiết
+                builder.ParagraphFormat.Alignment = Aspose.Words.ParagraphAlignment.Center;
+                builder.Font.Size = 18;
+                builder.Font.Bold = true;
+                builder.Font.Color = System.Drawing.Color.FromArgb(0, 51, 102);
+                builder.Writeln("THÔNG TIN CHI TIẾT NGƯỜI THUÊ");
+
+                builder.Font.Size = 12;
+                builder.Font.Bold = false;
+                builder.Writeln($"Người thuê số: {tenantIndex}/{items.Count(x => !string.IsNullOrEmpty(x.Photo))}");
+                builder.Writeln("");
+
+                // Tên người thuê
+                builder.Font.Size = 16;
+                builder.Font.Bold = true;
+                builder.Font.Color = System.Drawing.Color.FromArgb(0, 51, 102);
+                builder.Writeln(item.FullName ?? "");
+                builder.Writeln("");
+
+                // Ảnh CCCD
+                if (!string.IsNullOrEmpty(item.Photo))
+                {
+                    try
+                    {
+                        string imagePath = Server.MapPath(item.Photo);
+                        if (System.IO.File.Exists(imagePath))
+                        {
+                            builder.ParagraphFormat.Alignment = Aspose.Words.ParagraphAlignment.Center;
+                            builder.Font.Size = 12;
+                            builder.Font.Bold = true;
+                            builder.Font.Color = System.Drawing.Color.Black;
+                            builder.Writeln("Ảnh CCCD/Hộ chiếu:");
+
+                            var shape = builder.InsertImage(imagePath);
+                            shape.Width = 400;
+                            shape.Height = 300;
+                            shape.WrapType = Aspose.Words.Drawing.WrapType.Inline;
+                            builder.Writeln("");
+                        }
+                    }
+                    catch
+                    {
+                        // Bỏ qua nếu không tải được ảnh
+                    }
+                }
+
+                // Thông tin chi tiết
+                builder.ParagraphFormat.Alignment = Aspose.Words.ParagraphAlignment.Left;
+                builder.Font.Size = 12;
+                builder.Font.Bold = false;
+                builder.Font.Color = System.Drawing.Color.Black;
+
+                var infoTable = builder.StartTable();
+
+                // Số CMND/CCCD
+                builder.InsertCell();
+                builder.Font.Bold = true;
+                builder.Write("Số CMND/CCCD:");
+                builder.InsertCell();
+                builder.Font.Bold = false;
+                builder.Write(item.IdentityCard ?? "");
+                builder.EndRow();
+
+                // Giới tính
+                builder.InsertCell();
+                builder.Font.Bold = true;
+                builder.Write("Giới tính:");
+                builder.InsertCell();
+                builder.Font.Bold = false;
+                builder.Write(item.Gender ?? "");
+                builder.EndRow();
+
+                // Địa chỉ thường trú
+                builder.InsertCell();
+                builder.Font.Bold = true;
+                builder.Write("Địa chỉ thường trú:");
+                builder.InsertCell();
+                builder.Font.Bold = false;
+                builder.Write(item.PermanentAddress ?? "");
+                builder.EndRow();
+
+                // Số điện thoại
+                builder.InsertCell();
+                builder.Font.Bold = true;
+                builder.Write("Số điện thoại:");
+                builder.InsertCell();
+                builder.Font.Bold = false;
+                builder.Write(item.PhoneNumber ?? "");
+                builder.EndRow();
+
+                // Phòng thuê
+                builder.InsertCell();
+                builder.Font.Bold = true;
+                builder.Write("Phòng thuê:");
+                builder.InsertCell();
+                builder.Font.Bold = false;
+                builder.Write(item.RoomName ?? "");
+                builder.EndRow();
+
+                // Ngày ký hợp đồng
+                builder.InsertCell();
+                builder.Font.Bold = true;
+                builder.Write("Ngày ký hợp đồng:");
+                builder.InsertCell();
+                builder.Font.Bold = false;
+                builder.Write(item.ContractSignedDate.ToString("dd/MM/yyyy"));
+                builder.EndRow();
+
+                // Ngày vào ở
+                builder.InsertCell();
+                builder.Font.Bold = true;
+                builder.Write("Ngày vào ở:");
+                builder.InsertCell();
+                builder.Font.Bold = false;
+                builder.Write(item.MoveInDate.ToString("dd/MM/yyyy"));
+                builder.EndRow();
+
+                builder.EndTable();
+                tenantIndex++;
+            }
+
+            // Lưu file
+            string fileName = $"DanhSachNguoiThuePhong_{DateTime.Now:yyyyMMdd_HHmmss}.docx";
+            string tempPath = Server.MapPath("~/Uploads/Tenants/");
+            if (!Directory.Exists(tempPath))
+                Directory.CreateDirectory(tempPath);
+
+            string filePath = Path.Combine(tempPath, fileName);
+            doc.Save(filePath);
+
+            // Trả về file
+            byte[] fileBytes = System.IO.File.ReadAllBytes(filePath);
+            System.IO.File.Delete(filePath); // Xóa file temp
+
+            return File(fileBytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", fileName);
+        }
     }
 }

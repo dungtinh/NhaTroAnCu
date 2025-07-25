@@ -119,6 +119,21 @@
             border-color: #003366;
             box-shadow: 0 0 0 0.2rem rgba(0, 51, 102, 0.25);
         }
+
+    .btn-export-group {
+        display: flex;
+        gap: 5px;
+    }
+
+        .btn-export-group .btn {
+            padding: 8px 12px;
+            font-size: 14px;
+            border-radius: 4px;
+        }
+
+            .btn-export-group .btn i {
+                margin-right: 4px;
+            }
 </style>
 
 <div class="page-header">
@@ -148,19 +163,37 @@
                        placeholder="Đến ngày" autocomplete="off" />
             </div>
             <div class="col-md-2">
-                <button type="submit" class="btn btn-primary">Lọc</button>
-                <a class="btn btn-danger" target="_blank"
-                   href="@Url.Action("ExportToPdf", new {
-                   searchName = Model.SearchName,
-                   searchCard = Model.SearchCard,
-                   searchAddress = Model.SearchAddress,
-                   sortField = Model.SortField,
-                   sortDirection = Model.SortDirection,
-                   fromDate = (Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null),
-                   toDate = (Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null)
-               })">
-                    Xuất PDF
-                </a>
+                <div class="d-flex">
+                    <button type="submit" class="btn btn-primary btn-filter mr-2">
+                        <i class="fas fa-search"></i> Lọc
+                    </button>
+                    <a class="btn btn-danger mr-1" target="_blank" style="margin-left: 5px;"
+                       href="@Url.Action("ExportToPdf", new {
+               searchName = Model.SearchName,
+               searchCard = Model.SearchCard,
+               searchAddress = Model.SearchAddress,
+               sortField = Model.SortField,
+               sortDirection = Model.SortDirection,
+               fromDate = (Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null),
+               toDate = (Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null)
+           })"
+                       title="Xuất PDF">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </a>
+                    <a class="btn btn-success" target="_blank" style="margin-left: 5px;"
+                       href="@Url.Action("ExportToWord", new {
+               searchName = Model.SearchName,
+               searchCard = Model.SearchCard,
+               searchAddress = Model.SearchAddress,
+               sortField = Model.SortField,
+               sortDirection = Model.SortDirection,
+               fromDate = (Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null),
+               toDate = (Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null)
+           })"
+                       title="Xuất Word">
+                        <i class="fas fa-file-word"></i> Word
+                    </a>
+                </div>
             </div>
         </div>
     </form>
