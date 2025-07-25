@@ -7,11 +7,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <link href="~/Content/bootstrap-datepicker.min.css" rel="stylesheet" />
     @Styles.Render("~/Content/css")
+    <link href="~/Content/layout.css" rel="stylesheet" />
     @Scripts.Render("~/bundles/modernizr")
-
 </head>
 <body>
-    <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark">
         <div class="container">
             @Html.ActionLink("Nhà trọ An Cư", "Index", "Rooms", new { area = "" }, new { @class = "navbar-brand" })
             <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" title="Toggle navigation" aria-controls="navbarSupportedContent"
@@ -21,26 +21,26 @@
             <div class="collapse navbar-collapse d-sm-inline-flex justify-content-between">
                 <ul class="navbar-nav flex-grow-1">
                     <li>@Html.ActionLink("Danh sách người thuê", "Index", "TenantContracts", new { area = "" }, new { @class = "nav-link" })</li>
-                    @*<li>@Html.ActionLink("Home", "Index", "Home", new { area = "" }, new { @class = "nav-link" })</li>
-                        <li>@Html.ActionLink("About", "About", "Home", new { area = "" }, new { @class = "nav-link" })</li>
-                        <li>@Html.ActionLink("Contact", "Contact", "Home", new { area = "" }, new { @class = "nav-link" })</li>*@
                 </ul>
                 @Html.Partial("_LoginPartial")
             </div>
         </div>
     </nav>
+
     <div class="container body-content">
         @RenderBody()
-        <hr />
-        <footer>
-            <h4 class="text-primary">NHÀ TRỌ AN CƯ</h4>
-            <p class="text-dark">
-                ĐỊA CHỈ: THÔN ĐÌNH NGỌ (ẤP), XÃ HỒNG PHONG, HUYỆN AN DƯƠNG, HẢI PHÒNG
-                <br />CHỦ NHÀ TRỌ: TẠ NGỌC DUY - CCCD: 034082002422
-                <br />ĐIỆN THOẠI: 0975092833
-            </p>
-        </footer>
     </div>
+
+    <footer>
+        <div class="container">
+            <h4>NHÀ TRỌ AN CƯ</h4>
+            <p>
+                <i class="fas fa-map-marker-alt"></i> ĐỊA CHỈ: THÔN ĐÌNH NGỌ (ẤP), XÃ HỒNG PHONG, HUYỆN AN DƯƠNG, HẢI PHÒNG
+                <br /><i class="fas fa-id-card"></i> CHỦ NHÀ TRỌ: TẠ NGỌC DUY - CCCD: 034082002422
+                <br /><i class="fas fa-phone"></i> ĐIỆN THOẠI: 0975092833
+            </p>
+        </div>
+    </footer>
 
     @Scripts.Render("~/bundles/jquery")
     @Scripts.Render("~/bundles/bootstrap")
@@ -60,11 +60,15 @@
             const anElement = AutoNumeric.getAutoNumericElement(selector);
             return anElement ? anElement.getNumber() : 0;
         }
+
         $(function () {
             $(".datepicker").datepicker({
                 format: "dd/mm/yyyy",
                 autoclose: true
             });
+
+            // Add fade-in animation to body content
+            $('.body-content').addClass('fade-in');
         });
     </script>
 
