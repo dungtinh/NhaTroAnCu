@@ -1,0 +1,210 @@
+﻿@model NhaTroAnCu.Models.ContractHistoryViewModel
+
+<h2 class="text-primary">DANH SÁCH NGƯỜI THUÊ PHÒNG</h2>
+
+<form method="get" class="form-inline mb-2">
+    <div class="row w-100">
+        <div class="col-md-2 mb-1">
+            <input type="text" name="searchName" placeholder="Họ tên" value="@Model.SearchName" class="form-control w-100" />
+        </div>
+        <div class="col-md-2 mb-1">
+            <input type="text" name="searchCard" placeholder="Số thẻ" value="@Model.SearchCard" class="form-control w-100" />
+        </div>
+        <div class="col-md-2 mb-1">
+            <input type="text" name="searchAddress" placeholder="Địa chỉ" value="@Model.SearchAddress" class="form-control w-100" />
+        </div>
+        <div class="col-md-2 mb-1">
+            <input type="text" name="fromDate" id="fromDate" class="form-control datepicker w-100"
+                   value="@(Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : "")"
+                   placeholder="Từ ngày" autocomplete="off" />
+        </div>
+        <div class="col-md-2 mb-1">
+            <input type="text" name="toDate" id="toDate" class="form-control datepicker w-100"
+                   value="@(Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : "")"
+                   placeholder="Đến ngày" autocomplete="off" />
+        </div>
+        <div class="col-md-2 mb-1 align-items-center">
+            <button type="submit" class="btn btn-primary">Lọc</button>
+            <a class="btn btn-danger"
+               target="_blank"
+               href="@Url.Action("ExportHistoryToPdf", new {
+                   id = ViewBag.RoomId,
+                   searchName = Model.SearchName,
+                   searchCard = Model.SearchCard,
+                   searchAddress = Model.SearchAddress,
+                   sortField = Model.SortField,
+                   sortDirection = Model.SortDirection,
+                   fromDate = (Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null),
+                   toDate = (Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null)
+               })">
+                Xuất PDF
+            </a>
+        </div>
+    </div>
+</form>
+
+<table class="table table-bordered table-sm">
+    <thead>
+        <tr style="text-transform: uppercase;">
+            <th>
+                <a href="@Url.Action("History", new { sortField="FullName", sortDirection = Model.SortField=="FullName" && Model.SortDirection=="asc"?"desc":"asc", page=Model.Page, pageSize=Model.PageSize, searchName=Model.SearchName, searchCard=Model.SearchCard, searchAddress=Model.SearchAddress, fromDate=(Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null), toDate=(Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null) })">
+                    Họ tên @(Model.SortField=="FullName" ? (Model.SortDirection=="asc"?"▲":"▼"):"")
+                </a>
+            </th>
+            <th>Số thẻ</th>
+            <th>Giới tính</th>
+            <th>Địa chỉ</th>
+            <th>SĐT</th>
+            <th>Tên phòng</th>
+            <th>
+                <a href="@Url.Action("History", new { sortField="StartDate", sortDirection = Model.SortField=="StartDate" && Model.SortDirection=="asc"?"desc":"asc", page=Model.Page, pageSize=Model.PageSize, searchName=Model.SearchName, searchCard=Model.SearchCard, searchAddress=Model.SearchAddress, fromDate=(Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null), toDate=(Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null) })">
+                    Ngày vào @(Model.SortField== "StartDate" ? (Model.SortDirection=="asc"?"▲":"▼"):"")
+                </a>
+            </th>
+            <th>
+                <a href="@Url.Action("History", new { sortField="EndDate", sortDirection = Model.SortField=="EndDate" && Model.SortDirection=="asc"?"desc":"asc", page=Model.Page, pageSize=Model.PageSize, searchName=Model.SearchName, searchCard=Model.SearchCard, searchAddress=Model.SearchAddress, fromDate=(Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null), toDate=(Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null) })">
+                    Ngày ra @(Model.SortField== "EndDate" ? (Model.SortDirection=="asc"?"▲":"▼"):"")
+                </a>
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.Items != null && Model.Items.Count > 0)
+        {
+            foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td>@item.TenantNames</td>
+                    <td>@item.IdentityCards</td>
+                    <td>@item.Genders</td>
+                    <td>@item.Addresses</td>
+                    <td>@item.PhoneNumbers</td>
+                    <td>@item.RoomName</td>
+                    <td>@item.StartDate.ToString("dd/MM/yyyy")</td>
+                    <td>@item.EndDate.ToString("dd/MM/yyyy")</td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="8" class="text-center text-muted">Không có dữ liệu</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@{
+    int totalPages = (int)Math.Ceiling((double)Model.TotalItems / Model.PageSize);
+    int currentPage = Model.Page;
+    int startPage = Math.Max(1, currentPage - 2);
+    int endPage = Math.Min(totalPages, currentPage + 2);
+    if (endPage - startPage < 4)
+    {
+        if (startPage == 1)
+        {
+            endPage = Math.Min(totalPages, startPage + 4);
+        }
+        else if (endPage == totalPages)
+        {
+            startPage = Math.Max(1, endPage - 4);
+        }
+    }
+}
+
+@if (totalPages > 1)
+{
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                <a class="page-link"
+                   href="@Url.Action("History", new {
+                       page = currentPage - 1,
+                       pageSize = Model.PageSize,
+                       searchName = Model.SearchName,
+                       searchCard = Model.SearchCard,
+                       searchAddress = Model.SearchAddress,
+                       sortField = Model.SortField,
+                       sortDirection = Model.SortDirection,
+                       fromDate = (Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null),
+                       toDate = (Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null)
+                   })"
+                   tabindex="-1">Trước</a>
+            </li>
+
+            @if (startPage > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@Url.Action("History", new {
+                        page = 1,
+                        pageSize = Model.PageSize,
+                        searchName = Model.SearchName,
+                        searchCard = Model.SearchCard,
+                        searchAddress = Model.SearchAddress,
+                        sortField = Model.SortField,
+                        sortDirection = Model.SortDirection,
+                        fromDate = (Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null),
+                        toDate = (Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null)
+                    })">1</a>
+                </li>
+                if (startPage > 2)
+                {
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                }
+            }
+
+            @for (int i = startPage; i <= endPage; i++)
+            {
+                <li class="page-item @(i == currentPage ? "active" : "")">
+                    <a class="page-link" href="@Url.Action("History", new {
+                        page = i,
+                        pageSize = Model.PageSize,
+                        searchName = Model.SearchName,
+                        searchCard = Model.SearchCard,
+                        searchAddress = Model.SearchAddress,
+                        sortField = Model.SortField,
+                        sortDirection = Model.SortDirection,
+                        fromDate = (Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null),
+                        toDate = (Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null)
+                    })">@i</a>
+                </li>
+            }
+
+            @if (endPage < totalPages)
+            {
+                if (endPage < totalPages - 1)
+                {
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                }
+                <li class="page-item">
+                    <a class="page-link" href="@Url.Action("History", new {
+                        page = totalPages,
+                        pageSize = Model.PageSize,
+                        searchName = Model.SearchName,
+                        searchCard = Model.SearchCard,
+                        searchAddress = Model.SearchAddress,
+                        sortField = Model.SortField,
+                        sortDirection = Model.SortDirection,
+                        fromDate = (Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null),
+                        toDate = (Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null)
+                    })">@totalPages</a>
+                </li>
+            }
+
+            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                <a class="page-link"
+                   href="@Url.Action("History", new {
+                       page = currentPage + 1,
+                       pageSize = Model.PageSize,
+                       searchName = Model.SearchName,
+                       searchCard = Model.SearchCard,
+                       searchAddress = Model.SearchAddress,
+                       sortField = Model.SortField,
+                       sortDirection = Model.SortDirection,
+                       fromDate = (Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null),
+                       toDate = (Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null)
+                   })">Sau</a>
+            </li>
+        </ul>
+    </nav>
+}

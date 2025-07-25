@@ -1,0 +1,17 @@
+﻿@model NhaTroAnCu.Models.ReportSummaryViewModel
+<table class="table table-bordered">
+    <tr>
+        <th>Đã thuê</th>
+        <th>Đã thu</th>
+        <th>Tiền đã thu</th>
+        <th>Hiệu suất</th>
+        <th>Quá hạn</th>
+    </tr>
+    <tr>
+        <td class="text-success">@Model.RentedRooms</td>
+        <td class="text-success">@Model.PaidRooms</td>
+        <td class="text-primary">@Model.TotalAmount.ToString("N0") đ</td>
+        <td>@(Model.Density.ToString("P2"))</td>
+        <td class="text-danger">@Model.OverdueRooms</td>
+    </tr>
+</table>

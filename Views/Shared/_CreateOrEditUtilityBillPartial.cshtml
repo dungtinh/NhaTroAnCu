@@ -1,0 +1,65 @@
+﻿@model NhaTroAnCu.Models.UtilityBillCreateViewModel
+
+<div class="container-fluid">
+    <h5 class="mb-3 font-weight-bold">Tạo phiếu báo tiền</h5>
+    <form id="utilityBillForm">
+        @Html.HiddenFor(m => m.RoomId)
+        @Html.HiddenFor(m => m.ContractId)
+        @Html.HiddenFor(m => m.Month)
+        @Html.HiddenFor(m => m.Year)
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group mb-2">
+                    <label>Chỉ số nước tháng trước</label>
+                    <input type="number" class="form-control" id="waterPrev" value="@Model.WaterIndexStart" readonly />
+                </div>
+                <div class="form-group mb-2">
+                    <label>Chỉ số nước tháng này</label>
+                    @Html.TextBoxFor(m => m.WaterIndexEnd, new { @class = "form-control", id = "waterCurrent", min = Model.WaterIndexStart, type = "number" })
+                </div>
+                <div class="form-group mb-2">
+                    <label>Số nước đã sử dụng</label>
+                    <input id="waterUsed" class="form-control" readonly type="number" />
+                </div>
+                <div class="form-group mb-2">
+                    <label>Giá nước / số</label>
+                    @Html.TextBoxFor(m => m.WaterPrice, new { @class = "form-control money", id = "waterPrice", @readonly = "readonly" })
+                </div>
+                <div class="form-group mb-2">
+                    <label>Tiền nước</label>
+                    <input id="waterMoney" class="form-control money" />
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group mb-2">
+                    <label>Tiền điện</label>
+                    @Html.TextBoxFor(m => m.ElectricityAmount, new { @class = "form-control money", id = "electricMoney" })
+                </div>
+                <div class="form-group mb-2">
+                    <label>Tiền thuê phòng</label>
+                    @Html.TextBoxFor(m => m.RentAmount, new { @class = "form-control money", id = "rentMoney" })
+                </div>
+                <div class="form-group mb-2">
+                    <label>Tiền cộng thêm</label>
+                    @Html.TextBoxFor(m => m.ExtraCharge, new { @class = "form-control money", id = "extraCharge" })
+                </div>
+                <div class="form-group mb-2">
+                    <label>Tiền giảm trừ</label>
+                    @Html.TextBoxFor(m => m.Discount, new { @class = "form-control money", id = "discount" })
+                </div>
+                <div class="form-group mb-2">
+                    <label>Tổng cần thu</label>
+                    <input id="totalMoney" name="TotalAmount" class="form-control money" value="@Model.TotalAmount" />
+                </div>
+                <div class="form-group mb-2">
+                    <label>Ghi chú phiếu báo tiền</label>
+                    @Html.TextBoxFor(m => m.BillNote, new { @class = "form-control", id = "billNote" })
+                </div>
+            </div>
+        </div>
+        <div class="text-right mt-2">
+            <button type="submit" class="btn btn-primary px-4">Lưu phiếu báo tiền</button>
+        </div>
+    </form>
+</div>

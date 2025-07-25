@@ -1,0 +1,28 @@
+﻿@model NhaTroAnCu.Models.Tenant
+
+@{
+    ViewBag.Title = "Thêm khách thuê mới";
+}
+
+<h2>Thêm khách thuê</h2>
+
+@using (Html.BeginForm("Create", "Tenants", FormMethod.Post, new { enctype = "multipart/form-data" }))
+{
+    <div class="form-group">
+        <label>Họ tên</label>
+        @Html.TextBoxFor(m => m.FullName, new { @class = "form-control" })
+    </div>
+    <div class="form-group">
+        <label>Số điện thoại</label>
+        @Html.TextBoxFor(m => m.PhoneNumber, new { @class = "form-control" })
+    </div>
+    <div class="form-group">
+        <label>Căn cước công dân</label>
+        @Html.TextBoxFor(m => m.IdentityNumber, new { @class = "form-control" })
+    </div>
+    <div class="form-group">
+        <label>Ảnh đại diện</label>
+        <input type="file" name="avatarFile" class="form-control" />
+    </div>
+    <button type="submit" class="btn btn-success">Lưu</button>
+}

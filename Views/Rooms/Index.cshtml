@@ -1,0 +1,153 @@
+﻿@model IEnumerable<NhaTroAnCu.Models.RoomViewModel>
+@{
+    ViewBag.Title = "Danh sách phòng";
+    var grouped = Model.GroupBy(r => r.Room.Area).OrderBy(g => g.Key);
+    int selectedDay = ViewBag.SelectedDay;
+    int selectedMonth = ViewBag.SelectedMonth;
+    int selectedYear = ViewBag.SelectedYear;
+}
+
+<style>
+    .room-gray {
+        background: #888;
+        color: white;
+    }
+
+    .room-green {
+        background: #4caf50;
+        color: white;
+    }
+
+    .room-red {
+        background: #f44336;
+        color: white;
+    }
+
+    .room-yellow {
+        background: #ffc107;
+        color: #333;
+    }
+
+    .month-btn {
+        display: inline-block;
+        width: 48px;
+        height: 40px;
+        margin: 2px;
+        text-align: center;
+        line-height: 40px;
+        cursor: pointer;
+        border-radius: 5px;
+        background: #eee;
+        color: #333;
+        border: 1px solid #ccc;
+    }
+
+    .month-selected {
+        background: #007bff;
+        color: #fff;
+    }
+</style>
+
+<form id="filterForm" method="get" style="margin-bottom: 20px;">
+    <div class="row">
+        <div class="col-md-1">
+            <label>Ngày:</label>
+            <input type="number" id="dayInput" name="day" class="form-control" min="1"
+                   value="@selectedDay" />
+        </div>
+        <div class="col-md-10">
+            <label>Tháng:</label>
+            <div>
+                @for (int m = 1; m <= 12; m++)
+                {
+                    var css = m == selectedMonth ? "month-btn month-selected" : "month-btn";
+                    <span class="@css" data-month="@m">@m</span>
+                }
+            </div>
+        </div>
+        <div class="col-md-1">
+            <label>Năm:</label>
+            <input type="number" id="yearInput" name="year" class="form-control"
+                   min="2000" max="2100" value="@selectedYear" />
+        </div>
+    </div>
+    <input type="hidden" id="monthInput" name="month" value="@selectedMonth" />
+</form>
+@{
+    Html.RenderAction("_MonthSummary", "ReportSummary", new { month = ViewBag.SelectedMonth, year = ViewBag.SelectedYear });
+}
+<script>
+    // Khi chọn tháng thì cập nhật ngày cuối tháng
+    document.querySelectorAll('.month-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var month = parseInt(btn.getAttribute('data-month'));
+            var year = parseInt(document.getElementById('yearInput').value);
+            var lastDay = new Date(year, month, 0).getDate();
+            document.getElementById('monthInput').value = month;
+            document.getElementById('dayInput').value = lastDay;
+
+            // Submit form tự động
+            document.getElementById('filterForm').submit();
+        });
+    });
+
+    // Khi thay đổi ngày hoặc năm thì tự động gửi form
+    document.getElementById('dayInput').addEventListener('change', function () {
+        document.getElementById('filterForm').submit();
+    });
+    document.getElementById('yearInput').addEventListener('change', function () {
+        // Sau khi đổi năm, cập nhật ngày cuối tháng nếu tháng đã chọn
+        var month = parseInt(document.getElementById('monthInput').value);
+        var year = parseInt(document.getElementById('yearInput').value);
+        var lastDay = new Date(year, month, 0).getDate();
+        document.getElementById('dayInput').max = lastDay;
+        if (parseInt(document.getElementById('dayInput').value) > lastDay)
+            document.getElementById('dayInput').value = lastDay;
+        document.getElementById('filterForm').submit();
+    });
+</script>
+
+<!-- Phần hiển thị phòng như cũ, dùng ViewModel -->
+@foreach (var areaGroup in grouped)
+{
+    <h3 class="text-primary">DÃY @areaGroup.Key</h3>
+    for (int floor = 0; floor <= 3; floor++)
+    {
+        <h4 class="text-secondary">Tầng @floor</h4>
+        <div class="room-grid">
+            @foreach (var vm in areaGroup.Where(r => r.Room.Floor == floor).OrderBy(r => r.Room.RoomNumber))
+            {
+                var css = vm.ColorClass == "gray" ? "room-gray"
+                        : vm.ColorClass == "green" ? "room-green"
+                        : vm.ColorClass == "yellow" ? "room-yellow"
+                        : "room-red";
+                <div class="room-box @css text-center p-2">
+                    <div style="position: relative;">
+                        @Html.ActionLink(" ", "Edit", new { id = vm.Room.Id }, new { @class = "fas fa-edit", style = "position: absolute; color: white;left: 10px; top: 3px;" })
+                    </div>
+                    <h5>
+                        @vm.Room.Name
+                        @Html.ActionLink(" ", "history", "contracts", new { id = vm.Room.Id }, new { @class = "fas fa-history", style = "color: white;" })
+                    </h5>
+                    @if (vm.IsContractNearingEnd && vm.ContractEndDate.HasValue)
+                    {
+                        <div class="alert alert-warning p-1 mb-1 mt-1" style="font-size:0.9em; position: absolute; opacity: 80%;">
+                            <i class="fa fa-exclamation-triangle"></i>
+                            HĐ sắp hết hạn: @vm.ContractEndDate.Value.ToString("dd/MM/yyyy")
+                        </div>
+                    }
+                    @if (vm.Room.IsOccupied)
+                    {
+                        <small>@(string.IsNullOrEmpty(vm.TenantName) ? "Chưa có thông tin" : vm.TenantName)</small><br />
+                        <a href="@Url.Action("Details", "Rooms", new { id = vm.Room.Id })" class="btn btn-light btn-sm mt-1">Chi tiết</a>
+                    }
+                    else
+                    {
+                        <br />
+                        <a href="@Url.Action("Create", "Contracts", new { roomId = vm.Room.Id })" class="btn btn-light btn-sm mt-1">Cho thuê</a>
+                    }
+                </div>
+            }
+        </div>
+    }
+}
