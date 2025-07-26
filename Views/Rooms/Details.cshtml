@@ -146,6 +146,7 @@
                                             </button>
                                         </div>
                                     </div>
+                                    <br />
                                 </form>
                                 <div id="extendResult" class="text-success mt-2"></div>
                             </div>
@@ -243,6 +244,7 @@
                     </div>
                 </div>
             }
+
         </div>
 
         <div class="col-md-7">
@@ -443,74 +445,77 @@
                     }
                 </div>
             </div>
+
+            <!-- BILL HISTORY -->
+            <div class="custom-card animate-slide-up" style="animation-delay: 0.4s;">
+                <div class="card-header header-orange">
+                    <span><i class="fas fa-history"></i> Lịch sử phiếu báo tiền</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table custom-table">
+
+                            <tr>
+                                <th>Tháng/Năm</th>
+                                <th>Tổng tiền</th>
+                                <th>Ghi chú</th>
+                            </tr>
+
+                            <tbody>
+                                @foreach (var b in (Model.UtilityBills ?? new List<NhaTroAnCu.Models.UtilityBill>()).OrderByDescending(x => x.Year).ThenByDescending(x => x.Month))
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="badge badge-primary">@b.Month/@b.Year</span>
+                                        </td>
+                                        <td class="font-weight-bold">@((b.TotalAmount??0).ToString("N0"))đ</td>
+                                        <td>@b.BillNote</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAYMENT HISTORY -->
+            <div class="custom-card animate-slide-up" style="animation-delay: 0.5s;">
+                <div class="card-header header-purple">
+                    <span><i class="fas fa-receipt"></i> Lịch sử tất cả các lần thanh toán</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table custom-table">
+
+                            <tr>
+                                <th>Tháng/Năm</th>
+                                <th>Số tiền</th>
+                                <th>Ngày thu</th>
+                                <th>Ghi chú</th>
+                            </tr>
+
+                            <tbody>
+                                @foreach (var p in (Model.PaymentHistories ?? new List<NhaTroAnCu.Models.PaymentHistory>()).OrderByDescending(x => x.PaidDate))
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="badge badge-success">@p.Month/@p.Year</span>
+                                        </td>
+                                        <td class="font-weight-bold text-success">@p.TotalAmount.ToString("N0")đ</td>
+                                        <td>@p.PaidDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td>@p.Note</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <!-- BILL HISTORY -->
-    <div class="custom-card animate-slide-up" style="animation-delay: 0.4s;">
-        <div class="card-header header-orange">
-            <span><i class="fas fa-history"></i> Lịch sử phiếu báo tiền</span>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table custom-table">
-                    <thead>
-                        <tr>
-                            <th>Tháng/Năm</th>
-                            <th>Tổng tiền</th>
-                            <th>Ghi chú</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var b in (Model.UtilityBills ?? new List<NhaTroAnCu.Models.UtilityBill>()).OrderByDescending(x => x.Year).ThenByDescending(x => x.Month))
-                        {
-                            <tr>
-                                <td>
-                                    <span class="badge badge-primary">@b.Month/@b.Year</span>
-                                </td>
-                                <td class="font-weight-bold">@((b.TotalAmount??0).ToString("N0"))đ</td>
-                                <td>@b.BillNote</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
 
-    <!-- PAYMENT HISTORY -->
-    <div class="custom-card animate-slide-up" style="animation-delay: 0.5s;">
-        <div class="card-header header-purple">
-            <span><i class="fas fa-receipt"></i> Lịch sử tất cả các lần thanh toán</span>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table custom-table">
-                    <thead>
-                        <tr>
-                            <th>Tháng/Năm</th>
-                            <th>Số tiền</th>
-                            <th>Ngày thu</th>
-                            <th>Ghi chú</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var p in (Model.PaymentHistories ?? new List<NhaTroAnCu.Models.PaymentHistory>()).OrderByDescending(x => x.PaidDate))
-                        {
-                            <tr>
-                                <td>
-                                    <span class="badge badge-success">@p.Month/@p.Year</span>
-                                </td>
-                                <td class="font-weight-bold text-success">@p.TotalAmount.ToString("N0")đ</td>
-                                <td>@p.PaidDate.ToString("dd/MM/yyyy HH:mm")</td>
-                                <td>@p.Note</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
 </div>
 
 @section Scripts {
