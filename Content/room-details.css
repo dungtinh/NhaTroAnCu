@@ -514,3 +514,170 @@ a[href*="zalo.me"] {
         page-break-inside: avoid;
     }
 }
+/* Add these styles to your room-details.css file */
+
+/* Enhanced Card Body Styles */
+.custom-card .card-body {
+    padding: 1.75rem 1.5rem !important;
+    background: #ffffff;
+}
+
+/* More spacing between cards */
+.custom-card {
+    margin-bottom: 2rem !important; /* Increased from 1.5rem */
+}
+
+    /* Better visual separation for card sections */
+    .custom-card .card-header {
+        margin-bottom: 0;
+        border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+    }
+
+    /* Add subtle background to card bodies for better contrast */
+    .custom-card .card-body {
+        background-color: #ffffff;
+        position: relative;
+    }
+
+        /* Add inner spacing for card content */
+        .custom-card .card-body > *:not(:last-child) {
+            margin-bottom: 1.25rem;
+        }
+
+/* Enhance utilities list spacing */
+.utilities-list li {
+    padding: 1rem 0.5rem; /* Increased vertical padding */
+    transition: background-color 0.2s ease;
+}
+
+    .utilities-list li:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+        margin: 0 -0.5rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+/* Better spacing for form sections */
+.extension-form {
+    background: #f8f9fa;
+    padding: 2rem; /* Increased from 1.5rem */
+    border-radius: 12px;
+    margin-top: 1.5rem;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Improve bill details spacing */
+.bill-details dl {
+    margin-bottom: 0.5rem;
+}
+
+.bill-details dt {
+    margin-bottom: 0.5rem; /* Increased from 0.3rem */
+    font-size: 0.9rem;
+}
+
+.bill-details dd {
+    margin-bottom: 1.25rem; /* Increased from 1rem */
+    font-size: 1.1rem;
+}
+
+/* Better payment summary spacing */
+.payment-summary {
+    padding: 2rem; /* Increased from 1.5rem */
+    margin-top: 1.5rem; /* Increased from 1rem */
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Add spacing between form rows */
+.custom-card form .row {
+    margin-bottom: 1rem;
+}
+
+    .custom-card form .row:last-child {
+        margin-bottom: 0;
+    }
+
+/* Contract info sections */
+.contract-info-grid,
+.tenant-list-item,
+.contract-warning {
+    margin-bottom: 1.5rem;
+}
+
+/* Table spacing improvements */
+.custom-table {
+    margin-top: 0.5rem;
+}
+
+    .custom-table td,
+    .custom-table th {
+        padding: 1rem 1.2rem; /* Increased padding */
+    }
+
+/* Add breathing room to action buttons */
+.action-buttons {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Better visual hierarchy with shadows */
+.custom-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+    .custom-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+/* Add container padding for overall spacing */
+.room-details .row {
+    margin-left: -20px;
+    margin-right: -20px;
+}
+
+    .room-details .row > [class*="col-"] {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+/* Ensure consistent spacing in modals */
+.modal-body {
+    padding: 2rem !important;
+}
+
+/* Add subtle dividers between sections */
+.custom-card .card-body > div:not(:last-child):not(.bill-total):not(.payment-summary) {
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    margin-bottom: 1.5rem;
+}
+
+/* Remove divider for specific elements */
+.custom-card .card-body > .extension-form,
+.custom-card .card-body > .contract-warning,
+.custom-card .card-body > form {
+    border-bottom: none !important;
+    padding-bottom: 0 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .custom-card .card-body {
+        padding: 1.25rem 1rem !important;
+    }
+
+    .custom-card {
+        margin-bottom: 1.5rem !important;
+    }
+
+    .room-details .row {
+        margin-left: -10px;
+        margin-right: -10px;
+    }
+
+        .room-details .row > [class*="col-"] {
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+}
