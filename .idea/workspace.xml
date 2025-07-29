@@ -5,16 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="460c6966-c7ff-457c-8964-8ca873e79607" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.vs/NhaTroAnCu/FileContentIndex/5c29070d-a1a4-4a0e-96e7-3eef76b17c5e.vsidx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.vs/NhaTroAnCu/v17/.suo" beforeDir="false" afterPath="$PROJECT_DIR$/.vs/NhaTroAnCu/v17/.suo" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/room-details.css" beforeDir="false" afterPath="$PROJECT_DIR$/Content/room-details.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Properties/PublishProfiles/FolderProfile.pubxml.user" beforeDir="false" afterPath="$PROJECT_DIR$/Properties/PublishProfiles/FolderProfile.pubxml.user" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Views/Rooms/Details.cshtml" beforeDir="false" afterPath="$PROJECT_DIR$/Views/Rooms/Details.cshtml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/NhaTroAnCu.dll" beforeDir="false" afterPath="$PROJECT_DIR$/bin/NhaTroAnCu.dll" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/NhaTroAnCu.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/bin/NhaTroAnCu.pdb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/obj/Release/NhaTroAnCu.csproj.AssemblyReference.cache" beforeDir="false" afterPath="$PROJECT_DIR$/obj/Release/NhaTroAnCu.csproj.AssemblyReference.cache" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/obj/Release/NhaTroAnCu.dll" beforeDir="false" afterPath="$PROJECT_DIR$/obj/Release/NhaTroAnCu.dll" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/obj/Release/NhaTroAnCu.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/obj/Release/NhaTroAnCu.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
