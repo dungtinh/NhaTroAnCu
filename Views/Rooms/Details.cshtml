@@ -213,7 +213,7 @@
                                     {
                                         var photos = ct.Tenant.Photo.Split(';');
                                         <div class="tenant-photo-group">
-                                            <h6><i class="fas fa-camera"></i> Hình ảnh</h6>
+                                            <h6><i class="fas fa-camera"></i> @ct.Tenant.FullName</h6>
                                             <div class="photo-gallery">
                                                 @foreach (var photo in photos.Where(p => !string.IsNullOrWhiteSpace(p)))
                                                 {

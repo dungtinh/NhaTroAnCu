@@ -436,3 +436,356 @@
             opacity: 1;
         }
 
+
+/* Enhanced Photo Display CSS - Add to contract-action.css or create separate file */
+
+/* Photo Grid Layout */
+.photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+/* Photo Thumbnail Styling */
+.photo-thumbnail {
+    position: relative;
+    width: 100%;
+    height: 160px; /* Fixed height for consistency */
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+}
+
+    .photo-thumbnail:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        border-color: #667eea;
+    }
+
+    .photo-thumbnail img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* This ensures the image covers the container without distortion */
+        object-position: center; /* Center the image within the container */
+    }
+
+    /* Fallback for older browsers */
+    .photo-thumbnail img {
+        max-width: 100%;
+        max-height: 100%;
+    }
+
+/* Photo Modal Styling */
+.modal-dialog.modal-lg {
+    max-width: 90vw;
+    width: auto;
+}
+
+.modal-body {
+    padding: 20px;
+    text-align: center;
+    background: #f8f9fa;
+}
+
+#modalPhoto {
+    max-width: 100%;
+    max-height: 70vh; /* Limit height to 70% of viewport */
+    width: auto;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    object-fit: contain; /* Ensure entire image is visible */
+}
+
+/* Current Photos Section */
+.current-photos {
+    margin-bottom: 25px;
+    padding: 20px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+}
+
+    .current-photos h6 {
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+/* No Photo State */
+.no-photo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: #6c757d;
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+    .no-photo i {
+        font-size: 48px;
+        margin-bottom: 10px;
+        opacity: 0.5;
+    }
+
+    .no-photo p {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+/* Upload Section Enhancement */
+.upload-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+}
+
+    .upload-section h6 {
+        color: #495057;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+
+/* File List Improvements */
+.file-list {
+    margin-top: 15px;
+    max-height: 200px; /* Limit height */
+    overflow-y: auto;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid #f1f3f4;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
+}
+
+    .file-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .file-item:last-child {
+        border-bottom: none;
+    }
+
+    .file-item button {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: bold;
+        transition: background-color 0.2s ease;
+    }
+
+        .file-item button:hover {
+            background: #c82333;
+        }
+
+/* Photo Info Display */
+.file-info {
+    margin-top: 12px;
+    padding: 12px 15px;
+    background: #e7f3ff;
+    border: 1px solid #b3d9ff;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #0c5aa6;
+    font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .photo-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 10px;
+    }
+
+    .photo-thumbnail {
+        height: 120px;
+    }
+
+    .modal-dialog.modal-lg {
+        max-width: 95vw;
+        margin: 10px auto;
+    }
+
+    #modalPhoto {
+        max-height: 60vh;
+    }
+
+    .current-photos, .upload-section {
+        padding: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .photo-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .photo-thumbnail {
+        height: 100px;
+    }
+
+    .file-item {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+
+        .file-item span {
+            flex: 1;
+            margin-right: 10px;
+            word-break: break-word;
+        }
+}
+
+/* Loading and Results Styling */
+.loading-spinner {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+    color: #667eea;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.scan-result {
+    margin-top: 15px;
+    padding: 12px 15px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+    .scan-result.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .scan-result.partial {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+    }
+
+    .scan-result.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .scan-result i {
+        margin-right: 8px;
+    }
+
+/* Button Enhancements */
+.btn-upload {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    font-size: 14px;
+    text-decoration: none;
+}
+
+    .btn-upload:hover {
+        background: #5a67d8;
+        transform: translateY(-1px);
+        color: white;
+        text-decoration: none;
+    }
+
+/* Tenant Card Photo Section */
+.tenant-card .photo-section {
+    margin-bottom: 20px;
+    padding: 0;
+}
+
+.tenant-card .current-photos {
+    margin-bottom: 20px;
+}
+
+.tenant-card .upload-section {
+    margin-top: 0;
+}
+
+/* Photo Gallery for Room Details */
+.tenant-photo-group {
+    margin-bottom: 20px;
+}
+
+    .tenant-photo-group h6 {
+        font-size: 14px;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+.photo-gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.tenant-photo-item {
+    width: 80px;
+    height: 60px;
+    object-fit: cover;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+    .tenant-photo-item:hover {
+        border-color: #667eea;
+        transform: scale(1.05);
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
