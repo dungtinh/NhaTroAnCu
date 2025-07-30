@@ -678,5 +678,136 @@
                 }, i * 100);
             });
         });
+        $(document).ready(function () {
+
+            // Override file input change handler
+            $(document).on('change', 'input[type="file"][name="TenantPhotos"]', function () {
+                var tenantIndex = $(this).attr('data-tenant-index');
+                var files = this.files;
+
+                // Đảm bảo tenant index được lưu với mỗi file
+                $(this).data('tenant-index', tenantIndex);
+
+                // Cập nhật hiển thị
+                updateFileDisplay(tenantIndex, files);
+            });
+
+            // Cải tiến form submit để include tenant mapping
+            $('form').on('submit', function (e) {
+                // Tạo FormData mới với mapping chính xác
+                var formData = new FormData(this);
+
+                // Xóa tất cả TenantPhotos hiện tại
+                formData.delete('TenantPhotos');
+
+                // Thu thập và re-append files với thông tin tenant
+                $('input[type="file"][name="TenantPhotos"]').each(function (index) {
+                    var tenantIndex = $(this).attr('data-tenant-index');
+                    var files = this.files;
+
+                    for (let i = 0; i < files.length; i++) {
+                        // Rename file để include tenant index
+                        var file = files[i];
+                        var newFileName = `tenant_${tenantIndex}_${file.name}`;
+
+                        // Tạo new File object với tên mới
+                        var renamedFile = new File([file], newFileName, {
+                            type: file.type,
+                            lastModified: file.lastModified
+                        });
+
+                        formData.append('TenantPhotos', renamedFile);
+                    }
+                });
+
+                // Continue with normal form submission
+                // (Remove e.preventDefault() để form submit bình thường)
+            });
+
+            // Helper function để update file display
+            function updateFileDisplay(tenantIndex, files) {
+                var fileInfo = $("#fileInfo" + tenantIndex);
+                var fileList = $("#fileList" + tenantIndex);
+
+                fileList.empty();
+
+                if (files && files.length > 0) {
+                    fileInfo.show();
+                    $("#fileCount" + tenantIndex).text(files.length);
+
+                    for (let i = 0; i < files.length; i++) {
+                        var fileSize = (files[i].size / 1024).toFixed(1) + " KB";
+                        fileList.append(`
+                    <div class="file-item" data-file-index="${i}">
+                        <span>
+                            <i class="fas fa-file-image text-primary"></i>
+                            ${files[i].name} (${fileSize})
+                            <small class="text-success">- Tenant #${parseInt(tenantIndex) + 1}</small>
+                        </span>
+                        <button type="button" onclick="removeFileImproved(${tenantIndex}, ${i})" 
+                                class="btn-remove-file" title="Xóa file này">×</button>
+                    </div>
+                `);
+                    }
+                } else {
+                    fileInfo.hide();
+                    $("#fileCount" + tenantIndex).text("0");
+                }
+            }
+        });
+
+        // Cải tiến hàm remove file
+        function removeFileImproved(inputIndex, fileIndex) {
+            var input = document.getElementById("inputFile" + inputIndex);
+
+            if (!input.files || fileIndex >= input.files.length) {
+                return;
+            }
+
+            try {
+                var dt = new DataTransfer();
+
+                // Copy tất cả files ngoại trừ file cần xóa
+                for (let i = 0; i < input.files.length; i++) {
+                    if (i !== fileIndex) {
+                        dt.items.add(input.files[i]);
+                    }
+                }
+
+                // Cập nhật input
+                input.files = dt.files;
+
+                // Trigger change event để update display
+                $(input).trigger('change');
+
+            } catch (e) {
+                // Fallback cho browsers cũ
+                console.error('DataTransfer not supported:', e);
+
+                // Alternative: Clone input và reset
+                var newInput = $(input).clone(true);
+                $(input).replaceWith(newInput);
+
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Không thể xóa file riêng lẻ',
+                    text: 'Vui lòng chọn lại tất cả file ngoại trừ file muốn xóa.',
+                    confirmButtonText: 'Đã hiểu'
+                });
+            }
+        }
+
+        // Debug function để kiểm tra file mapping
+        function debugFileMapping() {
+            console.log('=== File Mapping Debug ===');
+            $('input[type="file"][name="TenantPhotos"]').each(function (index) {
+                var tenantIndex = $(this).attr('data-tenant-index');
+                var files = this.files;
+                console.log(`Tenant ${tenantIndex}: ${files.length} files`);
+                for (let i = 0; i < files.length; i++) {
+                    console.log(`  - ${files[i].name} (${(files[i].size / 1024).toFixed(1)}KB)`);
+                }
+            });
+        }
     </script>
 }

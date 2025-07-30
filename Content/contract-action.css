@@ -789,3 +789,71 @@
         transform: scale(1.05);
         box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
     }
+.file-item {
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    margin-bottom: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+    .file-item:hover {
+        background: #e9ecef;
+        border-color: #dee2e6;
+    }
+
+    .file-item .text-success {
+        font-weight: 600;
+    }
+
+.btn-remove-file {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+    .btn-remove-file:hover {
+        background: #c82333;
+        transform: scale(1.1);
+    }
+
+.file-upload-container {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 2px dashed #dee2e6;
+    transition: all 0.3s;
+}
+
+    .file-upload-container:hover {
+        border-color: #667eea;
+        background: #f0f4ff;
+    }
+
+/* Loading state */
+.uploading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.upload-progress {
+    margin-top: 10px;
+    display: none;
+}
+
+    .upload-progress .progress {
+        height: 20px;
+    }
+
+    .upload-progress .progress-bar {
+        transition: width 0.3s ease;
+    }
