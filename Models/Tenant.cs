@@ -29,6 +29,8 @@ namespace NhaTroAnCu.Models
         public Nullable<System.DateTime> BirthDate { get; set; }
         public string Gender { get; set; }
         public string PermanentAddress { get; set; }
+        public string Ethnicity { get; set; }
+        public string VehiclePlate { get; set; }
     
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<ContractTenant> ContractTenants { get; set; }

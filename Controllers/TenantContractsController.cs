@@ -47,6 +47,8 @@ namespace NhaTroAnCu.Controllers
                             t.PermanentAddress,
                             t.PhoneNumber,
                             t.Photo, // Thêm trường ảnh
+                            t.Ethnicity,         // Thêm mới
+                            t.VehiclePlate,      // Thêm mới
                             RoomName = r.Name,
                             ContractSignedDate = c.StartDate,
                             MoveInDate = ct.Contract.MoveInDate
@@ -96,7 +98,9 @@ namespace NhaTroAnCu.Controllers
                     Photo = x.Photo,
                     RoomName = x.RoomName,
                     ContractSignedDate = x.ContractSignedDate,
-                    MoveInDate = x.MoveInDate
+                    MoveInDate = x.MoveInDate,
+                    Ethnicity = x.Ethnicity,           // Thêm mới
+                    VehiclePlate = x.VehiclePlate      // Thêm mới
                 }).ToList();
 
             var model = new TenantContractListViewModel
@@ -144,6 +148,8 @@ namespace NhaTroAnCu.Controllers
                             t.PermanentAddress,
                             t.PhoneNumber,
                             t.Photo, // Thêm trường ảnh
+                            t.Ethnicity,           // Thêm mới
+                            t.VehiclePlate,        // Thêm mới
                             RoomName = r.Name,
                             ContractSignedDate = c.StartDate,
                             MoveInDate = ct.Contract.MoveInDate
@@ -387,8 +393,10 @@ namespace NhaTroAnCu.Controllers
 
                     AddInfoRow(infoTable, "Số CMND/CCCD:", item.IdentityCard, detailLabelFont, detailValueFont);
                     AddInfoRow(infoTable, "Giới tính:", item.Gender, detailLabelFont, detailValueFont);
+                    AddInfoRow(infoTable, "Dân tộc:", item.Ethnicity ?? "Kinh", detailLabelFont, detailValueFont);  // Thêm mới
                     AddInfoRow(infoTable, "Địa chỉ thường trú:", item.PermanentAddress, detailLabelFont, detailValueFont);
                     AddInfoRow(infoTable, "Số điện thoại:", item.PhoneNumber, detailLabelFont, detailValueFont);
+                    AddInfoRow(infoTable, "Biển số xe:", item.VehiclePlate ?? "Không có", detailLabelFont, detailValueFont);  // Thêm mới
                     AddInfoRow(infoTable, "Phòng thuê:", item.RoomName, detailLabelFont, detailValueFont);
                     AddInfoRow(infoTable, "Ngày ký hợp đồng:", item.ContractSignedDate.ToString("dd/MM/yyyy"), detailLabelFont, detailValueFont);
                     AddInfoRow(infoTable, "Ngày vào ở:", item.MoveInDate.ToString("dd/MM/yyyy"), detailLabelFont, detailValueFont);
@@ -500,6 +508,8 @@ namespace NhaTroAnCu.Controllers
                             PermanentAddress = t.PermanentAddress ?? "",
                             PhoneNumber = t.PhoneNumber ?? "",
                             Photo = t.Photo,
+                            Ethnicity = t.Ethnicity ?? "",         // Thêm mới
+                            VehiclePlate = t.VehiclePlate ?? "",   // Thêm mới
                             RoomName = r.Name ?? "",
                             ContractSignedDate = c.StartDate,
                             MoveInDate = ct.Contract.MoveInDate
@@ -758,6 +768,15 @@ namespace NhaTroAnCu.Controllers
                 builder.Write(item.Gender ?? "");
                 builder.EndRow();
 
+                // Dân tộc
+                builder.InsertCell();
+                builder.Font.Bold = true;
+                builder.Write("Dân tộc:");
+                builder.InsertCell();
+                builder.Font.Bold = false;
+                builder.Write(item.Ethnicity ?? "Kinh");
+                builder.EndRow();                
+
                 // Địa chỉ thường trú
                 builder.InsertCell();
                 builder.Font.Bold = true;
@@ -776,6 +795,15 @@ namespace NhaTroAnCu.Controllers
                 builder.Write(item.PhoneNumber ?? "");
                 builder.EndRow();
 
+                // Biển số xe (thêm sau Số điện thoại)
+                builder.InsertCell();
+                builder.Font.Bold = true;
+                builder.Write("Biển số xe:");
+                builder.InsertCell();
+                builder.Font.Bold = false;
+                builder.Write(item.VehiclePlate ?? "Không có");
+                builder.EndRow();
+
                 // Phòng thuê
                 builder.InsertCell();
                 builder.Font.Bold = true;
@@ -783,7 +811,7 @@ namespace NhaTroAnCu.Controllers
                 builder.InsertCell();
                 builder.Font.Bold = false;
                 builder.Write(item.RoomName ?? "");
-                builder.EndRow();
+                builder.EndRow();                
 
                 // Ngày ký hợp đồng
                 builder.InsertCell();

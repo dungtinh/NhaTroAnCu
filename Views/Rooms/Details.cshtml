@@ -209,7 +209,20 @@
                             <div class="tenant-photos">
                                 @foreach (var ct in contract.ContractTenants)
                                 {
-                                    <img src="@ct.Tenant.Photo" alt="@ct.Tenant.FullName" title="@ct.Tenant.FullName" />
+                                    if (!string.IsNullOrEmpty(ct.Tenant.Photo))
+                                    {
+                                        var photos = ct.Tenant.Photo.Split(';');
+                                        <div class="tenant-photo-group">
+                                            <h6><i class="fas fa-camera"></i> Hình ảnh</h6>
+                                            <div class="photo-gallery">
+                                                @foreach (var photo in photos.Where(p => !string.IsNullOrWhiteSpace(p)))
+                                                {
+                                                    <img src="@photo" alt="@ct.Tenant.FullName" title="@ct.Tenant.FullName"
+                                                         class="tenant-photo-item" onclick="showPhotoModal('@photo', '@ct.Tenant.FullName')" />
+                                                }
+                                            </div>
+                                        </div>
+                                    }
                                 }
                             </div>
                         </div>
@@ -517,9 +530,55 @@
 
 
 </div>
+<div class="modal fade" id="photoModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="photoModalTitle">Ảnh CCCD</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalPhoto" src="" style="max-width: 100%; height: auto;" />
+            </div>
+        </div>
+    </div>
+</div>
 
+<style>
+    .tenant-photo-group {
+        margin-bottom: 15px;
+    }
+
+    .photo-gallery {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .tenant-photo-item {
+        width: 100px;
+        height: 70px;
+        object-fit: cover;
+        border: 2px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+        .tenant-photo-item:hover {
+            border-color: #007bff;
+            transform: scale(1.05);
+        }
+</style>
 @section Scripts {
     <script>
+        function showPhotoModal(photoUrl, tenantName) {
+            $('#modalPhoto').attr('src', photoUrl);
+            $('#photoModalTitle').text('CCCD - ' + tenantName);
+            $('#photoModal').modal('show');
+        }
         $(document).ready(function() {
             // Initialize tooltips
             $('[data-toggle="tooltip"]').tooltip();

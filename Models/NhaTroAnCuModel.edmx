@@ -166,10 +166,12 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="FullName" Type="nvarchar" MaxLength="100" Nullable="false" />
           <Property Name="IdentityCard" Type="nvarchar" MaxLength="20" Nullable="false" />
           <Property Name="PhoneNumber" Type="nvarchar" MaxLength="20" />
-          <Property Name="Photo" Type="nvarchar" MaxLength="255" />
+          <Property Name="Photo" Type="nvarchar" MaxLength="1000" />
           <Property Name="BirthDate" Type="date" />
           <Property Name="Gender" Type="nvarchar" MaxLength="10" />
           <Property Name="PermanentAddress" Type="nvarchar" MaxLength="255" />
+          <Property Name="Ethnicity" Type="nvarchar" MaxLength="50" />
+          <Property Name="VehiclePlate" Type="nvarchar" MaxLength="20" />
         </EntityType>
         <EntityType Name="UtilityBills">
           <Key>
@@ -496,12 +498,14 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="FullName" Type="String" MaxLength="100" FixedLength="false" Unicode="true" Nullable="false" />
           <Property Name="IdentityCard" Type="String" MaxLength="20" FixedLength="false" Unicode="true" Nullable="false" />
           <Property Name="PhoneNumber" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
-          <Property Name="Photo" Type="String" MaxLength="255" FixedLength="false" Unicode="true" />
+          <Property Name="Photo" Type="String" MaxLength="1000" FixedLength="false" Unicode="true" />
           <NavigationProperty Name="ContractTenants" Relationship="Self.FK_ContractTenants_Tenants" FromRole="Tenants" ToRole="ContractTenants" />
           <NavigationProperty Name="Notifications" Relationship="Self.FK__Notificat__Tenan__4E88ABD4" FromRole="Tenants" ToRole="Notifications" />
           <Property Name="BirthDate" Type="DateTime" Precision="0" />
           <Property Name="Gender" Type="String" MaxLength="10" FixedLength="false" Unicode="true" />
           <Property Name="PermanentAddress" Type="String" MaxLength="255" FixedLength="false" Unicode="true" />
+          <Property Name="Ethnicity" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="VehiclePlate" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
         </EntityType>
         <Association Name="FK__Contracts__RoomI__3C69FB99">
           <End Role="Rooms" Type="Self.Room" Multiplicity="1" />
@@ -913,6 +917,8 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <EntitySetMapping Name="Tenants">
             <EntityTypeMapping TypeName="NhaTroAnCuModel.Tenant">
               <MappingFragment StoreEntitySet="Tenants">
+                <ScalarProperty Name="VehiclePlate" ColumnName="VehiclePlate" />
+                <ScalarProperty Name="Ethnicity" ColumnName="Ethnicity" />
                 <ScalarProperty Name="PermanentAddress" ColumnName="PermanentAddress" />
                 <ScalarProperty Name="Gender" ColumnName="Gender" />
                 <ScalarProperty Name="BirthDate" ColumnName="BirthDate" />

@@ -42,5 +42,9 @@ namespace NhaTroAnCu.Models
         [Display(Name = "Nơi thường trú")]
         public string PermanentAddress { get; set; }
         public string Photo { get; set; } // Đường dẫn file ảnh hiện tại (nếu có)
+        [Display(Name = "Dân tộc")]
+        public string Ethnicity { get; set; }        // Thêm mới
+        [Display(Name = "Biển số xe")]
+        public string VehiclePlate { get; set; }     // Thêm mới
     }
 }

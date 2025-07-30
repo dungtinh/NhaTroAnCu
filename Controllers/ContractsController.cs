@@ -56,8 +56,8 @@ namespace NhaTroAnCu.Controllers
                 DepositAmount = vm.DepositAmount,
                 Note = vm.Note,
                 Status = "Active",
-                ElectricityPrice = vm.ElectricityPrice, // Giá điện
-                WaterPrice = vm.WaterPrice              // Giá nước
+                ElectricityPrice = vm.ElectricityPrice,
+                WaterPrice = vm.WaterPrice
             };
 
             db.Contracts.Add(contract);
@@ -67,10 +67,14 @@ namespace NhaTroAnCu.Controllers
 
             for (int i = 0; i < vm.Tenants.Count; i++)
             {
-                string photoPath = null;
-                var file = photoList.ElementAtOrDefault(i);
+                string photoPaths = null;
+                var tenantPhotos = new List<string>();
 
-                if (file != null && file.ContentLength > 0)
+                // Xử lý upload nhiều ảnh cho mỗi tenant
+                // Lấy các file tương ứng với tenant hiện tại
+                var files = photoList.Skip(i * 10).Take(10).Where(f => f != null && f.ContentLength > 0).ToList();
+
+                foreach (var file in files)
                 {
                     string fileName = Path.GetFileNameWithoutExtension(file.FileName);
                     string ext = Path.GetExtension(file.FileName);
@@ -79,7 +83,13 @@ namespace NhaTroAnCu.Controllers
                     if (!Directory.Exists(serverPath)) Directory.CreateDirectory(serverPath);
                     string savePath = Path.Combine(serverPath, uniqueName);
                     file.SaveAs(savePath);
-                    photoPath = "/Uploads/TenantPhotos/" + uniqueName;
+                    tenantPhotos.Add("/Uploads/TenantPhotos/" + uniqueName);
+                }
+
+                // Lưu các đường dẫn ảnh, phân cách bằng dấu chấm phẩy
+                if (tenantPhotos.Any())
+                {
+                    photoPaths = string.Join(";", tenantPhotos);
                 }
 
                 var t = vm.Tenants[i];
@@ -91,7 +101,9 @@ namespace NhaTroAnCu.Controllers
                     BirthDate = t.BirthDate,
                     Gender = t.Gender,
                     PermanentAddress = t.PermanentAddress,
-                    Photo = photoPath
+                    Photo = photoPaths,
+                    Ethnicity = t.Ethnicity,
+                    VehiclePlate = t.VehiclePlate
                 };
                 db.Tenants.Add(tenant);
                 db.SaveChanges();
@@ -114,7 +126,6 @@ namespace NhaTroAnCu.Controllers
             db.SaveChanges();
             return RedirectToAction("Index", "Rooms");
         }
-
 
         // GET: /Contracts/End/5
         public ActionResult End(int id)
@@ -473,7 +484,9 @@ namespace NhaTroAnCu.Controllers
                     BirthDate = ct.Tenant.BirthDate,
                     Gender = ct.Tenant.Gender,
                     PermanentAddress = ct.Tenant.PermanentAddress,
-                    Photo = ct.Tenant.Photo
+                    Photo = ct.Tenant.Photo,
+                    Ethnicity = ct.Tenant.Ethnicity,
+                    VehiclePlate = ct.Tenant.VehiclePlate
                 }).ToList()
             };
 
@@ -491,7 +504,6 @@ namespace NhaTroAnCu.Controllers
                 return HttpNotFound();
 
             // Cập nhật thông tin hợp đồng
-
             contract.MoveInDate = vm.MoveInDate;
             contract.StartDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day);
             contract.EndDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day).AddMonths(vm.Months);
@@ -508,6 +520,25 @@ namespace NhaTroAnCu.Controllers
             foreach (var ct in contract.ContractTenants.Where(ct => !newTenantIds.Contains(ct.TenantId)).ToList())
             {
                 var tenant = db.Tenants.Find(ct.TenantId);
+
+                // Xóa các file ảnh cũ nếu có
+                if (tenant != null && !string.IsNullOrEmpty(tenant.Photo))
+                {
+                    var oldPhotos = tenant.Photo.Split(';');
+                    foreach (var oldPhoto in oldPhotos.Where(p => !string.IsNullOrWhiteSpace(p)))
+                    {
+                        try
+                        {
+                            var oldPath = Server.MapPath(oldPhoto);
+                            if (System.IO.File.Exists(oldPath))
+                            {
+                                System.IO.File.Delete(oldPath);
+                            }
+                        }
+                        catch { }
+                    }
+                }
+
                 db.ContractTenants.Remove(ct);
                 if (tenant != null)
                 {
@@ -516,14 +547,29 @@ namespace NhaTroAnCu.Controllers
             }
 
             var photoList = TenantPhotos?.ToList() ?? new List<HttpPostedFileBase>();
-            int photoIdx = 0;
+            int globalPhotoIndex = 0; // Index để theo dõi vị trí trong danh sách ảnh tổng
 
             // CẬP NHẬT tenant cũ và THÊM tenant mới
             foreach (var t in vm.Tenants)
             {
-                string photoPath = null;
-                var file = photoList.ElementAtOrDefault(photoIdx++);
-                if (file != null && file.ContentLength > 0)
+                string photoPaths = null;
+                var tenantPhotos = new List<string>();
+
+                // Lấy các file tương ứng với tenant hiện tại
+                // Giả sử mỗi tenant có thể có tối đa 10 ảnh
+                var currentTenantFiles = new List<HttpPostedFileBase>();
+                for (int j = 0; j < 10 && globalPhotoIndex < photoList.Count; j++)
+                {
+                    var file = photoList[globalPhotoIndex];
+                    if (file != null && file.ContentLength > 0)
+                    {
+                        currentTenantFiles.Add(file);
+                    }
+                    globalPhotoIndex++;
+                }
+
+                // Xử lý upload các ảnh mới
+                foreach (var file in currentTenantFiles)
                 {
                     string fileName = Path.GetFileNameWithoutExtension(file.FileName);
                     string ext = Path.GetExtension(file.FileName);
@@ -532,7 +578,7 @@ namespace NhaTroAnCu.Controllers
                     if (!Directory.Exists(serverPath)) Directory.CreateDirectory(serverPath);
                     string savePath = Path.Combine(serverPath, uniqueName);
                     file.SaveAs(savePath);
-                    photoPath = "/Uploads/TenantPhotos/" + uniqueName;
+                    tenantPhotos.Add("/Uploads/TenantPhotos/" + uniqueName);
                 }
 
                 if (t.Id > 0)
@@ -547,8 +593,34 @@ namespace NhaTroAnCu.Controllers
                         tenant.BirthDate = t.BirthDate;
                         tenant.Gender = t.Gender;
                         tenant.PermanentAddress = t.PermanentAddress;
-                        if (!string.IsNullOrEmpty(photoPath))
-                            tenant.Photo = photoPath;
+                        tenant.Ethnicity = t.Ethnicity;
+                        tenant.VehiclePlate = t.VehiclePlate;
+
+                        // Nếu có ảnh mới thì xóa ảnh cũ và cập nhật
+                        if (tenantPhotos.Any())
+                        {
+                            // Xóa ảnh cũ
+                            if (!string.IsNullOrEmpty(tenant.Photo))
+                            {
+                                var oldPhotos = tenant.Photo.Split(';');
+                                foreach (var oldPhoto in oldPhotos.Where(p => !string.IsNullOrWhiteSpace(p)))
+                                {
+                                    try
+                                    {
+                                        var oldPath = Server.MapPath(oldPhoto);
+                                        if (System.IO.File.Exists(oldPath))
+                                        {
+                                            System.IO.File.Delete(oldPath);
+                                        }
+                                    }
+                                    catch { }
+                                }
+                            }
+
+                            // Cập nhật ảnh mới
+                            tenant.Photo = string.Join(";", tenantPhotos);
+                        }
+                        // Nếu không có ảnh mới, giữ nguyên ảnh cũ
                     }
                 }
                 else
@@ -562,10 +634,13 @@ namespace NhaTroAnCu.Controllers
                         BirthDate = t.BirthDate,
                         Gender = t.Gender,
                         PermanentAddress = t.PermanentAddress,
-                        Photo = photoPath
+                        Photo = tenantPhotos.Any() ? string.Join(";", tenantPhotos) : null,
+                        Ethnicity = t.Ethnicity,
+                        VehiclePlate = t.VehiclePlate
                     };
                     db.Tenants.Add(tenant);
                     db.SaveChanges();
+
                     db.ContractTenants.Add(new ContractTenant
                     {
                         ContractId = contract.Id,

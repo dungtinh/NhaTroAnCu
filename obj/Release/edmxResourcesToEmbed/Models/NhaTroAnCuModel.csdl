@@ -95,6 +95,8 @@
     <Property Name="BirthDate" Type="DateTime" Precision="0" />
     <Property Name="Gender" Type="String" MaxLength="10" FixedLength="false" Unicode="true" />
     <Property Name="PermanentAddress" Type="String" MaxLength="255" FixedLength="false" Unicode="true" />
+    <Property Name="Ethnicity" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+    <Property Name="VehiclePlate" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
   </EntityType>
   <Association Name="FK__Contracts__RoomI__3C69FB99">
     <End Role="Rooms" Type="Self.Room" Multiplicity="1" />

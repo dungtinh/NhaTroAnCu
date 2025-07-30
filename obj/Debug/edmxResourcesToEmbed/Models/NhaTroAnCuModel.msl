@@ -76,6 +76,8 @@
     <EntitySetMapping Name="Tenants">
       <EntityTypeMapping TypeName="NhaTroAnCuModel.Tenant">
         <MappingFragment StoreEntitySet="Tenants">
+          <ScalarProperty Name="VehiclePlate" ColumnName="VehiclePlate" />
+          <ScalarProperty Name="Ethnicity" ColumnName="Ethnicity" />
           <ScalarProperty Name="PermanentAddress" ColumnName="PermanentAddress" />
           <ScalarProperty Name="Gender" ColumnName="Gender" />
           <ScalarProperty Name="BirthDate" ColumnName="BirthDate" />

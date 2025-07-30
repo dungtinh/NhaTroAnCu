@@ -161,10 +161,12 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
     <Property Name="FullName" Type="nvarchar" MaxLength="100" Nullable="false" />
     <Property Name="IdentityCard" Type="nvarchar" MaxLength="20" Nullable="false" />
     <Property Name="PhoneNumber" Type="nvarchar" MaxLength="20" />
-    <Property Name="Photo" Type="nvarchar" MaxLength="255" />
+    <Property Name="Photo" Type="nvarchar" MaxLength="1000" />
     <Property Name="BirthDate" Type="date" />
     <Property Name="Gender" Type="nvarchar" MaxLength="10" />
     <Property Name="PermanentAddress" Type="nvarchar" MaxLength="255" />
+    <Property Name="Ethnicity" Type="nvarchar" MaxLength="50" />
+    <Property Name="VehiclePlate" Type="nvarchar" MaxLength="20" />
   </EntityType>
   <EntityType Name="UtilityBills">
     <Key>

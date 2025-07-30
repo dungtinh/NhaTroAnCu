@@ -165,6 +165,8 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
     <Property Name="BirthDate" Type="date" />
     <Property Name="Gender" Type="nvarchar" MaxLength="10" />
     <Property Name="PermanentAddress" Type="nvarchar" MaxLength="255" />
+    <Property Name="Ethnicity" Type="nvarchar" MaxLength="50" />
+    <Property Name="VehiclePlate" Type="nvarchar" MaxLength="20" />
   </EntityType>
   <EntityType Name="UtilityBills">
     <Key>
