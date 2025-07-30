@@ -89,7 +89,7 @@
     <Property Name="FullName" Type="String" MaxLength="100" FixedLength="false" Unicode="true" Nullable="false" />
     <Property Name="IdentityCard" Type="String" MaxLength="20" FixedLength="false" Unicode="true" Nullable="false" />
     <Property Name="PhoneNumber" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
-    <Property Name="Photo" Type="String" MaxLength="255" FixedLength="false" Unicode="true" />
+    <Property Name="Photo" Type="String" MaxLength="1000" FixedLength="false" Unicode="true" />
     <NavigationProperty Name="ContractTenants" Relationship="Self.FK_ContractTenants_Tenants" FromRole="Tenants" ToRole="ContractTenants" />
     <NavigationProperty Name="Notifications" Relationship="Self.FK__Notificat__Tenan__4E88ABD4" FromRole="Tenants" ToRole="Notifications" />
     <Property Name="BirthDate" Type="DateTime" Precision="0" />

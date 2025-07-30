@@ -1,0 +1,234 @@
+﻿/* Set padding to keep content from hitting the edges */
+.body-content {
+    margin-top: 15px;
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+/* Override the default bootstrap behavior where horizontal description lists 
+   will truncate terms that are too long to fit in the left column 
+*/
+.dl-horizontal dt {
+    white-space: normal;
+}
+
+/* Set width on the form input elements since they're 100% wide by default */
+
+.container {
+    max-width: 100% !important;
+}
+
+.room-grid {
+    display: grid;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+/* Desktop lớn: 8 phòng/dòng */
+@media (min-width: 992px) {
+    .room-grid {
+        grid-template-columns: repeat(8, 1fr);
+    }
+}
+
+/* Tablet: 4 phòng/dòng */
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .room-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Điện thoại: 2 phòng/dòng */
+@media (max-width: 767.98px) {
+    .room-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.room-box {
+    border: 2px solid #ccc;
+    padding: 10px;
+    border-radius: 10px;
+    text-align: center;
+    height: 120px;
+    background-color: #f5f5f5;
+}
+input[readonly] {
+    background-color: #e0e0e0 !important; /* Màu ghi nhạt, hoặc bạn có thể dùng #f0f0f0, #ccc tùy ý */
+}
+
+
+
+.file-upload-container {
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.file-display {
+    display: flex;
+    align-items: center;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-top: 5px;
+    font-size: 14px;
+}
+
+    .file-display.has-file {
+        background: #d4edda;
+        border-color: #c3e6cb;
+        color: #155724;
+    }
+
+    .file-display i {
+        margin-right: 8px;
+        color: #6c757d;
+    }
+
+    .file-display.has-file i {
+        color: #28a745;
+    }
+
+.file-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-remove {
+    background: none;
+    border: none;
+    color: #dc3545;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 8px;
+    font-size: 12px;
+}
+
+    .file-remove:hover {
+        background: #f8d7da;
+    }
+
+.contract-card {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.contract-card-header {
+    background: linear-gradient(135deg, #fd7e14 0%, #e83e8c 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px 8px 0 0;
+    margin: 0;
+}
+
+.contract-card-body {
+    padding: 20px;
+}
+
+.tenant-card {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+    .tenant-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+
+.tenant-card-header {
+    background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+    color: white;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tenant-card-body {
+    padding: 20px;
+}
+
+.form-row {
+    margin-left: -5px;
+    margin-right: -5px;
+}
+
+    .form-row .form-group {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+
+.section-title {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.btn-custom {
+    border-radius: 25px;
+    padding: 8px 20px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+    .btn-custom:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+.photo-upload-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 2px dashed #dee2e6;
+    transition: all 0.3s ease;
+}
+
+    .photo-upload-section:hover {
+        border-color: #007bff;
+        background: #e3f2fd;
+    }
+
+.current-photo {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid #dee2e6;
+    text-align: center;
+}
+
+    .current-photo img {
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        margin-bottom: 10px;
+    }
+
+.readonly-field {
+    background: #e9ecef !important;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .contract-card-body {
+        padding: 15px;
+    }
+
+    .tenant-card-body {
+        padding: 15px;
+    }
+}

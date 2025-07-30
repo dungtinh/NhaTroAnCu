@@ -1,0 +1,393 @@
+﻿</table>@model NhaTroAnCu.Models.TenantContractListViewModel
+
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #003366 0%, #004080 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .filter-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .table-container {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .custom-table {
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+        .custom-table thead {
+            background: #003366;
+            color: white;
+        }
+
+            .custom-table thead th {
+                border: none;
+                padding: 12px;
+                font-weight: 600;
+                text-transform: uppercase;
+                font-size: 13px;
+                letter-spacing: 0.5px;
+            }
+
+                .custom-table thead th a {
+                    color: white;
+                    text-decoration: none;
+                }
+
+                    .custom-table thead th a:hover {
+                        color: #ffc107;
+                    }
+
+        .custom-table tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        .custom-table tbody tr:hover {
+            background-color: #e9ecef;
+            transition: background-color 0.2s;
+        }
+
+        .custom-table tbody td {
+            padding: 10px;
+            vertical-align: middle;
+        }
+
+    .btn-export {
+        background: #dc3545;
+        border: none;
+        padding: 10px 20px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: all 0.3s;
+    }
+
+        .btn-export:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+        }
+
+    .btn-filter {
+        background: #007bff;
+        border: none;
+        padding: 10px 20px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: all 0.3s;
+    }
+
+        .btn-filter:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+        }
+
+    .pagination .page-link {
+        color: #003366;
+        border-radius: 5px;
+        margin: 0 2px;
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: #003366;
+        border-color: #003366;
+    }
+
+    .form-control {
+        border-radius: 5px;
+        border: 1px solid #ced4da;
+    }
+
+        .form-control:focus {
+            border-color: #003366;
+            box-shadow: 0 0 0 0.2rem rgba(0, 51, 102, 0.25);
+        }
+
+    .btn-export-group {
+        display: flex;
+        gap: 5px;
+    }
+
+        .btn-export-group .btn {
+            padding: 8px 12px;
+            font-size: 14px;
+            border-radius: 4px;
+        }
+
+            .btn-export-group .btn i {
+                margin-right: 4px;
+            }
+</style>
+
+<div class="page-header">
+    <h2 class="mb-0"><i class="fas fa-users"></i> DANH SÁCH NGƯỜI THUÊ PHÒNG</h2>
+</div>
+
+<div class="filter-section">
+    <form method="get" class="form-inline" style="margin-bottom: 10px;">
+        <div class="row">
+            <div class="col-md-2">
+                <input type="text" name="searchName" placeholder="Họ tên" value="@Model.SearchName" class="form-control" />
+            </div>
+            <div class="col-md-2">
+                <input type="text" name="searchCard" placeholder="Số thẻ" value="@Model.SearchCard" class="form-control" />
+            </div>
+            <div class="col-md-2">
+                <input type="text" name="searchAddress" placeholder="Địa chỉ" value="@Model.SearchAddress" class="form-control" />
+            </div>
+            <div class="col-md-2">
+                <input type="text" name="fromDate" id="fromDate" class="form-control datepicker"
+                       value="@(Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : "")"
+                       placeholder="Từ ngày" autocomplete="off" />
+            </div>
+            <div class="col-md-2">
+                <input type="text" name="toDate" id="toDate" class="form-control datepicker"
+                       value="@(Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : "")"
+                       placeholder="Đến ngày" autocomplete="off" />
+            </div>
+            <div class="col-md-2">
+                <div class="d-flex">
+                    <button type="submit" class="btn btn-primary btn-filter mr-2">
+                        <i class="fas fa-search"></i> Lọc
+                    </button>
+                    <a class="btn btn-danger mr-1" target="_blank" style="margin-left: 5px;"
+                       href="@Url.Action("ExportToPdf", new {
+               searchName = Model.SearchName,
+               searchCard = Model.SearchCard,
+               searchAddress = Model.SearchAddress,
+               sortField = Model.SortField,
+               sortDirection = Model.SortDirection,
+               fromDate = (Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null),
+               toDate = (Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null)
+           })"
+                       title="Xuất PDF">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </a>
+                    <a class="btn btn-success" target="_blank" style="margin-left: 5px;"
+                       href="@Url.Action("ExportToWord", new {
+               searchName = Model.SearchName,
+               searchCard = Model.SearchCard,
+               searchAddress = Model.SearchAddress,
+               sortField = Model.SortField,
+               sortDirection = Model.SortDirection,
+               fromDate = (Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null),
+               toDate = (Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null)
+           })"
+                       title="Xuất Word">
+                        <i class="fas fa-file-word"></i> Word
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <table class="table table-bordered table-sm">
+        <thead>
+            <tr style="text-transform: uppercase;">
+                <th style="width: 50px; text-align: center;">STT</th>
+                <th>
+                    <a href="@Url.Action("Index", new { sortField="FullName", sortDirection = Model.SortField=="FullName" && Model.SortDirection=="asc"?"desc":"asc", page=Model.Page, pageSize=Model.PageSize, searchName=Model.SearchName, searchCard=Model.SearchCard, searchAddress=Model.SearchAddress, fromDate=(Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null), toDate=(Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null) })">
+                        Họ tên @(Model.SortField=="FullName" ? (Model.SortDirection=="asc"?"▲":"▼"):"")
+                    </a>
+                </th>
+                <th>Số thẻ</th>
+                <th>Giới tính</th>
+                <th>Dân tộc</th>
+                <th>Biển số xe</th>
+                <th>Địa chỉ</th>
+                <th>SĐT</th>
+                <th>Tên phòng</th>
+                <th>
+                    <a href="@Url.Action("Index", new { sortField="ContractSignedDate", sortDirection = Model.SortField=="ContractSignedDate" && Model.SortDirection=="asc"?"desc":"asc", page=Model.Page, pageSize=Model.PageSize, searchName=Model.SearchName, searchCard=Model.SearchCard, searchAddress=Model.SearchAddress, fromDate=(Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null), toDate=(Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null) })">
+                        Ngày ký @(Model.SortField=="ContractSignedDate" ? (Model.SortDirection=="asc"?"▲":"▼"):"")
+                    </a>
+                </th>
+                <th>
+                    <a href="@Url.Action("Index", new { sortField="MoveInDate", sortDirection = Model.SortField=="MoveInDate" && Model.SortDirection=="asc"?"desc":"asc", page=Model.Page, pageSize=Model.PageSize, searchName=Model.SearchName, searchCard=Model.SearchCard, searchAddress=Model.SearchAddress, fromDate=(Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null), toDate=(Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null) })">
+                        Ngày vào @(Model.SortField=="MoveInDate" ? (Model.SortDirection=="asc"?"▲":"▼"):"")
+                    </a>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td style="text-align: center;">@item.OrderNumber</td>
+                    <td>@item.FullName</td>
+                    <td>@item.IdentityCard</td>
+                    <td>@item.Gender</td>
+                    <td>@(item.Ethnicity ?? "Kinh")</td>
+                    <td>@(item.VehiclePlate ?? "-")</td>
+                    <td>@item.PermanentAddress</td>
+                    <td>@item.PhoneNumber</td>
+                    <td>@item.RoomName</td>
+                    <td>@item.ContractSignedDate.ToString("dd/MM/yyyy")</td>
+                    <td>@item.MoveInDate.ToString("dd/MM/yyyy")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <div class="text-muted">
+            Hiển thị @((Model.Page - 1) * Model.PageSize + 1) - @Math.Min(Model.Page * Model.PageSize, Model.TotalItems) trong tổng số @Model.TotalItems người thuê
+        </div>
+
+        @{
+            int totalPages = (int)Math.Ceiling((double)Model.TotalItems / Model.PageSize);
+            int currentPage = Model.Page;
+            int startPage = Math.Max(1, currentPage - 2);
+            int endPage = Math.Min(totalPages, currentPage + 2);
+            if (endPage - startPage < 4)
+            {
+                if (startPage == 1)
+                {
+                    endPage = Math.Min(totalPages, startPage + 4);
+                }
+                else if (endPage == totalPages)
+                {
+                    startPage = Math.Max(1, endPage - 4);
+                }
+            }
+        }
+
+        @if (totalPages > 1)
+        {
+            <nav aria-label="Page navigation">
+                <ul class="pagination mb-0">
+
+                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                        <a class="page-link"
+                           href="@Url.Action("Index", new {
+                               page = currentPage - 1,
+                               pageSize = Model.PageSize,
+                               searchName = Model.SearchName,
+                               searchCard = Model.SearchCard,
+                               searchAddress = Model.SearchAddress,
+                               sortField = Model.SortField,
+                               sortDirection = Model.SortDirection,
+                               fromDate = (Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null),
+                               toDate = (Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null)
+                           })"
+                           tabindex="-1"><i class="fas fa-chevron-left"></i></a>
+                    </li>
+
+                    @if (startPage > 1)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@Url.Action("Index", new {
+                                page = 1,
+                                pageSize = Model.PageSize,
+                                searchName = Model.SearchName,
+                                searchCard = Model.SearchCard,
+                                searchAddress = Model.SearchAddress,
+                                sortField = Model.SortField,
+                                sortDirection = Model.SortDirection,
+                                fromDate = (Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null),
+                                toDate = (Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null)
+                            })">1</a>
+                        </li>
+                        if (startPage > 2)
+                        {
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        }
+                    }
+
+                    @for (int i = startPage; i <= endPage; i++)
+                    {
+                        <li class="page-item @(i == currentPage ? "active" : "")">
+                            <a class="page-link" href="@Url.Action("Index", new {
+                                page = i,
+                                pageSize = Model.PageSize,
+                                searchName = Model.SearchName,
+                                searchCard = Model.SearchCard,
+                                searchAddress = Model.SearchAddress,
+                                sortField = Model.SortField,
+                                sortDirection = Model.SortDirection,
+                                fromDate = (Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null),
+                                toDate = (Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null)
+                            })">@i</a>
+                        </li>
+                    }
+
+                    @if (endPage < totalPages)
+                    {
+                        if (endPage < totalPages - 1)
+                        {
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        }
+                        <li class="page-item">
+                            <a class="page-link" href="@Url.Action("Index", new {
+                                page = totalPages,
+                                pageSize = Model.PageSize,
+                                searchName = Model.SearchName,
+                                searchCard = Model.SearchCard,
+                                searchAddress = Model.SearchAddress,
+                                sortField = Model.SortField,
+                                sortDirection = Model.SortDirection,
+                                fromDate = (Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null),
+                                toDate = (Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null)
+                            })">@totalPages</a>
+                        </li>
+                    }
+
+                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                        <a class="page-link"
+                           href="@Url.Action("Index", new {
+                               page = currentPage + 1,
+                               pageSize = Model.PageSize,
+                               searchName = Model.SearchName,
+                               searchCard = Model.SearchCard,
+                               searchAddress = Model.SearchAddress,
+                               sortField = Model.SortField,
+                               sortDirection = Model.SortDirection,
+                               fromDate = (Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null),
+                               toDate = (Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null)
+                           })"><i class="fas fa-chevron-right"></i></a>
+                    </li>
+                </ul>
+            </nav>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Khởi tạo datepicker cho các trường ngày
+            $('.datepicker').datepicker({
+                format: 'dd/mm/yyyy',
+                autoclose: true,
+                todayHighlight: true,
+                language: 'vi'
+            });
+
+            // Hiệu ứng hover cho các nút
+            $('.btn').hover(
+                function () { $(this).addClass('shadow'); },
+                function () { $(this).removeClass('shadow'); }
+            );
+
+            // Tooltip cho các icon
+            $('[data-toggle="tooltip"]').tooltip();
+        });
+    </script>
+}
