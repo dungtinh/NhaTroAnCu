@@ -17,6 +17,8 @@ namespace NhaTroAnCu.Models
         public string Photo { get; set; }
         public DateTime ContractSignedDate { get; set; }
         public DateTime MoveInDate { get; set; }
+        public string Ethnicity { get; set; }      // Thêm mới
+        public string VehiclePlate { get; set; }   // Thêm mới
     }
 
     public class TenantContractListViewModel

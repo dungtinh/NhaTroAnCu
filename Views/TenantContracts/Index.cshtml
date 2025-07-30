@@ -209,6 +209,8 @@
                 </th>
                 <th>Số thẻ</th>
                 <th>Giới tính</th>
+                <th>Dân tộc</th>
+                <th>Biển số xe</th>
                 <th>Địa chỉ</th>
                 <th>SĐT</th>
                 <th>Tên phòng</th>
@@ -232,6 +234,8 @@
                     <td>@item.FullName</td>
                     <td>@item.IdentityCard</td>
                     <td>@item.Gender</td>
+                    <td>@(item.Ethnicity ?? "Kinh")</td>
+                    <td>@(item.VehiclePlate ?? "-")</td>
                     <td>@item.PermanentAddress</td>
                     <td>@item.PhoneNumber</td>
                     <td>@item.RoomName</td>

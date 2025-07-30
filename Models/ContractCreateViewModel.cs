@@ -32,6 +32,8 @@ namespace NhaTroAnCu.Models
         public DateTime? BirthDate { get; set; }
         public string Gender { get; set; }
         public string PermanentAddress { get; set; }
+        public string Ethnicity { get; set; }        // Thêm mới
+        public string VehiclePlate { get; set; }     // Thêm mới
     }
 
 }

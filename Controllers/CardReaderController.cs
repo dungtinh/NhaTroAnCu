@@ -17,106 +17,139 @@ namespace NhaTroAnCu.Controllers
 {
     public class CardReaderController : Controller
     {
-
         private NhaTroAnCuEntities db = new NhaTroAnCuEntities();
         private const string ApiEndpoint = "https://api.fpt.ai/vision/idr/vnm";
 
         [HttpPost]
-        public async Task<ActionResult> ReadCCCD(HttpPostedFileBase inputFile)
+        public async Task<ActionResult> ReadCCCD(HttpPostedFileBase[] inputFiles)
         {
             string apiKey = db.FPTReaderAPIs.Single(x => x.Status).ApiKey;
-            if (inputFile == null || inputFile.ContentLength == 0)
+
+            if (inputFiles == null || inputFiles.Length == 0 || inputFiles.All(f => f == null || f.ContentLength == 0))
             {
                 return Json(new { success = false, message = "Yêu cầu chọn file." });
             }
+
             try
             {
-                if (inputFile.ContentType.StartsWith("image/"))
+                CardData combinedData = new CardData();
+                bool hasFront = false;
+                bool hasBack = false;
+                bool hasError = false;
+                List<string> processedResults = new List<string>();
+
+                // Xử lý từng file
+                foreach (var inputFile in inputFiles)
                 {
-                    // Đặt lại vị trí stream
-                    inputFile.InputStream.Position = 0;
-                    using (Image originalImage = Image.FromStream(inputFile.InputStream))
+                    if (inputFile != null && inputFile.ContentLength > 0)
                     {
-                        return await ProcessImages(originalImage, inputFile.FileName, apiKey);
+                        if (inputFile.ContentType.StartsWith("image/"))
+                        {
+                            inputFile.InputStream.Position = 0;
+                            using (Image originalImage = Image.FromStream(inputFile.InputStream))
+                            {
+                                using (MemoryStream ms = new MemoryStream())
+                                {
+                                    originalImage.Save(ms, ImageFormat.Jpeg);
+                                    ms.Position = 0;
+
+                                    string fileName = Path.GetFileNameWithoutExtension(inputFile.FileName) + "_" + Guid.NewGuid().ToString() + ".jpg";
+                                    ApiResponse currentResponse = await ReadCCCDFromStreamAsync(ms, fileName, apiKey);
+
+                                    if (currentResponse.errorCode == 0 && currentResponse.data != null && currentResponse.data.Count > 0)
+                                    {
+                                        CardData currentData = currentResponse.data[0];
+                                        string imageType = DetermineImageType(currentData);
+
+                                        processedResults.Add($"{inputFile.FileName}: {imageType}");
+
+                                        if (imageType.Contains("Mặt trước"))
+                                        {
+                                            MergeFrontData(combinedData, currentData);
+                                            hasFront = true;
+                                        }
+                                        else if (imageType.Contains("Mặt sau"))
+                                        {
+                                            MergeBackData(combinedData, currentData);
+                                            hasBack = true;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        processedResults.Add($"{inputFile.FileName}: Không nhận diện được");
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-                else
+
+                // Tạo response
+                ApiResponse finalResponse = new ApiResponse
                 {
-                    return Json(new { success = false, message = "Invalid file type." });
+                    errorCode = (!hasFront && !hasBack) ? 1 : 0,
+                    errorMessage = "",
+                    data = new List<CardData> { combinedData }
+                };
+
+                // Thêm thông báo về kết quả xử lý
+                string processMessage = string.Join("; ", processedResults);
+
+                if (!hasFront)
+                {
+                    finalResponse.errorMessage += "Chưa có mặt trước CCCD. ";
                 }
+                if (!hasBack)
+                {
+                    finalResponse.errorMessage += "Chưa có mặt sau CCCD. ";
+                }
+
+                finalResponse.errorMessage += processMessage;
+
+                return Json(new { success = !hasError || (hasFront || hasBack), data = finalResponse });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = "An unexpected error occurred: " + ex.Message });
+                return Json(new { success = false, message = "Lỗi xử lý: " + ex.Message });
             }
         }
-        private async Task<ActionResult> ProcessImages(Image img, string originalFileName, string apiKey)
+
+        // Hàm xác định loại ảnh (mặt trước/mặt sau)
+        private string DetermineImageType(CardData data)
         {
-            CardData combinedData = new CardData(); // KHÔNG khởi tạo giá trị mặc định
-            bool hasFront = false;
-            bool hasBack = false;
-            bool hasError = false;
-            try
-            {
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    img.Save(ms, ImageFormat.Jpeg);
-                    ms.Position = 0;
-                    string fileName = Path.GetFileNameWithoutExtension(originalFileName) + "_" + Guid.NewGuid().ToString() + ".jpg";
-                    ApiResponse currentResponse = await ReadCCCDFromStreamAsync(ms, fileName, apiKey);
+            if (data == null) return "Không xác định";
 
-                    if (currentResponse.errorCode == 0 && currentResponse.data != null && currentResponse.data.Count > 0)
-                    {
-                        CardData currentData = currentResponse.data[0];
-
-                        if (currentData.type == "new" || currentData.type == "old" || currentData.type.Contains("front"))
-                        {
-                            MergeFrontData(combinedData, currentData);
-                            hasFront = true;
-                        }
-                        else if (currentData.type == "new_back" || currentData.type == "old_back" || currentData.type.Contains("back"))
-                        {
-                            MergeBackData(combinedData, currentData);
-                            hasBack = true;
-                        }
-                    }
-                    else
-                    {
-                        hasError = true;
-                    }
-                }
-            }
-            catch (Exception ex)
+            // Kiểm tra dựa trên type
+            if (!string.IsNullOrEmpty(data.type))
             {
-                hasError = true;
-            }
-            finally
-            {
-                img.Dispose();
+                if (data.type == "new" || data.type == "old" || data.type.Contains("front"))
+                    return "Mặt trước CCCD";
+                if (data.type == "new_back" || data.type == "old_back" || data.type.Contains("back"))
+                    return "Mặt sau CCCD";
             }
 
-            ApiResponse finalResponse = new ApiResponse
-            {
-                errorCode = hasError ? 1 : 0,  // Nếu có lỗi nào thì errorCode != 0
-                errorMessage = hasError ? "Error processing one or more images." : "",
-                data = new List<CardData> { combinedData } // Trả về MỘT CardData
-            };
-            if (!string.IsNullOrEmpty(finalResponse.errorMessage))
-            {
-                finalResponse.errorCode = 1;
-            }
-            if (!hasFront)
-            {
-                finalResponse.errorMessage += " Front side of ID card is missing.";
-            }
-            if (!hasBack)
-            {
-                finalResponse.errorMessage += " Back side of ID card is missing.";
-            }
-            return Json(new { success = !hasError, data = finalResponse });
+            // Kiểm tra dựa trên các trường dữ liệu
+            bool hasFrontFields = !string.IsNullOrEmpty(data.id) ||
+                                 !string.IsNullOrEmpty(data.name) ||
+                                 !string.IsNullOrEmpty(data.dob) ||
+                                 !string.IsNullOrEmpty(data.address);
+
+            bool hasBackFields = !string.IsNullOrEmpty(data.ethnicity) ||
+                                !string.IsNullOrEmpty(data.religion) ||
+                                !string.IsNullOrEmpty(data.features) ||
+                                !string.IsNullOrEmpty(data.issue_date);
+
+            if (hasFrontFields && !hasBackFields)
+                return "Mặt trước CCCD";
+            else if (!hasFrontFields && hasBackFields)
+                return "Mặt sau CCCD";
+            else if (hasFrontFields && hasBackFields)
+                return "CCCD đầy đủ";
+            else
+                return "Không phải CCCD";
         }
 
-        // Hàm merge dữ liệu mặt TRƯỚC (CHỈ kiểm tra null hoặc rỗng)
+        // Các hàm khác giữ nguyên...
         private void MergeFrontData(CardData combined, CardData front)
         {
             if (!string.IsNullOrEmpty(front.id)) combined.id = front.id;
@@ -136,7 +169,7 @@ namespace NhaTroAnCu.Controllers
 
             if (front.address_entities != null)
             {
-                if (combined.address_entities == null) combined.address_entities = new AddressEntities(); // Khởi tạo nếu chưa có
+                if (combined.address_entities == null) combined.address_entities = new AddressEntities();
                 if (!string.IsNullOrEmpty(front.address_entities.province)) combined.address_entities.province = front.address_entities.province;
                 if (!string.IsNullOrEmpty(front.address_entities.district)) combined.address_entities.district = front.address_entities.district;
                 if (!string.IsNullOrEmpty(front.address_entities.ward)) combined.address_entities.ward = front.address_entities.ward;
@@ -149,7 +182,6 @@ namespace NhaTroAnCu.Controllers
             if (!string.IsNullOrEmpty(front.type_new)) combined.type_new = front.type_new;
         }
 
-        // Hàm merge dữ liệu mặt SAU (CHỈ kiểm tra null hoặc rỗng)
         private void MergeBackData(CardData combined, CardData back)
         {
             if (!string.IsNullOrEmpty(back.ethnicity)) combined.ethnicity = back.ethnicity;
@@ -184,7 +216,6 @@ namespace NhaTroAnCu.Controllers
                     ApiResponse apiResponse = JsonConvert.DeserializeObject<ApiResponse>(jsonResponse);
                     apiResponse.filename = fileName;
                     return apiResponse;
-
                 }
             }
         }
