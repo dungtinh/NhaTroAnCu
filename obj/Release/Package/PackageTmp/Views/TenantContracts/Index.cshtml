@@ -164,7 +164,7 @@
             </div>
             <div class="col-md-2">
                 <div class="d-flex">
-                    <button type="submit" class="btn btn-primary btn-filter mr-2">
+                    <button type="submit" class="btn btn-secondary mr-2">
                         <i class="fas fa-search"></i> Lọc
                     </button>
                     <a class="btn btn-danger mr-1" target="_blank" style="margin-left: 5px;"
@@ -180,7 +180,7 @@
                        title="Xuất PDF">
                         <i class="fas fa-file-pdf"></i> PDF
                     </a>
-                    <a class="btn btn-success" target="_blank" style="margin-left: 5px;"
+                    <a class="btn btn-primary" target="_blank" style="margin-left: 5px;"
                        href="@Url.Action("ExportToWord", new {
                searchName = Model.SearchName,
                searchCard = Model.SearchCard,
@@ -192,6 +192,19 @@
            })"
                        title="Xuất Word">
                         <i class="fas fa-file-word"></i> Word
+                    </a>
+                    <a class="btn btn-success" target="_blank" style="margin-left: 5px;"
+                       href="@Url.Action("ExportToExcel", new {
+       searchName = Model.SearchName,
+       searchCard = Model.SearchCard,
+       searchAddress = Model.SearchAddress,
+       sortField = Model.SortField,
+       sortDirection = Model.SortDirection,
+       fromDate = (Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : null),
+       toDate = (Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : null)
+   })"
+                       title="Xuất Excel">
+                        <i class="fas fa-file-excel"></i> Excel
                     </a>
                 </div>
             </div>

@@ -11,6 +11,7 @@ using System.IO;
 using System.Web.Hosting;
 using System.Globalization;
 using iTextSharp.text.pdf.draw;
+using ClosedXML.Excel;
 
 namespace NhaTroAnCu.Controllers
 {
@@ -775,7 +776,7 @@ namespace NhaTroAnCu.Controllers
                 builder.InsertCell();
                 builder.Font.Bold = false;
                 builder.Write(item.Ethnicity ?? "Kinh");
-                builder.EndRow();                
+                builder.EndRow();
 
                 // Địa chỉ thường trú
                 builder.InsertCell();
@@ -811,7 +812,7 @@ namespace NhaTroAnCu.Controllers
                 builder.InsertCell();
                 builder.Font.Bold = false;
                 builder.Write(item.RoomName ?? "");
-                builder.EndRow();                
+                builder.EndRow();
 
                 // Ngày ký hợp đồng
                 builder.InsertCell();
@@ -849,6 +850,194 @@ namespace NhaTroAnCu.Controllers
             System.IO.File.Delete(filePath); // Xóa file temp
 
             return File(fileBytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", fileName);
+        }
+        public ActionResult ExportToExcel(
+      string searchName = "",
+      string searchCard = "",
+      string searchAddress = "",
+      string sortField = "ContractSignedDate",
+      string sortDirection = "desc",
+      string fromDate = null,
+      string toDate = null)
+        {
+            DateTime? from = null, to = null;
+            if (!string.IsNullOrEmpty(fromDate))
+                from = DateTime.ParseExact(fromDate, "dd/MM/yyyy", CultureInfo.InvariantCulture);
+            if (!string.IsNullOrEmpty(toDate))
+                to = DateTime.ParseExact(toDate, "dd/MM/yyyy", CultureInfo.InvariantCulture);
+
+            var query = from ct in db.ContractTenants
+                        join t in db.Tenants on ct.TenantId equals t.Id
+                        join c in db.Contracts on ct.ContractId equals c.Id
+                        join r in db.Rooms on c.RoomId equals r.Id
+                        select new
+                        {
+                            t.FullName,
+                            t.BirthDate,
+                            t.Gender,
+                            t.IdentityCard,
+                            t.Ethnicity,
+                            t.VehiclePlate,
+                            t.PermanentAddress,
+                            ContractSignedDate = c.StartDate,
+                            RoomName = r.Name
+                        };
+
+            if (!string.IsNullOrEmpty(searchName))
+                query = query.Where(x => x.FullName.Contains(searchName));
+            if (!string.IsNullOrEmpty(searchCard))
+                query = query.Where(x => x.IdentityCard.Contains(searchCard));
+            if (!string.IsNullOrEmpty(searchAddress))
+                query = query.Where(x => x.PermanentAddress.Contains(searchAddress));
+            if (from.HasValue)
+                query = query.Where(x => x.ContractSignedDate >= from.Value);
+            if (to.HasValue)
+                query = query.Where(x => x.ContractSignedDate <= to.Value);
+
+            switch (sortField)
+            {
+                case "FullName":
+                    query = sortDirection == "asc" ? query.OrderBy(x => x.FullName) : query.OrderByDescending(x => x.FullName);
+                    break;
+                case "ContractSignedDate":
+                    query = sortDirection == "asc" ? query.OrderBy(x => x.ContractSignedDate) : query.OrderByDescending(x => x.ContractSignedDate);
+                    break;
+                default:
+                    query = sortDirection == "asc" ? query.OrderBy(x => x.ContractSignedDate) : query.OrderByDescending(x => x.ContractSignedDate);
+                    break;
+            }
+
+            var items = query.ToList();
+            int tongSoPhong = db.Rooms.Count();
+
+            using (var workbook = new XLWorkbook())
+            {
+                var ws = workbook.Worksheets.Add("Thông Tin Lưu Trú");
+
+                // ===== HEADER THÔNG TIN NHÀ TRỌ =====
+                ws.Range("A1:J1").Merge().Value = "CƠ SỞ NHÀ TRỌ: NHÀ TRỌ AN CƯ";
+                ws.Range("A2:J2").Merge().Value = "ĐỊA CHỈ: THÔN ĐÌNH NGỌ (ẤP), XÃ HỒNG PHONG, HUYỆN AN DƯƠNG, HẢI PHÒNG";
+                ws.Range("A3:J3").Merge().Value = "CHỦ NHÀ TRỌ: TẠ NGỌC DUY - CCCD: 034082002422";
+                ws.Range("A4:J4").Merge().Value = "ĐIỆN THOẠI: 0975092833";
+                ws.Range("A5:J5").Merge().Value = $"Tổng số phòng: {tongSoPhong}";
+                ws.Range("A1:J5").Style.Font.Bold = true;
+                ws.Range("A1:J5").Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                ws.Range("A1:J5").Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                ws.Range("A1:J5").Style.Fill.BackgroundColor = XLColor.WhiteSmoke;
+
+                // ===== TIÊU ĐỀ BẢNG =====
+                ws.Range("A7:J7").Merge().Value = "DANH SÁCH LƯU TRÚ";
+                ws.Range("A7:J7").Style.Font.Bold = true;
+                ws.Range("A7:J7").Style.Font.FontSize = 14;
+                ws.Range("A7:J7").Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                ws.Range("A7:J7").Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                ws.Row(7).Height = 25;
+
+                // ===== HEADER CỘT =====
+                ws.Cell(8, 1).Value = "STT";
+                ws.Cell(8, 2).Value = "Họ và Tên";
+                ws.Cell(8, 3).Value = "Năm sinh";
+                ws.Cell(8, 4).Value = "Giới tính";
+                ws.Cell(8, 5).Value = "SỐ CCCD";
+                ws.Cell(8, 6).Value = "Dân tộc";
+                ws.Cell(8, 7).Value = "Phương tiện";
+                ws.Cell(8, 8).Value = "ĐKTT";
+                ws.Cell(8, 9).Value = "NGÀY ĐK";
+                ws.Cell(8, 10).Value = "P/Ở";
+                ws.Range("A8:J8").Style.Font.Bold = true;
+                ws.Range("A8:J8").Style.Fill.BackgroundColor = XLColor.LightBlue;
+                ws.Range("A8:J8").Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                ws.Range("A8:J8").Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                ws.Range("A8:J8").Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                ws.Row(8).Height = 20;
+
+                // ===== DATA =====
+                int row = 9;
+                int stt = 1;
+                foreach (var item in items)
+                {
+                    ws.Cell(row, 1).Value = stt++;
+                    ws.Cell(row, 2).Value = item.FullName;
+                    ws.Cell(row, 3).Value = item.BirthDate?.ToString("yyyy");
+                    ws.Cell(row, 4).Value = item.Gender;
+                    ws.Cell(row, 5).Value = item.IdentityCard;
+                    ws.Cell(row, 6).Value = item.Ethnicity;
+                    ws.Cell(row, 7).Value = item.VehiclePlate;
+                    //ws.Cell(row, 8).Value = item.PermanentAddress;
+                    ws.Cell(row, 8).Value = WrapText(item.PermanentAddress, 20);
+                    ws.Cell(row, 8).Style.Alignment.WrapText = true;
+                    ws.Cell(row, 9).Value = item.ContractSignedDate.ToString("dd/MM/yyyy");
+                    ws.Cell(row, 10).Value = item.RoomName;
+
+                    // Căn trái cho Họ tên, ĐKTT, Phương tiện
+                    ws.Cell(row, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                    ws.Cell(row, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                    ws.Cell(row, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+
+                    // Chữ thường (không in đậm)
+                    ws.Range(row, 1, row, 10).Style.Font.Bold = false;
+
+                    // Border và căn giữa mặc định
+                    ws.Range(row, 1, row, 10).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    ws.Range(row, 1, row, 10).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    ws.Range(row, 1, row, 10).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                    ws.Range(row, 1, row, 10).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    // Dòng chẵn lẻ
+                    if ((row - 9) % 2 == 1)
+                        ws.Range(row, 1, row, 10).Style.Fill.BackgroundColor = XLColor.White;
+                    else
+                        ws.Range(row, 1, row, 10).Style.Fill.BackgroundColor = XLColor.LightGray;
+
+                    row++;
+                }
+
+                ws.Columns().AdjustToContents();
+                ws.SheetView.FreezeRows(8);
+
+                // ===== PAGE SETUP =====
+                ws.PageSetup.PageOrientation = XLPageOrientation.Portrait;
+                ws.PageSetup.PagesWide = 1;
+                ws.PageSetup.PagesTall = 1;
+                ws.PageSetup.PageOrientation = XLPageOrientation.Portrait;
+
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    stream.Position = 0;
+                    return File(stream.ToArray(),
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        "ThongTinLuuTru.xlsx");
+                }
+            }
+        }
+        string WrapText(string text, int maxLength = 20)
+        {
+            if (string.IsNullOrWhiteSpace(text) || text.Length <= maxLength)
+                return text;
+
+            var result = new List<string>();
+            int start = 0;
+            while (start < text.Length)
+            {
+                // Đoạn còn lại ngắn hơn maxLength
+                if (text.Length - start <= maxLength)
+                {
+                    result.Add(text.Substring(start));
+                    break;
+                }
+                // Tìm dấu cách gần nhất trước maxLength
+                int end = start + maxLength;
+                int spaceIndex = text.LastIndexOf(' ', end, maxLength);
+                if (spaceIndex <= start) // Không có dấu cách, phải cắt cứng
+                    spaceIndex = end;
+                result.Add(text.Substring(start, spaceIndex - start).Trim());
+                start = spaceIndex;
+                // Bỏ qua dấu cách đầu dòng tiếp theo nếu có
+                while (start < text.Length && text[start] == ' ')
+                    start++;
+            }
+            return string.Join(Environment.NewLine, result);
         }
     }
 }

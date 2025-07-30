@@ -33,7 +33,7 @@ namespace NhaTroAnCu.Controllers
                 WaterPrice = 15000,
             });
         }
-        
+
         // GET: /Contracts/End/5
         public ActionResult End(int id)
         {
@@ -400,7 +400,7 @@ namespace NhaTroAnCu.Controllers
             ViewBag.RoomList = new SelectList(db.Rooms, "Id", "Name", vm.RoomId);
             return View(vm);
         }
-        
+
         [HttpPost]
         public ActionResult ExtendContract(int contractId, int extendMonths, string note)
         {
@@ -614,158 +614,6 @@ namespace NhaTroAnCu.Controllers
 
             db.SaveChanges();
             return RedirectToAction("Index", "Rooms");
-        }
-
-        // POST: Contracts/Edit/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Edit(ContractEditViewModel vm, IEnumerable<HttpPostedFileBase> TenantPhotos)
-        {
-            var contract = db.Contracts.Include("ContractTenants.Tenant").FirstOrDefault(c => c.Id == vm.Id);
-            if (contract == null)
-                return HttpNotFound();
-
-            // Update contract information
-            contract.MoveInDate = vm.MoveInDate;
-            contract.StartDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day);
-            contract.EndDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day).AddMonths(vm.Months);
-            contract.PriceAgreed = vm.PriceAgreed;
-            contract.DepositAmount = vm.DepositAmount;
-            contract.ElectricityPrice = vm.ElectricityPrice;
-            contract.WaterPrice = vm.WaterPrice;
-
-            // Handle tenant mapping (add, remove, update)
-            var oldTenantIds = contract.ContractTenants.Select(ct => ct.TenantId).ToList();
-            var newTenantIds = vm.Tenants.Where(t => t.Id > 0).Select(t => t.Id).ToList();
-
-            // Remove tenants that are no longer in the contract
-            foreach (var ct in contract.ContractTenants.Where(ct => !newTenantIds.Contains(ct.TenantId)).ToList())
-            {
-                var tenant = db.Tenants.Find(ct.TenantId);
-
-                // Delete old photo files if any
-                if (tenant != null && !string.IsNullOrEmpty(tenant.Photo))
-                {
-                    var oldPhotos = tenant.Photo.Split(';');
-                    foreach (var oldPhoto in oldPhotos.Where(p => !string.IsNullOrWhiteSpace(p)))
-                    {
-                        try
-                        {
-                            var oldPath = Server.MapPath(oldPhoto);
-                            if (System.IO.File.Exists(oldPath))
-                            {
-                                System.IO.File.Delete(oldPath);
-                            }
-                        }
-                        catch { }
-                    }
-                }
-
-                db.ContractTenants.Remove(ct);
-                if (tenant != null)
-                {
-                    db.Tenants.Remove(tenant);
-                }
-            }
-
-            // Group uploaded files by tenant index
-            var photosByTenant = GroupPhotosByTenant(TenantPhotos, vm.Tenants.Count);
-
-            // Update existing tenants and add new tenants
-            for (int i = 0; i < vm.Tenants.Count; i++)
-            {
-                var t = vm.Tenants[i];
-                string photoPaths = null;
-                var tenantPhotos = new List<string>();
-
-                // Get photos specifically for this tenant
-                if (photosByTenant.ContainsKey(i))
-                {
-                    var files = photosByTenant[i];
-                    foreach (var file in files)
-                    {
-                        string fileName = Path.GetFileNameWithoutExtension(file.FileName);
-                        string ext = Path.GetExtension(file.FileName);
-                        string uniqueName = fileName + "_" + Guid.NewGuid().ToString("N") + ext;
-                        string serverPath = Server.MapPath("~/Uploads/TenantPhotos/");
-                        if (!Directory.Exists(serverPath)) Directory.CreateDirectory(serverPath);
-                        string savePath = Path.Combine(serverPath, uniqueName);
-                        file.SaveAs(savePath);
-                        tenantPhotos.Add("/Uploads/TenantPhotos/" + uniqueName);
-                    }
-                }
-
-                if (t.Id > 0)
-                {
-                    // Update existing tenant
-                    var tenant = db.Tenants.Find(t.Id);
-                    if (tenant != null)
-                    {
-                        tenant.FullName = t.FullName;
-                        tenant.IdentityCard = t.IdentityCard;
-                        tenant.PhoneNumber = t.PhoneNumber;
-                        tenant.BirthDate = t.BirthDate;
-                        tenant.Gender = t.Gender;
-                        tenant.PermanentAddress = t.PermanentAddress;
-                        tenant.Ethnicity = t.Ethnicity;
-                        tenant.VehiclePlate = t.VehiclePlate;
-
-                        // If there are new photos, delete old ones and update
-                        if (tenantPhotos.Any())
-                        {
-                            // Delete old photos
-                            if (!string.IsNullOrEmpty(tenant.Photo))
-                            {
-                                var oldPhotos = tenant.Photo.Split(';');
-                                foreach (var oldPhoto in oldPhotos.Where(p => !string.IsNullOrWhiteSpace(p)))
-                                {
-                                    try
-                                    {
-                                        var oldPath = Server.MapPath(oldPhoto);
-                                        if (System.IO.File.Exists(oldPath))
-                                        {
-                                            System.IO.File.Delete(oldPath);
-                                        }
-                                    }
-                                    catch { }
-                                }
-                            }
-
-                            // Update with new photos
-                            tenant.Photo = string.Join(";", tenantPhotos);
-                        }
-                        // If no new photos, keep existing photos
-                    }
-                }
-                else
-                {
-                    // Add new tenant
-                    var tenant = new Tenant
-                    {
-                        FullName = t.FullName,
-                        IdentityCard = t.IdentityCard,
-                        PhoneNumber = t.PhoneNumber,
-                        BirthDate = t.BirthDate,
-                        Gender = t.Gender,
-                        PermanentAddress = t.PermanentAddress,
-                        Photo = tenantPhotos.Any() ? string.Join(";", tenantPhotos) : null,
-                        Ethnicity = t.Ethnicity,
-                        VehiclePlate = t.VehiclePlate
-                    };
-                    db.Tenants.Add(tenant);
-                    db.SaveChanges();
-
-                    db.ContractTenants.Add(new ContractTenant
-                    {
-                        ContractId = contract.Id,
-                        TenantId = tenant.Id,
-                        CreatedAt = DateTime.Now
-                    });
-                }
-            }
-
-            db.SaveChanges();
-            return RedirectToAction("Details", "Rooms", new { id = contract.RoomId });
         }
 
         /// <summary>
@@ -1045,6 +893,288 @@ namespace NhaTroAnCu.Controllers
                     System.Diagnostics.Debug.WriteLine($"Error deleting photo {oldPhoto}: {ex.Message}");
                 }
             }
+        }
+        // Cập nhật phương thức Edit trong ContractsController.cs
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Edit(ContractEditViewModel vm)
+        {
+            var contract = db.Contracts.Include("ContractTenants.Tenant").FirstOrDefault(c => c.Id == vm.Id);
+            if (contract == null)
+                return HttpNotFound();
+
+            // Update contract information
+            contract.MoveInDate = vm.MoveInDate;
+            contract.StartDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day);
+            contract.EndDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day).AddMonths(vm.Months);
+            contract.PriceAgreed = vm.PriceAgreed;
+            contract.DepositAmount = vm.DepositAmount;
+            contract.ElectricityPrice = vm.ElectricityPrice;
+            contract.WaterPrice = vm.WaterPrice;
+
+            // Handle tenant mapping
+            var oldTenantIds = contract.ContractTenants.Select(ct => ct.TenantId).ToList();
+            var newTenantIds = vm.Tenants.Where(t => t.Id > 0).Select(t => t.Id).ToList();
+
+            // Remove tenants that are no longer in the contract
+            foreach (var ct in contract.ContractTenants.Where(ct => !newTenantIds.Contains(ct.TenantId)).ToList())
+            {
+                var tenant = db.Tenants.Find(ct.TenantId);
+                if (tenant != null && !string.IsNullOrEmpty(tenant.Photo))
+                {
+                    DeleteOldPhotos(tenant.Photo);
+                }
+                db.ContractTenants.Remove(ct);
+                if (tenant != null)
+                {
+                    db.Tenants.Remove(tenant);
+                }
+            }
+
+            // Process file uploads - Cải tiến logic xử lý
+            var allFiles = new List<HttpPostedFileBase>();
+            var filesByTenant = new Dictionary<int, List<HttpPostedFileBase>>();
+
+            // Thu thập tất cả files và phân loại theo tenant index
+            for (int i = 0; i < Request.Files.Count; i++)
+            {
+                var file = Request.Files[i];
+                if (file != null && file.ContentLength > 0)
+                {
+                    // Kiểm tra key name để xác định tenant index
+                    var key = Request.Files.AllKeys[i];
+                    if (key == "TenantPhotos")
+                    {
+                        // Sử dụng một cách khác để xác định tenant index
+                        // Dựa vào thứ tự upload hoặc metadata khác
+                        allFiles.Add(file);
+                    }
+                }
+            }
+
+            // Phương pháp mới: Phân bổ files dựa trên file name pattern
+            foreach (var file in allFiles)
+            {
+                int tenantIndex = ExtractTenantIndexFromFileName(file.FileName);
+                if (tenantIndex == -1)
+                {
+                    // Nếu không tìm thấy index trong filename, 
+                    // phân bổ dựa trên vị trí trong danh sách
+                    tenantIndex = DetermineTargetTenant(file, allFiles, vm.Tenants.Count);
+                }
+
+                if (!filesByTenant.ContainsKey(tenantIndex))
+                {
+                    filesByTenant[tenantIndex] = new List<HttpPostedFileBase>();
+                }
+                filesByTenant[tenantIndex].Add(file);
+            }
+
+            // Update existing tenants and add new tenants
+            for (int i = 0; i < vm.Tenants.Count; i++)
+            {
+                var t = vm.Tenants[i];
+                var tenantPhotos = new List<string>();
+
+                // Xử lý photos cho tenant này
+                if (filesByTenant.ContainsKey(i))
+                {
+                    foreach (var file in filesByTenant[i])
+                    {
+                        try
+                        {
+                            string savedPath = SaveTenantPhoto(file);
+                            if (!string.IsNullOrEmpty(savedPath))
+                            {
+                                tenantPhotos.Add(savedPath);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Error saving photo: {ex.Message}");
+                        }
+                    }
+                }
+
+                if (t.Id > 0)
+                {
+                    // Update existing tenant
+                    var tenant = db.Tenants.Find(t.Id);
+                    if (tenant != null)
+                    {
+                        tenant.FullName = t.FullName;
+                        tenant.IdentityCard = t.IdentityCard;
+                        tenant.PhoneNumber = t.PhoneNumber;
+                        tenant.BirthDate = t.BirthDate;
+                        tenant.Gender = t.Gender;
+                        tenant.PermanentAddress = t.PermanentAddress;
+                        tenant.Ethnicity = t.Ethnicity;
+                        tenant.VehiclePlate = t.VehiclePlate;
+
+                        // Only update photos if new ones are uploaded
+                        if (tenantPhotos.Any())
+                        {
+                            // Delete old photos
+                            if (!string.IsNullOrEmpty(tenant.Photo))
+                            {
+                                DeleteOldPhotos(tenant.Photo);
+                            }
+                            tenant.Photo = string.Join(";", tenantPhotos);
+                        }
+                        // Keep existing photos if no new ones uploaded
+                    }
+                }
+                else
+                {
+                    // Add new tenant
+                    var tenant = new Tenant
+                    {
+                        FullName = t.FullName,
+                        IdentityCard = t.IdentityCard,
+                        PhoneNumber = t.PhoneNumber,
+                        BirthDate = t.BirthDate,
+                        Gender = t.Gender,
+                        PermanentAddress = t.PermanentAddress,
+                        Photo = tenantPhotos.Any() ? string.Join(";", tenantPhotos) : null,
+                        Ethnicity = t.Ethnicity,
+                        VehiclePlate = t.VehiclePlate
+                    };
+                    db.Tenants.Add(tenant);
+                    db.SaveChanges();
+
+                    db.ContractTenants.Add(new ContractTenant
+                    {
+                        ContractId = contract.Id,
+                        TenantId = tenant.Id,
+                        CreatedAt = DateTime.Now
+                    });
+                }
+            }
+
+            db.SaveChanges();
+            return RedirectToAction("Details", "Rooms", new { id = contract.RoomId });
+        }
+
+        // Helper methods mới
+
+        /// <summary>
+        /// Trích xuất tenant index từ tên file
+        /// Ví dụ: "tenant_0_cccd.jpg" -> 0
+        /// </summary>
+        private int ExtractTenantIndexFromFileName(string fileName)
+        {
+            if (string.IsNullOrEmpty(fileName))
+                return -1;
+
+            // Pattern: tenant_X_ hoặc tenantX_
+            var patterns = new[] { @"tenant_(\d+)_", @"tenant(\d+)_" };
+
+            foreach (var pattern in patterns)
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(fileName, pattern);
+                if (match.Success && int.TryParse(match.Groups[1].Value, out int index))
+                {
+                    return index;
+                }
+            }
+
+            return -1;
+        }
+
+        /// <summary>
+        /// Xác định tenant target dựa trên vị trí và context
+        /// </summary>
+        private int DetermineTargetTenant(HttpPostedFileBase file, List<HttpPostedFileBase> allFiles, int tenantCount)
+        {
+            // Tìm vị trí của file trong danh sách
+            int fileIndex = allFiles.IndexOf(file);
+            if (fileIndex == -1) return 0;
+
+            // Phân bổ đều các files cho các tenants
+            int filesPerTenant = Math.Max(1, allFiles.Count / tenantCount);
+            int targetTenant = fileIndex / filesPerTenant;
+
+            // Đảm bảo không vượt quá số lượng tenant
+            return Math.Min(targetTenant, tenantCount - 1);
+        }
+
+        /// <summary>
+        /// Lưu ảnh tenant với error handling tốt hơn
+        /// </summary>
+        private string SaveTenantPhoto(HttpPostedFileBase file)
+        {
+            if (file == null || file.ContentLength == 0)
+                return null;
+
+            try
+            {
+                string fileName = Path.GetFileNameWithoutExtension(file.FileName);
+                string ext = Path.GetExtension(file.FileName);
+
+                // Tạo tên file unique
+                string uniqueName = $"{fileName}_{DateTime.Now.Ticks}_{Guid.NewGuid():N}{ext}";
+
+                string serverPath = Server.MapPath("~/Uploads/TenantPhotos/");
+                if (!Directory.Exists(serverPath))
+                {
+                    Directory.CreateDirectory(serverPath);
+                }
+
+                string savePath = Path.Combine(serverPath, uniqueName);
+                file.SaveAs(savePath);
+
+                return "/Uploads/TenantPhotos/" + uniqueName;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving file {file.FileName}: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Phương thức cải tiến để nhóm photos theo tenant
+        /// </summary>
+        private Dictionary<int, List<HttpPostedFileBase>> GroupPhotosByTenantImproved(int tenantCount)
+        {
+            var result = new Dictionary<int, List<HttpPostedFileBase>>();
+
+            // Initialize
+            for (int i = 0; i < tenantCount; i++)
+            {
+                result[i] = new List<HttpPostedFileBase>();
+            }
+
+            // Đọc thông tin từ form data để xác định chính xác file nào thuộc tenant nào
+            var tenantPhotoMappings = new Dictionary<string, int>();
+
+            for (int i = 0; i < Request.Files.Count; i++)
+            {
+                var file = Request.Files[i];
+                var key = Request.Files.AllKeys[i];
+
+                if (file != null && file.ContentLength > 0 && key == "TenantPhotos")
+                {
+                    // Kiểm tra xem có thông tin tenant index trong form không
+                    var tenantIndexKey = $"TenantPhotos_Index_{i}";
+                    if (Request.Form[tenantIndexKey] != null &&
+                        int.TryParse(Request.Form[tenantIndexKey], out int tenantIndex))
+                    {
+                        if (tenantIndex >= 0 && tenantIndex < tenantCount)
+                        {
+                            result[tenantIndex].Add(file);
+                            continue;
+                        }
+                    }
+
+                    // Fallback: phân bổ tuần tự
+                    int targetIndex = i % tenantCount;
+                    result[targetIndex].Add(file);
+                }
+            }
+
+            return result;
         }
     }
 }
