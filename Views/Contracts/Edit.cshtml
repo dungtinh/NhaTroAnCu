@@ -3,277 +3,396 @@
 @{
     ViewBag.Title = "Sửa hợp đồng";
 }
-<style>
-    .file-list {
-        max-height: 100px;
-        overflow-y: auto;
-        border: 1px solid #e0e0e0;
-        border-radius: 4px;
-        padding: 5px;
-        display: none;
-    }
 
-        .file-list.has-files {
-            display: block;
-        }
+<div class="edit-contract-container">
+    <div class="page-header">
+        <h2><i class="fas fa-edit"></i> Sửa hợp đồng thuê phòng</h2>
+    </div>
 
-    .file-item {
-        padding: 3px 5px;
-        background: #f8f9fa;
-        margin-bottom: 3px;
-        border-radius: 3px;
-        font-size: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
+    @using (Html.BeginForm("Edit", "Contracts", FormMethod.Post, new { enctype = "multipart/form-data" }))
+    {
+        @Html.AntiForgeryToken()
+        @Html.HiddenFor(m => m.Id)
 
-        .file-item button {
-            padding: 0 5px;
-            font-size: 10px;
-            border: none;
-            background: #dc3545;
-            color: white;
-            border-radius: 3px;
-            cursor: pointer;
-        }
+        <!-- Thông tin hợp đồng -->
+        <div class="edit-card">
+            <div class="section-title">
+                <i class="fas fa-file-contract"></i>
+                Thông tin hợp đồng
+            </div>
 
-    .scan-result {
-        margin-top: 10px;
-        padding: 10px;
-        border-radius: 5px;
-    }
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label><i class="fas fa-door-open"></i> Phòng</label>
+                    @Html.HiddenFor(m => m.RoomId)
+                    @Html.DropDownListFor(m => m.RoomId, (SelectList)ViewBag.RoomList, "Chọn phòng", new { @class = "form-control readonly-field", disabled = "disabled" })
+                    <small class="text-muted"><i class="fas fa-lock"></i> Không thể thay đổi phòng khi sửa hợp đồng</small>
+                </div>
+                <div class="form-group col-md-3">
+                    <label><i class="fas fa-calendar-alt"></i> Ngày bắt đầu</label>
+                    @Html.TextBoxFor(m => m.MoveInDate, "{0:dd/MM/yyyy}", new { @class = "form-control readonly-field", @readonly = "readonly" })
+                    <small class="text-muted"><i class="fas fa-lock"></i> Không thể thay đổi</small>
+                </div>
+                <div class="form-group col-md-3">
+                    <label><i class="fas fa-clock"></i> Số tháng thuê</label>
+                    @Html.TextBoxFor(m => m.Months, new { @class = "form-control", type = "number", min = 1 })
+                </div>
+            </div>
 
-        .scan-result.success {
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-        }
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label><i class="fas fa-money-bill-wave"></i> Giá thương lượng</label>
+                    @Html.TextBoxFor(m => m.PriceAgreed, new { @class = "form-control money" })
+                </div>
+                <div class="form-group col-md-6">
+                    <label><i class="fas fa-piggy-bank"></i> Tiền đặt cọc</label>
+                    @Html.TextBoxFor(m => m.DepositAmount, new { @class = "form-control money" })
+                </div>
+            </div>
 
-        .scan-result.partial {
-            background-color: #fff3cd;
-            border: 1px solid #ffeeba;
-            color: #856404;
-        }
-
-        .scan-result.error {
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-        }
-</style>
-<div class="container-fluid">
-    <div class="contract-card">
-        <div class="contract-card-header">
-            <h2><i class="fas fa-edit"></i> Sửa hợp đồng thuê phòng</h2>
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label><i class="fas fa-bolt"></i> Giá điện (VNĐ/kWh)</label>
+                    @Html.TextBoxFor(m => m.ElectricityPrice, new { @class = "form-control money" })
+                </div>
+                <div class="form-group col-md-6">
+                    <label><i class="fas fa-tint"></i> Giá nước (VNĐ/m³)</label>
+                    @Html.TextBoxFor(m => m.WaterPrice, new { @class = "form-control money" })
+                </div>
+            </div>
         </div>
-        <div class="contract-card-body">
-            @using (Html.BeginForm("Edit", "Contracts", FormMethod.Post, new { enctype = "multipart/form-data" }))
-            {
-                @Html.AntiForgeryToken()
-                @Html.HiddenFor(m => m.Id)
 
-                <!-- Thông tin hợp đồng -->
-                <div class="section-title">
-                    <i class="fas fa-info-circle"></i> Thông tin hợp đồng
-                </div>
+        <!-- Thông tin người thuê -->
+        <div class="edit-card">
+            <div class="section-title">
+                <i class="fas fa-users"></i>
+                Thông tin người thuê
+            </div>
 
-                <div class="form-row">
-                    <div class="form-group col-md-6">
-                        <label><i class="fas fa-door-open"></i> Phòng</label>
-                        @Html.HiddenFor(m => m.RoomId)
-                        @Html.DropDownListFor(m => m.RoomId, (SelectList)ViewBag.RoomList, "Chọn phòng", new { @class = "form-control readonly-field", disabled = "disabled" })
-                        <small class="text-muted"><i class="fas fa-lock"></i> Không thể thay đổi phòng khi sửa hợp đồng</small>
-                    </div>
-                    <div class="form-group col-md-3">
-                        <label><i class="fas fa-calendar-alt"></i> Ngày bắt đầu</label>
-                        @Html.TextBoxFor(m => m.MoveInDate, "{0:dd/MM/yyyy}", new { @class = "form-control readonly-field", @readonly = "readonly" })
-                        <small class="text-muted"><i class="fas fa-lock"></i> Không thể thay đổi ngày bắt đầu</small>
-                    </div>
-                    <div class="form-group col-md-3">
-                        <label><i class="fas fa-clock"></i> Số tháng thuê</label>
-                        @Html.TextBoxFor(m => m.Months, new { @class = "form-control", type = "number", min = 1 })
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group col-md-6">
-                        <label><i class="fas fa-money-bill-wave"></i> Giá thương lượng</label>
-                        @Html.TextBoxFor(m => m.PriceAgreed, new { @class = "form-control money" })
-                    </div>
-                    <div class="form-group col-md-6">
-                        <label><i class="fas fa-piggy-bank"></i> Tiền đặt cọc</label>
-                        @Html.TextBoxFor(m => m.DepositAmount, new { @class = "form-control money" })
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group col-md-6">
-                        <label><i class="fas fa-bolt"></i> Giá điện (VNĐ/kWh)</label>
-                        @Html.TextBoxFor(m => m.ElectricityPrice, new { @class = "form-control money" })
-                    </div>
-                    <div class="form-group col-md-6">
-                        <label><i class="fas fa-tint"></i> Giá nước (VNĐ/m³)</label>
-                        @Html.TextBoxFor(m => m.WaterPrice, new { @class = "form-control money" })
-                    </div>
-                </div>
-
-                <!-- Thông tin người thuê -->
-                <div class="section-title mt-4">
-                    <i class="fas fa-users"></i> Thông tin người thuê
-                </div>
-
-                <div id="tenantList">
-                    @for (int i = 0; i < Model.Tenants.Count; i++)
-                    {
-                        <div class="tenant-card">
-                            @Html.HiddenFor(m => m.Tenants[i].Id)
-                            <div class="tenant-card-header">
-                                <span><i class="fas fa-user"></i> Người thuê #@(i + 1)</span>
-                                @if (Model.Tenants.Count > 1)
-                                {
-                                    <button type="button" class="btn btn-sm btn-outline-light remove-tenant">
-                                        <i class="fas fa-trash"></i> Xóa
-                                    </button>
-                                }
-                            </div>
-                            <div class="tenant-card-body">
+            <div id="tenantList">
+                @for (int i = 0; i < Model.Tenants.Count; i++)
+                {
+                    <div class="tenant-card">
+                        @Html.HiddenFor(m => m.Tenants[i].Id)
+                        <div class="tenant-card-header">
+                            <span><i class="fas fa-user"></i> Người thuê #@(i + 1)</span>
+                            @if (Model.Tenants.Count > 1)
+                            {
+                                <button type="button" class="remove-tenant">
+                                    <i class="fas fa-trash"></i> Xóa
+                                </button>
+                            }
+                        </div>
+                        <div class="tenant-card-body">
+                            <div class="photo-section">
                                 <!-- Ảnh hiện tại -->
                                 @if (!string.IsNullOrEmpty(Model.Tenants[i].Photo))
                                 {
-                                    <div class="current-photo">
-                                        <label><i class="fas fa-image"></i> Giấy tờ mặt trước, sau</label><br />
-                                        <img src="@Url.Content(Model.Tenants[i].Photo)" style="width:120px;height:150px;object-fit:cover;" />
-                                        <div class="mt-2">
-                                            <small class="text-muted">
-                                                <i class="fas fa-info-circle"></i> Chọn file mới bên dưới để thay thế ảnh này
-                                            </small>
+                                    <div class="current-photos">
+                                        <h6><i class="fas fa-images"></i> Giấy tờ hiện tại - @Model.Tenants[i].FullName</h6>
+                                        <div class="photo-grid">
+                                            @{
+                                                var photos = Model.Tenants[i].Photo.Split(';');
+                                                var tenantIndex = i;
+                                                foreach (var photo in photos.Where(p => !string.IsNullOrWhiteSpace(p)))
+                                                {
+                                                    <div class="photo-thumbnail" onclick="showPhotoModal('@photo', @tenantIndex)">
+                                                        <img src="@Url.Content(photo)" alt="Giấy tờ người thuê @(tenantIndex + 1)" />
+                                                    </div>
+                                                }
+                                            }
                                         </div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle"></i> Click vào ảnh để xem chi tiết. Chọn file mới sẽ thay thế tất cả ảnh hiện tại.
+                                        </small>
                                     </div>
                                 }
                                 else
                                 {
-                                    <div class="current-photo">
-                                        <i class="fas fa-image text-muted" style="font-size: 3rem;"></i>
-                                        <p class="text-muted mt-2">Chưa có giấy tờ</p>
+                                    <div class="no-photo">
+                                        <i class="fas fa-image"></i>
+                                        <p>Chưa có giấy tờ</p>
                                     </div>
                                 }
 
-                                <!-- Upload ảnh CCCD mới -->
-                                <div class="photo-upload-section">
-                                    <div class="file-upload-container">
-                                        <label for="inputFile@(i)" class="btn btn-outline-primary btn-sm btn-file-select">
-                                            <i class="fas fa-upload"></i> Chọn CCCD/Hộ chiếu mới (có thể chọn nhiều ảnh)
-                                        </label>
-                                        <input type="file" id="inputFile@(i)" name="TenantPhotos" accept=".jpg,.jpeg,.png" style="display: none;" multiple />
-                                        <div id="fileName@(i)" class="file-display">
-                                            <i class="far fa-file-image"></i>
-                                            <span class="file-name text-muted">Chưa chọn file mới</span>
-                                        </div>
-                                        <div id="fileList@(i)" class="file-list mt-2"></div>
-                                        <button type="button" id="btn@(i)" name="uploadButton" class="btn btn-primary btn-sm mt-2 btn-custom">
-                                            <i class="fas fa-search"></i> Quét thẻ
-                                        </button>
-                                        <div id="loading@(i)" style="display:none;" class="mt-2">
-                                            <i class="fas fa-spinner fa-spin"></i> Đang xử lý...
-                                        </div>
-                                        <div id="results@(i)"></div>
-                                    </div>
-                                </div>
+                                <!-- Upload ảnh mới -->
+                                <div class="upload-section">
+                                    <h6 style="font-size: 16px; font-weight: 600; margin-bottom: 15px;">
+                                        <i class="fas fa-upload"></i> Upload giấy tờ mới
+                                    </h6>
+                                    <label for="inputFile@(i)" class="btn-upload">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        Chọn file (có thể chọn nhiều)
+                                    </label>
+                                    <input type="file" id="inputFile@(i)" name="TenantPhotos" accept=".jpg,.jpeg,.png" style="display: none;" multiple />
 
-                                <!-- Thông tin cá nhân -->
-                                <div class="form-row">
-                                    <div class="form-group col-md-6">
-                                        <label><i class="fas fa-signature"></i> Họ tên</label>
-                                        @Html.TextBoxFor(m => m.Tenants[i].FullName, new { @class = "form-control", required = "required" })
+                                    <div id="fileInfo@(i)" class="file-info" style="display: none;">
+                                        <i class="fas fa-file-image"></i>
+                                        <span id="fileCount@(i)">0</span> file đã chọn
                                     </div>
-                                    <div class="form-group col-md-6">
-                                        <label><i class="fas fa-id-card"></i> Số giấy tờ</label>
-                                        @Html.TextBoxFor(m => m.Tenants[i].IdentityCard, new { @class = "form-control", required = "required" })
-                                    </div>
-                                </div>
 
-                                <div class="form-row">
-                                    <div class="form-group col-md-4">
-                                        <label><i class="fas fa-phone"></i> Điện thoại</label>
-                                        @Html.TextBoxFor(m => m.Tenants[i].PhoneNumber, new { @class = "form-control", required = "required" })
+                                    <div id="fileList@(i)" class="file-list"></div>
+
+                                    <button type="button" id="btn@(i)" name="uploadButton" class="btn btn-primary btn-sm mt-3">
+                                        <i class="fas fa-id-card-alt"></i> Quét thông tin
+                                    </button>
+
+                                    <div id="loading@(i)" style="display:none;" class="mt-2">
+                                        <i class="fas fa-spinner loading-spinner"></i> Đang xử lý...
                                     </div>
-                                    <div class="form-group col-md-4">
-                                        <label><i class="fas fa-birthday-cake"></i> Ngày sinh</label>
-                                        @Html.TextBoxFor(m => m.Tenants[i].BirthDate, "{0:dd/MM/yyyy}", new { @class = "form-control datepicker" })
-                                    </div>
-                                    <div class="form-group col-md-4">
-                                        <label><i class="fas fa-venus-mars"></i> Giới tính</label>
-                                        @Html.DropDownListFor(m => m.Tenants[i].Gender,
-                                            new SelectList(new[] { "Nam", "Nữ", "Khác" }, Model.Tenants[i].Gender), "Chọn giới tính", new { @class = "form-control" })
-                                    </div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group col-md-6">
-                                        <label><i class="fas fa-users"></i> Dân tộc</label>
-                                        @Html.TextBoxFor(m => m.Tenants[i].Ethnicity, new { @class = "form-control" })
-                                    </div>
-                                    <div class="form-group col-md-6">
-                                        <label><i class="fas fa-motorcycle"></i> Biển số xe</label>
-                                        @Html.TextBoxFor(m => m.Tenants[i].VehiclePlate, new { @class = "form-control", placeholder = "VD: 15H1-12345" })
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label><i class="fas fa-home"></i> Nơi thường trú</label>
-                                    @Html.TextBoxFor(m => m.Tenants[i].PermanentAddress, new { @class = "form-control" })
+                                    <div id="results@(i)"></div>
                                 </div>
                             </div>
-                        </div>
-                    }
-                </div>
 
-                <!-- Nút thao tác -->
-                <div class="text-center mt-4">
-                    <button type="button" class="btn btn-outline-secondary btn-custom mr-3" onclick="addTenant()">
-                        <i class="fas fa-plus"></i> Thêm người thuê
-                    </button>
-                    <button type="submit" class="btn btn-primary btn-custom mr-3">
-                        <i class="fas fa-save"></i> Lưu thay đổi
-                    </button>
-                    @Html.ActionLink("Quay lại", "Index", null, new { @class = "btn btn-outline-secondary btn-custom" })
-                </div>
-            }
+                            <!-- Thông tin cá nhân -->
+                            <div class="form-row mt-4">
+                                <div class="form-group col-md-6">
+                                    <label><i class="fas fa-signature"></i> Họ tên</label>
+                                    @Html.TextBoxFor(m => m.Tenants[i].FullName, new { @class = "form-control", required = "required" })
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <label><i class="fas fa-id-card"></i> Số CCCD</label>
+                                    @Html.TextBoxFor(m => m.Tenants[i].IdentityCard, new { @class = "form-control", required = "required" })
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group col-md-4">
+                                    <label><i class="fas fa-phone"></i> Điện thoại</label>
+                                    @Html.TextBoxFor(m => m.Tenants[i].PhoneNumber, new { @class = "form-control" })
+                                </div>
+                                <div class="form-group col-md-4">
+                                    <label><i class="fas fa-birthday-cake"></i> Ngày sinh</label>
+                                    @Html.TextBoxFor(m => m.Tenants[i].BirthDate, "{0:dd/MM/yyyy}", new { @class = "form-control datepicker" })
+                                </div>
+                                <div class="form-group col-md-4">
+                                    <label><i class="fas fa-venus-mars"></i> Giới tính</label>
+                                    @Html.DropDownListFor(m => m.Tenants[i].Gender,
+                                        new SelectList(new[] { "Nam", "Nữ", "Khác" }, Model.Tenants[i].Gender),
+                                        "Chọn giới tính", new { @class = "form-control" })
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group col-md-6">
+                                    <label><i class="fas fa-users"></i> Dân tộc</label>
+                                    @Html.TextBoxFor(m => m.Tenants[i].Ethnicity, new { @class = "form-control" })
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <label><i class="fas fa-motorcycle"></i> Biển số xe</label>
+                                    @Html.TextBoxFor(m => m.Tenants[i].VehiclePlate, new { @class = "form-control", placeholder = "VD: 15H1-12345" })
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label><i class="fas fa-home"></i> Nơi thường trú</label>
+                                @Html.TextBoxFor(m => m.Tenants[i].PermanentAddress, new { @class = "form-control" })
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="action-buttons">
+                <button type="button" class="btn btn-outline-secondary btn-custom" onclick="addTenant()">
+                    <i class="fas fa-plus"></i> Thêm người thuê
+                </button>
+                <button type="submit" class="btn btn-primary btn-custom">
+                    <i class="fas fa-save"></i> Lưu thay đổi
+                </button>
+                @Html.ActionLink("Quay lại", "Index", "Rooms", null, new { @class = "btn btn-outline-secondary btn-custom" })
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Modal hiển thị ảnh -->
+<div class="modal fade" id="photoModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="photoModalTitle">Xem giấy tờ</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalPhoto" src="" style="max-width: 100%; height: auto;" />
+            </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-
-        // Hàm xóa file riêng lẻ (chỉ hiển thị, không thực sự xóa khỏi input)
-        function removeFile(inputIndex, fileIndex) {
-            // Lưu ý: Không thể xóa file riêng lẻ từ FileList
-            // Chỉ có thể clear toàn bộ input
-            alert('Để xóa file, vui lòng chọn lại danh sách file mới');
+        // Hiển thị modal ảnh
+        function showPhotoModal(photoUrl, tenantIndex) {
+            $('#modalPhoto').attr('src', photoUrl);
+            $('#photoModalTitle').text('Giấy tờ - Người thuê #' + (tenantIndex + 1));
+            $('#photoModal').modal('show');
         }
 
-        // Cập nhật số thứ tự người thuê
+        // Xử lý chọn file
+        $(document).on('change', 'input[type="file"][name="TenantPhotos"]', function() {
+            var index = this.id.replace("inputFile", "");
+            var files = this.files;
+            var fileInfo = $("#fileInfo" + index);
+            var fileList = $("#fileList" + index);
+
+            fileList.empty();
+
+            if (files && files.length > 0) {
+                fileInfo.show();
+                $("#fileCount" + index).text(files.length);
+
+                for (let i = 0; i < files.length; i++) {
+                    var fileSize = (files[i].size / 1024).toFixed(2) + " KB";
+                    fileList.append(`
+                        <div class="file-item">
+                            <span><i class="fas fa-file-image"></i> ${files[i].name} (${fileSize})</span>
+                            <button type="button" onclick="alert('Không thể xóa file riêng lẻ. Vui lòng chọn lại.')">×</button>
+                        </div>
+                    `);
+                }
+            } else {
+                fileInfo.hide();
+            }
+        });
+
+        // Thêm người thuê mới
+        function addTenant() {
+            const index = $('#tenantList .tenant-card').length;
+            const html = `
+                <div class="tenant-card">
+                    <input type="hidden" name="Tenants[${index}].Id" value="0" />
+                    <div class="tenant-card-header">
+                        <span><i class="fas fa-user"></i> Người thuê #${index + 1}</span>
+                        <button type="button" class="remove-tenant">
+                            <i class="fas fa-trash"></i> Xóa
+                        </button>
+                    </div>
+                    <div class="tenant-card-body">
+                        <div class="photo-section">
+                            <div class="no-photo">
+                                <i class="fas fa-image"></i>
+                                <p>Người thuê mới - chưa có giấy tờ</p>
+                            </div>
+
+                            <div class="upload-section">
+                                <h6 style="font-size: 16px; font-weight: 600; margin-bottom: 15px;">
+                                    <i class="fas fa-upload"></i> Upload giấy tờ
+                                </h6>
+                                <label for="inputFile${index}" class="btn-upload">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    Chọn file (có thể chọn nhiều)
+                                </label>
+                                <input type="file" id="inputFile${index}" name="TenantPhotos" accept=".jpg,.jpeg,.png" style="display: none;" multiple />
+
+                                <div id="fileInfo${index}" class="file-info" style="display: none;">
+                                    <i class="fas fa-file-image"></i>
+                                    <span id="fileCount${index}">0</span> file đã chọn
+                                </div>
+
+                                <div id="fileList${index}" class="file-list"></div>
+
+                                <button type="button" id="btn${index}" name="uploadButton" class="btn btn-primary btn-sm mt-3">
+                                    <i class="fas fa-id-card-alt"></i> Quét thông tin
+                                </button>
+
+                                <div id="loading${index}" style="display:none;" class="mt-2">
+                                    <i class="fas fa-spinner loading-spinner"></i> Đang xử lý...
+                                </div>
+                                <div id="results${index}"></div>
+                            </div>
+                        </div>
+
+                        <div class="form-row mt-4">
+                            <div class="form-group col-md-6">
+                                <label><i class="fas fa-signature"></i> Họ tên</label>
+                                <input name="Tenants[${index}].FullName" class="form-control" required="required" />
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label><i class="fas fa-id-card"></i> Số CCCD</label>
+                                <input name="Tenants[${index}].IdentityCard" class="form-control" required="required" />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-4">
+                                <label><i class="fas fa-phone"></i> Điện thoại</label>
+                                <input name="Tenants[${index}].PhoneNumber" class="form-control" />
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label><i class="fas fa-birthday-cake"></i> Ngày sinh</label>
+                                <input name="Tenants[${index}].BirthDate" class="form-control datepicker" placeholder="dd/MM/yyyy" />
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label><i class="fas fa-venus-mars"></i> Giới tính</label>
+                                <select name="Tenants[${index}].Gender" class="form-control">
+                                    <option value="">Chọn giới tính</option>
+                                    <option value="Nam">Nam</option>
+                                    <option value="Nữ">Nữ</option>
+                                    <option value="Khác">Khác</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label><i class="fas fa-users"></i> Dân tộc</label>
+                                <input name="Tenants[${index}].Ethnicity" class="form-control" />
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label><i class="fas fa-motorcycle"></i> Biển số xe</label>
+                                <input name="Tenants[${index}].VehiclePlate" class="form-control" placeholder="VD: 15H1-12345" />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-home"></i> Nơi thường trú</label>
+                            <input name="Tenants[${index}].PermanentAddress" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            $('#tenantList').append(html);
+            updateTenantNumbers();
+
+            // Khởi tạo datepicker cho tenant mới
+            $(`input[name="Tenants[${index}].BirthDate"]`).datepicker({
+                format: "dd/mm/yyyy",
+                autoclose: true,
+                todayHighlight: true
+            });
+
+            // Khởi tạo event handler cho nút quét
+            AddEventReadCCCD(document.getElementById("btn" + index));
+        }
+
+        // Cập nhật số thứ tự
         function updateTenantNumbers() {
             $('#tenantList .tenant-card').each(function(index) {
                 $(this).find('.tenant-card-header span').html(`<i class="fas fa-user"></i> Người thuê #${index + 1}`);
             });
         }
 
-        // Xóa block người thuê
-        $(document).on('click', '.remove-tenant', function () {
+        // Xóa người thuê
+        $(document).on('click', '.remove-tenant', function() {
             $(this).closest('.tenant-card').remove();
             updateTenantNumbers();
 
-            // Re-index lại tất cả tên các input còn lại
-            $('#tenantList .tenant-card').each(function (idx) {
-                $(this).find('input, select').each(function () {
+            // Re-index tất cả input
+            $('#tenantList .tenant-card').each(function(idx) {
+                $(this).find('input, select').each(function() {
                     var name = $(this).attr('name');
                     if (name) {
                         var newName = name.replace(/Tenants\[\d+\]/, 'Tenants[' + idx + ']');
                         $(this).attr('name', newName);
                     }
                 });
-                // Update IDs for file inputs and related elements
+
+                // Update IDs
                 $(this).find('input[type="file"]').each(function() {
                     var oldId = $(this).attr('id');
                     if (oldId) {
@@ -282,7 +401,8 @@
                         $(this).siblings('label').attr('for', newId);
                     }
                 });
-                $(this).find('[id^="fileName"], [id^="btn"], [id^="loading"], [id^="results"]').each(function() {
+
+                $(this).find('[id^="fileInfo"], [id^="fileCount"], [id^="fileList"], [id^="btn"], [id^="loading"], [id^="results"]').each(function() {
                     var oldId = $(this).attr('id');
                     if (oldId) {
                         var prefix = oldId.replace(/\d+$/, '');
@@ -292,245 +412,80 @@
             });
         });
 
-        // Khởi tạo datepicker
-        $('.datepicker').datepicker({
-            format: "dd/mm/yyyy",
-            autoclose: true,
-            todayHighlight: true
-        });
-
+        // API Read CCCD
         const elements = document.getElementsByName('uploadButton');
         for (const element of elements) {
             AddEventReadCCCD(element);
         }
 
-        // Khởi tạo datepicker khi trang load
-        $(document).ready(function() {
-            $('.datepicker').datepicker({
-                format: "dd/mm/yyyy",
-                autoclose: true,
-                todayHighlight: true,
-                orientation: "bottom"
-            });
-        });
+        function AddEventReadCCCD(element) {
+            element.addEventListener('click', function() {
+                var index = this.id.replace("btn", "");
+                var fileInput = document.getElementById("inputFile" + index);
+                var files = fileInput.files;
 
-        $(document).on('change', 'input[type="file"][name="TenantPhotos"]', function() {
-        var index = this.id.replace("inputFile", "");
-        var files = this.files;
-        var fileDisplay = $("#fileName" + index);
-        var fileList = $("#fileList" + index);
+                if (!files || files.length === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Chưa chọn file',
+                        text: 'Vui lòng chọn ít nhất một file giấy tờ trước khi quét.',
+                        confirmButtonText: 'Đã hiểu',
+                        confirmButtonColor: '#667eea'
+                    });
+                    return;
+                }
 
-        fileList.empty();
+                var formData = new FormData();
+                for (let i = 0; i < files.length; i++) {
+                    formData.append("inputFiles", files[i]);
+                }
 
-        if (files && files.length > 0) {
-            fileDisplay.addClass('has-file');
-            fileDisplay.html(`
-                <i class="far fa-file-image"></i>
-                <span class="file-name">${files.length} file đã chọn</span>
-            `);
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "@Url.Action("ReadCCCD", "CardReader")", true);
 
-            fileList.addClass('has-files');
-
-            for (let i = 0; i < files.length; i++) {
-                fileList.append(`
-                    <div class="file-item" data-index="${i}">
-                        <span>${files[i].name}</span>
-                        <button type="button" onclick="removeFile(${index}, ${i})">×</button>
-                    </div>
-                `);
-            }
-        } else {
-            fileDisplay.removeClass('has-file');
-            fileDisplay.html(`
-                <i class="far fa-file-image"></i>
-                <span class="file-name text-muted">Chưa chọn file mới</span>
-            `);
-            fileList.removeClass('has-files');
-        }
-    });
-
-    // Trong phần addTenant cho Edit view
-    function addTenant() {
-        const index = $('#tenantList .tenant-card').length;
-        const html = `
-            <div class="tenant-card">
-                <input type="hidden" name="Tenants[${index}].Id" value="0" />
-                <div class="tenant-card-header">
-                    <span><i class="fas fa-user"></i> Người thuê #${index + 1}</span>
-                    <button type="button" class="btn btn-sm btn-outline-light remove-tenant">
-                        <i class="fas fa-trash"></i> Xóa
-                    </button>
-                </div>
-                <div class="tenant-card-body">
-                    <div class="current-photo">
-                        <i class="fas fa-image text-muted" style="font-size: 3rem;"></i>
-                        <p class="text-muted mt-2">Người thuê mới - chưa có ảnh</p>
-                    </div>
-
-                    <div class="photo-upload-section">
-                        <div class="file-upload-container">
-                            <label for="inputFile${index}" class="btn btn-outline-primary btn-sm btn-file-select">
-                                <i class="fas fa-upload"></i> Chọn giấy tờ mặt trước, sau
-                            </label>
-                            <input type="file" id="inputFile${index}" name="TenantPhotos" accept=".jpg,.jpeg,.png" style="display: none;" multiple />
-                            <div id="fileName${index}" class="file-display">
-                                <i class="far fa-file-image"></i>
-                                <span class="file-name text-muted">Chưa chọn file nào</span>
-                            </div>
-                            <div id="fileList${index}" class="file-list mt-2"></div>
-                            <button type="button" id="btn${index}" name="uploadButton" class="btn btn-primary btn-sm mt-2 btn-custom">
-                                <i class="fas fa-search"></i> Quét thẻ
-                            </button>
-                            <div id="loading${index}" style="display:none;" class="mt-2">
-                                <i class="fas fa-spinner fa-spin"></i> Đang xử lý...
-                            </div>
-                            <div id="results${index}"></div>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group col-md-6">
-                            <label><i class="fas fa-signature"></i> Họ tên</label>
-                            <input name="Tenants[${index}].FullName" class="form-control" required="required" />
-                        </div>
-                        <div class="form-group col-md-6">
-                            <label><i class="fas fa-id-card"></i> Số CCCD</label>
-                            <input name="Tenants[${index}].IdentityCard" class="form-control" required="required" />
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group col-md-4">
-                            <label><i class="fas fa-phone"></i> Điện thoại</label>
-                            <input name="Tenants[${index}].PhoneNumber" class="form-control" required="required" />
-                        </div>
-                        <div class="form-group col-md-4">
-                            <label><i class="fas fa-birthday-cake"></i> Ngày sinh</label>
-                            <input name="Tenants[${index}].BirthDate" class="form-control datepicker" placeholder="dd/MM/yyyy" autocomplete="off" />
-                        </div>
-                        <div class="form-group col-md-4">
-                            <label><i class="fas fa-venus-mars"></i> Giới tính</label>
-                            <select name="Tenants[${index}].Gender" class="form-control">
-                                <option value="">Chọn giới tính</option>
-                                <option value="Nam">Nam</option>
-                                <option value="Nữ">Nữ</option>
-                                <option value="Khác">Khác</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group col-md-6">
-                            <label><i class="fas fa-users"></i> Dân tộc</label>
-                            <input name="Tenants[${index}].Ethnicity" class="form-control" />
-                        </div>
-                        <div class="form-group col-md-6">
-                            <label><i class="fas fa-motorcycle"></i> Biển số xe</label>
-                            <input name="Tenants[${index}].VehiclePlate" class="form-control" placeholder="VD: 15H1-12345" />
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label><i class="fas fa-home"></i> Nơi thường trú</label>
-                        <input name="Tenants[${index}].PermanentAddress" class="form-control" />
-                    </div>
-                </div>
-            </div>
-        `;
-
-        $('#tenantList').append(html);
-        updateTenantNumbers();
-
-        // Khởi tạo Datepicker
-        $(`input[name="Tenants[${index}].BirthDate"]`).datepicker({
-            format: "dd/mm/yyyy",
-            autoclose: true,
-            todayHighlight: true
-        });
-
-        AddEventReadCCCD(document.getElementById("btn" + index));
-    }
-
-    // Cập nhật event handler cho Edit
-    function AddEventReadCCCD(element) {
-        element.addEventListener('click', function () {
-            var index = this.id.replace("btn", "");
-            var fileInput = document.getElementById("inputFile" + index);
-            var files = fileInput.files;
-
-            if (!files || files.length === 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Chưa chọn file',
-                    text: 'Vui lòng chọn ít nhất một file giấy tờ trước khi quét thẻ.',
-                    confirmButtonText: 'Đã hiểu'
-                });
-                return;
-            }
-
-            var formData = new FormData();
-
-            // Thêm tất cả các files vào FormData
-            for (let i = 0; i < files.length; i++) {
-                formData.append("inputFiles", files[i]);
-            }
-
-            var xhr = new XMLHttpRequest();
-            xhr.open("POST", "@Url.Action("ReadCCCD", "CardReader")", true);
-
-            xhr.onload = function () {
-                document.getElementById("loading" + index).style.display = "none";
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    try {
-                        var response = JSON.parse(xhr.responseText);
-                        if (response.success) {
-                            if (response.data) {
-                                displayResultsEdit(response.data, index, true);
+                xhr.onload = function() {
+                    document.getElementById("loading" + index).style.display = "none";
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            var response = JSON.parse(xhr.responseText);
+                            if (response.success) {
+                                if (response.data) {
+                                    displayResults(response.data, index);
+                                }
                             } else {
                                 document.getElementById("results" + index).innerHTML =
-                                    "<div class='scan-result error'><i class='fas fa-exclamation-triangle'></i> Không có dữ liệu trả về từ server.</div>";
+                                    `<div class='scan-result error'>
+                                        <i class='fas fa-exclamation-triangle'></i> ${response.message}
+                                    </div>`;
                             }
-                        } else {
+                        } catch (e) {
                             document.getElementById("results" + index).innerHTML =
-                                "<div class='scan-result error'><i class='fas fa-exclamation-triangle'></i> " + response.message + "</div>";
+                                `<div class='scan-result error'>
+                                    <i class='fas fa-exclamation-triangle'></i> Lỗi xử lý: ${e.message}
+                                </div>`;
                         }
-                    } catch (e) {
-                        document.getElementById("results" + index).innerHTML =
-                            "<div class='scan-result error'><i class='fas fa-exclamation-triangle'></i> Lỗi xử lý phản hồi: " + e.message + "</div>";
                     }
-                } else {
+                };
+
+                xhr.onerror = function() {
+                    document.getElementById("loading" + index).style.display = "none";
                     document.getElementById("results" + index).innerHTML =
-                        "<div class='scan-result error'><i class='fas fa-exclamation-triangle'></i> Đã xảy ra lỗi: " + xhr.status + " - " + xhr.statusText + "</div>";
-                }
-            };
+                        `<div class='scan-result error'>
+                            <i class='fas fa-exclamation-triangle'></i> Lỗi kết nối mạng
+                        </div>`;
+                };
 
-            xhr.onerror = function() {
-                document.getElementById("loading" + index).style.display = "none";
-                document.getElementById("results" + index).innerHTML =
-                    "<div class='scan-result error'><i class='fas fa-exclamation-triangle'></i> Lỗi kết nối mạng.</div>";
-            };
-
-            document.getElementById("loading" + index).style.display = "block";
-            document.getElementById("results" + index).innerHTML = "";
-
-            xhr.send(formData);
-        });
-    }
-
-    // Hàm displayResults cho Edit view
-    function displayResultsEdit(apiResponses, pos) {
-        var resultsDiv = $("#results" + pos);
-        resultsDiv.empty();
-
-        if (!apiResponses || apiResponses.length === 0) {
-            resultsDiv.html("<div class='scan-result error'><i class='fas fa-info-circle'></i> Không tìm thấy kết quả.</div>");
-            return;
+                document.getElementById("loading" + index).style.display = "block";
+                document.getElementById("results" + index).innerHTML = "";
+                xhr.send(formData);
+            });
         }
 
-        apiResponse = apiResponses;
-        if (apiResponse.errorCode === 0) {
-            if (apiResponse.data && apiResponse.data.length > 0) {
-                // Hiển thị thông báo chi tiết về các ảnh đã xử lý
+        function displayResults(apiResponse, pos) {
+            var resultsDiv = $("#results" + pos);
+            resultsDiv.empty();
+
+            if (apiResponse.errorCode === 0 && apiResponse.data && apiResponse.data.length > 0) {
                 var message = apiResponse.errorMessage || "";
                 var scanClass = "success";
 
@@ -541,12 +496,12 @@
                 resultsDiv.html(`
                     <div class='scan-result ${scanClass}'>
                         <i class='fas fa-check-circle'></i> Đã quét thông tin từ giấy tờ!
-                        <br><small>${message}</small>
+                        ${message ? `<br><small>${message}</small>` : ''}
                     </div>
                 `);
 
-                // Điền thông tin vào form
-                $.each(apiResponse.data, function (i, cardData) {
+                // Điền thông tin
+                $.each(apiResponse.data, function(i, cardData) {
                     if (cardData.id) {
                         $(`#Tenants_${pos}__IdentityCard`).val(cardData.id);
                     }
@@ -572,19 +527,38 @@
                     if (cardData.address && cardData.address !== "N/A") {
                         $(`#Tenants_${pos}__PermanentAddress`).val(cardData.address);
                     }
-                    // Điền dân tộc nếu có
                     if (cardData.ethnicity) {
                         $(`#Tenants_${pos}__Ethnicity`).val(cardData.ethnicity);
                     }
                 });
             } else {
-                resultsDiv.html("<div class='scan-result error'><i class='fas fa-info-circle'></i> Không tìm thấy dữ liệu thẻ trong phản hồi này.</div>");
+                resultsDiv.html(`
+                    <div class='scan-result error'>
+                        <i class='fas fa-info-circle'></i> Không tìm thấy dữ liệu
+                    </div>
+                `);
             }
-        } else {
-            var errorMsg = apiResponse.errorMessage || "Lỗi không xác định";
-            resultsDiv.html(`<div class='scan-result error'><i class='fas fa-exclamation-triangle'></i> ${errorMsg}</div>`);
-        }
         }
 
+        // Khởi tạo khi trang load
+        $(document).ready(function() {
+            // Datepicker
+            $('.datepicker').datepicker({
+                format: "dd/mm/yyyy",
+                autoclose: true,
+                todayHighlight: true
+            });
+
+            // Animation cho cards
+            $('.edit-card').each(function(i) {
+                $(this).css('opacity', '0');
+                $(this).css('transform', 'translateY(20px)');
+                setTimeout(() => {
+                    $(this).css('transition', 'all 0.5s ease');
+                    $(this).css('opacity', '1');
+                    $(this).css('transform', 'translateY(0)');
+                }, i * 100);
+            });
+        });
     </script>
 }

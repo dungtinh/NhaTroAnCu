@@ -314,6 +314,7 @@
     <Content Include="Content\bootstrap.min.css" />
     <Content Include="Content\bootstrap.rtl.css" />
     <Content Include="Content\bootstrap.rtl.min.css" />
+    <Content Include="Content\contract-action.css" />
     <Content Include="Content\CSS\font-awesome.css" />
     <Content Include="Content\CSS\font-awesome.min.css" />
     <Content Include="Content\Fonts\fontawesome-webfont.svg" />
