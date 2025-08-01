@@ -230,17 +230,11 @@
                 <h5 class="modal-title" id="photoModalTitle">
                     <i class="fas fa-image"></i> Xem giấy tờ
                 </h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
                 </button>
             </div>
             <div class="modal-body text-center">
                 <img id="modalPhoto" src="" alt="Giấy tờ" />
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times"></i> Đóng
-                </button>
             </div>
         </div>
     </div>
@@ -744,7 +738,7 @@
                             ${files[i].name} (${fileSize})
                             <small class="text-success">- Tenant #${parseInt(tenantIndex) + 1}</small>
                         </span>
-                        <button type="button" onclick="removeFileImproved(${tenantIndex}, ${i})" 
+                        <button type="button" onclick="removeFileImproved(${tenantIndex}, ${i})"
                                 class="btn-remove-file" title="Xóa file này">×</button>
                     </div>
                 `);
