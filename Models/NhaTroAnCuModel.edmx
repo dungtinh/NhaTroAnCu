@@ -123,9 +123,9 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
           <Property Name="Name" Type="nvarchar" MaxLength="100" Nullable="false" />
           <Property Name="Type" Type="nvarchar" MaxLength="10" Nullable="false" />
-          <Property Name="IsSystem" Type="bit" />
-          <Property Name="IsActive" Type="bit" />
-          <Property Name="CreatedAt" Type="datetime" />
+          <Property Name="IsSystem" Type="bit" Nullable="false" />
+          <Property Name="IsActive" Type="bit" Nullable="false" />
+          <Property Name="CreatedAt" Type="datetime" Nullable="false" />
           <Property Name="UpdatedAt" Type="datetime" />
         </EntityType>
         <EntityType Name="IncomeExpenses">
@@ -141,7 +141,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="Description" Type="nvarchar" MaxLength="500" />
           <Property Name="ReferenceNumber" Type="nvarchar" MaxLength="50" />
           <Property Name="CreatedBy" Type="nvarchar" MaxLength="128" />
-          <Property Name="CreatedAt" Type="datetime" />
+          <Property Name="CreatedAt" Type="datetime" Nullable="false" />
           <Property Name="UpdatedAt" Type="datetime" />
         </EntityType>
         <EntityType Name="Notifications">
@@ -937,9 +937,9 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
           <Property Name="Name" Type="String" Nullable="false" MaxLength="100" FixedLength="false" Unicode="true" />
           <Property Name="Type" Type="String" Nullable="false" MaxLength="10" FixedLength="false" Unicode="true" />
-          <Property Name="IsSystem" Type="Boolean" />
-          <Property Name="IsActive" Type="Boolean" />
-          <Property Name="CreatedAt" Type="DateTime" Precision="3" />
+          <Property Name="IsSystem" Type="Boolean" Nullable="false" />
+          <Property Name="IsActive" Type="Boolean" Nullable="false" />
+          <Property Name="CreatedAt" Type="DateTime" Precision="3" Nullable="false" />
           <Property Name="UpdatedAt" Type="DateTime" Precision="3" />
           <NavigationProperty Name="IncomeExpenses" Relationship="NhaTroAnCuModel.FK__IncomeExp__Categ__32AB8735" FromRole="IncomeExpenseCategory" ToRole="IncomeExpens" />
         </EntityType>
@@ -956,7 +956,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="Description" Type="String" MaxLength="500" FixedLength="false" Unicode="true" />
           <Property Name="ReferenceNumber" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
           <Property Name="CreatedBy" Type="String" MaxLength="128" FixedLength="false" Unicode="true" />
-          <Property Name="CreatedAt" Type="DateTime" Precision="3" />
+          <Property Name="CreatedAt" Type="DateTime" Precision="3" Nullable="false" />
           <Property Name="UpdatedAt" Type="DateTime" Precision="3" />
           <NavigationProperty Name="Contract" Relationship="NhaTroAnCuModel.FK__IncomeExp__Contr__339FAB6E" FromRole="IncomeExpens" ToRole="Contract" />
           <NavigationProperty Name="IncomeExpenseCategory" Relationship="NhaTroAnCuModel.FK__IncomeExp__Categ__32AB8735" FromRole="IncomeExpens" ToRole="IncomeExpenseCategory" />

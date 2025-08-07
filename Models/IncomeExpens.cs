@@ -23,7 +23,7 @@ namespace NhaTroAnCu.Models
         public string Description { get; set; }
         public string ReferenceNumber { get; set; }
         public string CreatedBy { get; set; }
-        public Nullable<System.DateTime> CreatedAt { get; set; }
+        public System.DateTime CreatedAt { get; set; }
         public Nullable<System.DateTime> UpdatedAt { get; set; }
     
         public virtual Contract Contract { get; set; }
