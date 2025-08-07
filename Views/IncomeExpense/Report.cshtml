@@ -1,55 +1,67 @@
-﻿@{
+﻿﻿@{
     ViewBag.Title = "Báo cáo thu chi";
     var transactions = ViewBag.Transactions as List<NhaTroAnCu.Models.IncomeExpens>;
+    // Không ép kiểu, dùng trực tiếp ViewBag.ExpenseChartData
 }
 
 <div class="container">
-    <div class="report-header">
-        <h2><i class="fas fa-chart-line"></i> Báo cáo thu chi tháng @ViewBag.Month/@ViewBag.Year</h2>
-
-        <form method="get" class="form-inline">
-            <select name="month" class="form-control mr-2" style="display: inline-block; width: 100px;">
-                @for (int m = 1; m <= 12; m++)
-                {
-                    <option value="@m" @(m == ViewBag.Month ? "selected" : "")>Tháng @m</option>
-                }
-            </select>
-            <select name="year" class="form-control mr-2" style="display: inline-block; width: 100px;">
-                @for (int y = DateTime.Now.Year - 2; y <= DateTime.Now.Year + 1; y++)
-                {
-                    <option value="@y" @(y == ViewBag.Year ? "selected" : "")>@y</option>
-                }
-            </select>
-            <button type="submit" class="btn btn-primary" style="display: inline-block; width: 100px;">
-                <i class="fas fa-search"></i> Xem
-            </button>
-        </form>
+    <div class="row">
+        <!-- Bên trái: Report Header + Summary -->
+        <div class="col-md-8">
+            <div class="report-header">
+                <h2><i class="fas fa-chart-line"></i> Báo cáo thu chi tháng @ViewBag.Month/@ViewBag.Year</h2>
+                <form method="get" class="form-inline">
+                    <select name="month" class="form-control mr-2" style="display: inline-block; width: 100px;">
+                        @for (int m = 1; m <= 12; m++)
+                        {
+                            <option value="@m" @(m == ViewBag.Month ? "selected" : "")>Tháng @m</option>
+                        }
+                    </select>
+                    <select name="year" class="form-control mr-2" style="display: inline-block; width: 100px;">
+                        @for (int y = DateTime.Now.Year - 2; y <= DateTime.Now.Year + 1; y++)
+                        {
+                            <option value="@y" @(y == ViewBag.Year ? "selected" : "")>@y</option>
+                        }
+                    </select>
+                    <button type="submit" class="btn btn-primary" style="display: inline-block; width: 100px;">
+                        <i class="fas fa-search"></i> Xem
+                    </button>
+                </form>
+            </div>
+            <div class="row summary-boxes">
+                <div class="col-md-4">
+                    <div class="summary-box income">
+                        <h4>Tổng thu</h4>
+                        <p class="amount">+@ViewBag.TotalIncome.ToString("N0") đ</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="summary-box expense">
+                        <h4>Tổng chi</h4>
+                        <p class="amount">-@ViewBag.TotalExpense.ToString("N0") đ</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="summary-box balance @(ViewBag.Balance >= 0 ? "positive" : "negative")">
+                        <h4>Cân đối</h4>
+                        <p class="amount">@ViewBag.Balance.ToString("N0") đ</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Bên phải: Biểu đồ các loại chi -->
+        <div class="col-md-4 d-flex align-items-start">
+            <div class="w-100">
+                <h4 class="mb-3"><i class="fas fa-chart-pie"></i> Biểu đồ phân bổ các loại chi</h4>
+                <div style=" padding: 0 10rem;">
+                    <canvas id="expenseCategoryChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Summary -->
-    <div class="row summary-boxes">
-        <div class="col-md-4">
-            <div class="summary-box income">
-                <h4>Tổng thu</h4>
-                <p class="amount">+@ViewBag.TotalIncome.ToString("N0") đ</p>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="summary-box expense">
-                <h4>Tổng chi</h4>
-                <p class="amount">-@ViewBag.TotalExpense.ToString("N0") đ</p>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="summary-box balance @(ViewBag.Balance >= 0 ? "positive" : "negative")">
-                <h4>Cân đối</h4>
-                <p class="amount">@ViewBag.Balance.ToString("N0") đ</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Transaction Details -->
-    <div class="transaction-details">
+    <!-- Transaction Details giữ nguyên phía dưới -->
+    <div class="transaction-details mt-4">
         <h4>Chi tiết giao dịch</h4>
         <table class="table table-striped">
             <thead>
@@ -96,79 +108,35 @@
     </div>
 </div>
 
-<style>
-    .report-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 30px;
-        padding: 20px;
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Dữ liệu chart các loại chi từ ViewBag (không ép kiểu)
+    var expenseChartData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(ViewBag.ExpenseChartData ?? new List<dynamic>()));
+    var labels = (expenseChartData && expenseChartData.length > 0) ? expenseChartData.map(x => x.Category) : [];
+    var data = (expenseChartData && expenseChartData.length > 0) ? expenseChartData.map(x => x.TotalAmount) : [];
+
+    if(labels.length > 0 && data.length > 0) {
+        var ctx = document.getElementById('expenseCategoryChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Phân bổ chi',
+                    data: data,
+                    backgroundColor: [
+                        '#dc3545', '#ffc107', '#17a2b8', '#6f42c1', '#28a745', '#007bff', '#fd7e14', '#20c997', '#6610f2', '#e83e8c'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'right' }
+                }
+            }
+        });
     }
-
-    .summary-boxes {
-        margin-bottom: 30px;
-    }
-
-    .summary-box {
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        text-align: center;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-    }
-
-        .summary-box.income {
-            border-top: 4px solid #28a745;
-        }
-
-        .summary-box.expense {
-            border-top: 4px solid #dc3545;
-        }
-
-        .summary-box.balance.positive {
-            border-top: 4px solid #17a2b8;
-        }
-
-        .summary-box.balance.negative {
-            border-top: 4px solid #ffc107;
-        }
-
-        .summary-box h4 {
-            font-size: 1rem;
-            color: #666;
-            margin-bottom: 10px;
-        }
-
-        .summary-box .amount {
-            font-size: 1.8rem;
-            font-weight: bold;
-            margin: 0;
-        }
-
-        .summary-box.income .amount {
-            color: #28a745;
-        }
-
-        .summary-box.expense .amount {
-            color: #dc3545;
-        }
-
-        .summary-box.balance.positive .amount {
-            color: #17a2b8;
-        }
-
-        .summary-box.balance.negative .amount {
-            color: #ffc107;
-        }
-
-    .transaction-details {
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-</style>
+</script>
+<link href="~/Content/income-report.css" rel="stylesheet" />
