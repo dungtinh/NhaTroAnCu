@@ -8,19 +8,19 @@
         <h2><i class="fas fa-chart-line"></i> Báo cáo thu chi tháng @ViewBag.Month/@ViewBag.Year</h2>
 
         <form method="get" class="form-inline">
-            <select name="month" class="form-control mr-2">
+            <select name="month" class="form-control mr-2" style="display: inline-block; width: 100px;">
                 @for (int m = 1; m <= 12; m++)
                 {
                     <option value="@m" @(m == ViewBag.Month ? "selected" : "")>Tháng @m</option>
                 }
             </select>
-            <select name="year" class="form-control mr-2">
+            <select name="year" class="form-control mr-2" style="display: inline-block; width: 100px;">
                 @for (int y = DateTime.Now.Year - 2; y <= DateTime.Now.Year + 1; y++)
                 {
                     <option value="@y" @(y == ViewBag.Year ? "selected" : "")>@y</option>
                 }
             </select>
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-primary" style="display: inline-block; width: 100px;">
                 <i class="fas fa-search"></i> Xem
             </button>
         </form>
