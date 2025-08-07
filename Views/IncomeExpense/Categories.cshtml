@@ -1,0 +1,197 @@
+﻿
+@model NhaTroAnCu.Models.CategoryManagementViewModel
+@{
+    ViewBag.Title = "Quản lý danh mục thu chi";
+}
+
+<div class="container">
+    <div class="page-header mb-4">
+        <h2><i class="fas fa-list"></i> Quản lý danh mục thu chi</h2>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="fas fa-plus"></i> Thêm danh mục mới</h5>
+                </div>
+                <div class="card-body">
+                    <form id="addCategoryForm">
+                        <div class="form-group">
+                            <label>Tên danh mục</label>
+                            <input type="text" id="newCategoryName" class="form-control" required />
+                        </div>
+                        <div class="form-group">
+                            <label>Loại</label>
+                            <select id="newCategoryType" class="form-control">
+                                <option value="Income">Thu</option>
+                                <option value="Expense">Chi</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus"></i> Thêm
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Danh mục thu:</span>
+                        <span class="badge badge-success">@Model.IncomeCount</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Danh mục chi:</span>
+                        <span class="badge badge-danger">@Model.ExpenseCount</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="fas fa-list"></i> Danh sách danh mục</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Tên danh mục</th>
+                                <th>Loại</th>
+                                <th>Trạng thái</th>
+                                <th width="120">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var cat in Model.Categories)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="category-name">@cat.Name</span>
+                                        <input type="text" class="form-control edit-input"
+                                               value="@cat.Name" style="display:none;" />
+                                    </td>
+                                    <td>
+                                        <span class="badge @(cat.Type == "Income" ? "badge-success" : "badge-danger")">
+                                            @(cat.Type == "Income" ? "Thu" : "Chi")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (cat.IsSystem)
+                                        {
+                                            <span class="badge badge-primary">Hệ thống</span>
+                                        }
+                                        else if (cat.IsActive)
+                                        {
+                                            <span class="badge badge-success">Hoạt động</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-secondary">Đã ẩn</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!cat.IsSystem)
+                                        {
+                                            <button onclick="editCategory(@cat.Id, this)"
+                                                    class="btn btn-sm btn-warning edit-btn">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button onclick="saveCategory(@cat.Id, this)"
+                                                    class="btn btn-sm btn-success save-btn" style="display:none;">
+                                                <i class="fas fa-save"></i>
+                                            </button>
+                                            <button onclick="cancelEdit(this)"
+                                                    class="btn btn-sm btn-secondary cancel-btn" style="display:none;">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button onclick="deleteCategory(@cat.Id)"
+                                                    class="btn btn-sm btn-danger">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $('#addCategoryForm').submit(function(e) {
+            e.preventDefault();
+            var name = $('#newCategoryName').val();
+            var type = $('#newCategoryType').val();
+
+            $.post('@Url.Action("CreateCategory")', { name: name, type: type }, function(res) {
+                if (res.success) {
+                    Swal.fire('Thành công!', res.message, 'success')
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire('Lỗi!', res.message, 'error');
+                }
+            });
+        });
+
+        function editCategory(id, btn) {
+            var row = $(btn).closest('tr');
+            row.find('.category-name').hide();
+            row.find('.edit-input').show();
+            row.find('.edit-btn').hide();
+            row.find('.save-btn, .cancel-btn').show();
+        }
+
+        function cancelEdit(btn) {
+            var row = $(btn).closest('tr');
+            row.find('.category-name').show();
+            row.find('.edit-input').hide();
+            row.find('.edit-btn').show();
+            row.find('.save-btn, .cancel-btn').hide();
+        }
+
+        function saveCategory(id, btn) {
+            var row = $(btn).closest('tr');
+            var name = row.find('.edit-input').val();
+
+            $.post('@Url.Action("UpdateCategory")', { id: id, name: name }, function(res) {
+                if (res.success) {
+                    Swal.fire('Thành công!', res.message, 'success')
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire('Lỗi!', res.message, 'error');
+                }
+            });
+        }
+
+        function deleteCategory(id) {
+            Swal.fire({
+                title: 'Xác nhận xóa?',
+                text: "Danh mục sẽ bị xóa hoặc ẩn nếu có giao dịch liên quan!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Xóa',
+                cancelButtonText: 'Hủy'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('@Url.Action("DeleteCategory")', { id: id }, function(res) {
+                        if (res.success) {
+                            Swal.fire('Thành công!', res.message, 'success')
+                                .then(() => location.reload());
+                        } else {
+                            Swal.fire('Lỗi!', res.message, 'error');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}

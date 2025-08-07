@@ -111,9 +111,7 @@ body {
             transform: translateY(-2px);
         }
 
-        .navbar-nav .nav-link::before {
-            content: '\f007';
-            font-family: 'Font Awesome 6 Free';
+        .navbar-nav .nav-link::before {            
             font-weight: 900;
             margin-right: 8px;
             font-size: 14px;

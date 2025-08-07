@@ -116,6 +116,34 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="Email" Type="nvarchar" MaxLength="150" Nullable="false" />
           <Property Name="Status" Type="bit" Nullable="false" />
         </EntityType>
+        <EntityType Name="IncomeExpenseCategories">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="Name" Type="nvarchar" MaxLength="100" Nullable="false" />
+          <Property Name="Type" Type="nvarchar" MaxLength="10" Nullable="false" />
+          <Property Name="IsSystem" Type="bit" />
+          <Property Name="IsActive" Type="bit" />
+          <Property Name="CreatedAt" Type="datetime" />
+          <Property Name="UpdatedAt" Type="datetime" />
+        </EntityType>
+        <EntityType Name="IncomeExpenses">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="CategoryId" Type="int" Nullable="false" />
+          <Property Name="ContractId" Type="int" />
+          <Property Name="RoomId" Type="int" />
+          <Property Name="Amount" Type="decimal" Precision="18" Scale="2" Nullable="false" />
+          <Property Name="TransactionDate" Type="date" Nullable="false" />
+          <Property Name="Description" Type="nvarchar" MaxLength="500" />
+          <Property Name="ReferenceNumber" Type="nvarchar" MaxLength="50" />
+          <Property Name="CreatedBy" Type="nvarchar" MaxLength="128" />
+          <Property Name="CreatedAt" Type="datetime" />
+          <Property Name="UpdatedAt" Type="datetime" />
+        </EntityType>
         <EntityType Name="Notifications">
           <Key>
             <PropertyRef Name="Id" />
@@ -166,7 +194,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="FullName" Type="nvarchar" MaxLength="100" Nullable="false" />
           <Property Name="IdentityCard" Type="nvarchar" MaxLength="20" Nullable="false" />
           <Property Name="PhoneNumber" Type="nvarchar" MaxLength="20" />
-          <Property Name="Photo" Type="nvarchar" MaxLength="1000" />
+          <Property Name="Photo" Type="nvarchar(max)" />
           <Property Name="BirthDate" Type="date" />
           <Property Name="Gender" Type="nvarchar" MaxLength="10" />
           <Property Name="PermanentAddress" Type="nvarchar" MaxLength="255" />
@@ -216,6 +244,42 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             </Principal>
             <Dependent Role="ContractExtensionHistory">
               <PropertyRef Name="ContractId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__IncomeExp__Categ__32AB8735">
+          <End Role="IncomeExpenseCategories" Type="Self.IncomeExpenseCategories" Multiplicity="1" />
+          <End Role="IncomeExpenses" Type="Self.IncomeExpenses" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="IncomeExpenseCategories">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="IncomeExpenses">
+              <PropertyRef Name="CategoryId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__IncomeExp__Contr__339FAB6E">
+          <End Role="Contracts" Type="Self.Contracts" Multiplicity="0..1" />
+          <End Role="IncomeExpenses" Type="Self.IncomeExpenses" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Contracts">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="IncomeExpenses">
+              <PropertyRef Name="ContractId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__IncomeExp__RoomI__3493CFA7">
+          <End Role="Rooms" Type="Self.Rooms" Multiplicity="0..1" />
+          <End Role="IncomeExpenses" Type="Self.IncomeExpenses" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Rooms">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="IncomeExpenses">
+              <PropertyRef Name="RoomId" />
             </Dependent>
           </ReferentialConstraint>
         </Association>
@@ -351,6 +415,8 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <EntitySet Name="ContractExtensionHistory" EntityType="Self.ContractExtensionHistory" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Contracts" EntityType="Self.Contracts" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="ContractTenants" EntityType="Self.ContractTenants" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="IncomeExpenseCategories" EntityType="Self.IncomeExpenseCategories" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="IncomeExpenses" EntityType="Self.IncomeExpenses" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Notifications" EntityType="Self.Notifications" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="PaymentHistories" EntityType="Self.PaymentHistories" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Rooms" EntityType="Self.Rooms" Schema="dbo" store:Type="Tables" />
@@ -367,6 +433,18 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <AssociationSet Name="FK__ContractE__Contr__2180FB33" Association="Self.FK__ContractE__Contr__2180FB33">
             <End Role="Contracts" EntitySet="Contracts" />
             <End Role="ContractExtensionHistory" EntitySet="ContractExtensionHistory" />
+          </AssociationSet>
+          <AssociationSet Name="FK__IncomeExp__Categ__32AB8735" Association="Self.FK__IncomeExp__Categ__32AB8735">
+            <End Role="IncomeExpenseCategories" EntitySet="IncomeExpenseCategories" />
+            <End Role="IncomeExpenses" EntitySet="IncomeExpenses" />
+          </AssociationSet>
+          <AssociationSet Name="FK__IncomeExp__Contr__339FAB6E" Association="Self.FK__IncomeExp__Contr__339FAB6E">
+            <End Role="Contracts" EntitySet="Contracts" />
+            <End Role="IncomeExpenses" EntitySet="IncomeExpenses" />
+          </AssociationSet>
+          <AssociationSet Name="FK__IncomeExp__RoomI__3493CFA7" Association="Self.FK__IncomeExp__RoomI__3493CFA7">
+            <End Role="Rooms" EntitySet="Rooms" />
+            <End Role="IncomeExpenses" EntitySet="IncomeExpenses" />
           </AssociationSet>
           <AssociationSet Name="FK__Notificat__Tenan__4E88ABD4" Association="Self.FK__Notificat__Tenan__4E88ABD4">
             <End Role="Tenants" EntitySet="Tenants" />
@@ -429,6 +507,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="WaterPrice" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
           <Property Name="ContractScanFilePath" Type="String" MaxLength="250" FixedLength="false" Unicode="true" />
           <NavigationProperty Name="ContractExtensionHistories" Relationship="NhaTroAnCuModel.FK__ContractE__Contr__2180FB33" FromRole="Contract" ToRole="ContractExtensionHistory" />
+          <NavigationProperty Name="IncomeExpenses" Relationship="NhaTroAnCuModel.FK__IncomeExp__Contr__339FAB6E" FromRole="Contract" ToRole="IncomeExpens" />
         </EntityType>
         <EntityType Name="ContractTenant">
           <Key>
@@ -489,6 +568,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="HasBed" Type="Boolean" Nullable="false" />
           <Property Name="HasWardrobe" Type="Boolean" Nullable="false" />
           <NavigationProperty Name="UtilityBills" Relationship="NhaTroAnCuModel.FK_UtilityBills_Rooms" FromRole="Room" ToRole="UtilityBill" />
+          <NavigationProperty Name="IncomeExpenses" Relationship="NhaTroAnCuModel.FK__IncomeExp__RoomI__3493CFA7" FromRole="Room" ToRole="IncomeExpens" />
         </EntityType>
         <EntityType Name="Tenant">
           <Key>
@@ -498,7 +578,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="FullName" Type="String" MaxLength="100" FixedLength="false" Unicode="true" Nullable="false" />
           <Property Name="IdentityCard" Type="String" MaxLength="20" FixedLength="false" Unicode="true" Nullable="false" />
           <Property Name="PhoneNumber" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
-          <Property Name="Photo" Type="String" MaxLength="1000" FixedLength="false" Unicode="true" />
+          <Property Name="Photo" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
           <NavigationProperty Name="ContractTenants" Relationship="Self.FK_ContractTenants_Tenants" FromRole="Tenants" ToRole="ContractTenants" />
           <NavigationProperty Name="Notifications" Relationship="Self.FK__Notificat__Tenan__4E88ABD4" FromRole="Tenants" ToRole="Notifications" />
           <Property Name="BirthDate" Type="DateTime" Precision="0" />
@@ -634,6 +714,20 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <AssociationSet Name="FK__ContractE__Contr__2180FB33" Association="NhaTroAnCuModel.FK__ContractE__Contr__2180FB33">
             <End Role="Contract" EntitySet="Contracts" />
             <End Role="ContractExtensionHistory" EntitySet="ContractExtensionHistories" />
+          </AssociationSet>
+          <EntitySet Name="IncomeExpenseCategories" EntityType="NhaTroAnCuModel.IncomeExpenseCategory" />
+          <EntitySet Name="IncomeExpenses" EntityType="NhaTroAnCuModel.IncomeExpens" />
+          <AssociationSet Name="FK__IncomeExp__Contr__339FAB6E" Association="NhaTroAnCuModel.FK__IncomeExp__Contr__339FAB6E">
+            <End Role="Contract" EntitySet="Contracts" />
+            <End Role="IncomeExpens" EntitySet="IncomeExpenses" />
+          </AssociationSet>
+          <AssociationSet Name="FK__IncomeExp__Categ__32AB8735" Association="NhaTroAnCuModel.FK__IncomeExp__Categ__32AB8735">
+            <End Role="IncomeExpenseCategory" EntitySet="IncomeExpenseCategories" />
+            <End Role="IncomeExpens" EntitySet="IncomeExpenses" />
+          </AssociationSet>
+          <AssociationSet Name="FK__IncomeExp__RoomI__3493CFA7" Association="NhaTroAnCuModel.FK__IncomeExp__RoomI__3493CFA7">
+            <End Role="Room" EntitySet="Rooms" />
+            <End Role="IncomeExpens" EntitySet="IncomeExpenses" />
           </AssociationSet>
         </EntityContainer>
         <EntityType Name="C__MigrationHistory">
@@ -833,6 +927,74 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             </Principal>
             <Dependent Role="ContractExtensionHistory">
               <PropertyRef Name="ContractId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <EntityType Name="IncomeExpenseCategory">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="Name" Type="String" Nullable="false" MaxLength="100" FixedLength="false" Unicode="true" />
+          <Property Name="Type" Type="String" Nullable="false" MaxLength="10" FixedLength="false" Unicode="true" />
+          <Property Name="IsSystem" Type="Boolean" />
+          <Property Name="IsActive" Type="Boolean" />
+          <Property Name="CreatedAt" Type="DateTime" Precision="3" />
+          <Property Name="UpdatedAt" Type="DateTime" Precision="3" />
+          <NavigationProperty Name="IncomeExpenses" Relationship="NhaTroAnCuModel.FK__IncomeExp__Categ__32AB8735" FromRole="IncomeExpenseCategory" ToRole="IncomeExpens" />
+        </EntityType>
+        <EntityType Name="IncomeExpens">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="CategoryId" Type="Int32" Nullable="false" />
+          <Property Name="ContractId" Type="Int32" />
+          <Property Name="RoomId" Type="Int32" />
+          <Property Name="Amount" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="TransactionDate" Type="DateTime" Nullable="false" Precision="0" />
+          <Property Name="Description" Type="String" MaxLength="500" FixedLength="false" Unicode="true" />
+          <Property Name="ReferenceNumber" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="CreatedBy" Type="String" MaxLength="128" FixedLength="false" Unicode="true" />
+          <Property Name="CreatedAt" Type="DateTime" Precision="3" />
+          <Property Name="UpdatedAt" Type="DateTime" Precision="3" />
+          <NavigationProperty Name="Contract" Relationship="NhaTroAnCuModel.FK__IncomeExp__Contr__339FAB6E" FromRole="IncomeExpens" ToRole="Contract" />
+          <NavigationProperty Name="IncomeExpenseCategory" Relationship="NhaTroAnCuModel.FK__IncomeExp__Categ__32AB8735" FromRole="IncomeExpens" ToRole="IncomeExpenseCategory" />
+          <NavigationProperty Name="Room" Relationship="NhaTroAnCuModel.FK__IncomeExp__RoomI__3493CFA7" FromRole="IncomeExpens" ToRole="Room" />
+        </EntityType>
+        <Association Name="FK__IncomeExp__Contr__339FAB6E">
+          <End Type="NhaTroAnCuModel.Contract" Role="Contract" Multiplicity="0..1" />
+          <End Type="NhaTroAnCuModel.IncomeExpens" Role="IncomeExpens" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Contract">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="IncomeExpens">
+              <PropertyRef Name="ContractId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__IncomeExp__Categ__32AB8735">
+          <End Type="NhaTroAnCuModel.IncomeExpenseCategory" Role="IncomeExpenseCategory" Multiplicity="1" />
+          <End Type="NhaTroAnCuModel.IncomeExpens" Role="IncomeExpens" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="IncomeExpenseCategory">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="IncomeExpens">
+              <PropertyRef Name="CategoryId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__IncomeExp__RoomI__3493CFA7">
+          <End Type="NhaTroAnCuModel.Room" Role="Room" Multiplicity="0..1" />
+          <End Type="NhaTroAnCuModel.IncomeExpens" Role="IncomeExpens" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Room">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="IncomeExpens">
+              <PropertyRef Name="RoomId" />
             </Dependent>
           </ReferentialConstraint>
         </Association>
@@ -1047,6 +1209,36 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
                 <ScalarProperty Name="OldEndDate" ColumnName="OldEndDate" />
                 <ScalarProperty Name="ExtendedAt" ColumnName="ExtendedAt" />
                 <ScalarProperty Name="ContractId" ColumnName="ContractId" />
+                <ScalarProperty Name="Id" ColumnName="Id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="IncomeExpenseCategories">
+            <EntityTypeMapping TypeName="NhaTroAnCuModel.IncomeExpenseCategory">
+              <MappingFragment StoreEntitySet="IncomeExpenseCategories">
+                <ScalarProperty Name="UpdatedAt" ColumnName="UpdatedAt" />
+                <ScalarProperty Name="CreatedAt" ColumnName="CreatedAt" />
+                <ScalarProperty Name="IsActive" ColumnName="IsActive" />
+                <ScalarProperty Name="IsSystem" ColumnName="IsSystem" />
+                <ScalarProperty Name="Type" ColumnName="Type" />
+                <ScalarProperty Name="Name" ColumnName="Name" />
+                <ScalarProperty Name="Id" ColumnName="Id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="IncomeExpenses">
+            <EntityTypeMapping TypeName="NhaTroAnCuModel.IncomeExpens">
+              <MappingFragment StoreEntitySet="IncomeExpenses">
+                <ScalarProperty Name="UpdatedAt" ColumnName="UpdatedAt" />
+                <ScalarProperty Name="CreatedAt" ColumnName="CreatedAt" />
+                <ScalarProperty Name="CreatedBy" ColumnName="CreatedBy" />
+                <ScalarProperty Name="ReferenceNumber" ColumnName="ReferenceNumber" />
+                <ScalarProperty Name="Description" ColumnName="Description" />
+                <ScalarProperty Name="TransactionDate" ColumnName="TransactionDate" />
+                <ScalarProperty Name="Amount" ColumnName="Amount" />
+                <ScalarProperty Name="RoomId" ColumnName="RoomId" />
+                <ScalarProperty Name="ContractId" ColumnName="ContractId" />
+                <ScalarProperty Name="CategoryId" ColumnName="CategoryId" />
                 <ScalarProperty Name="Id" ColumnName="Id" />
               </MappingFragment>
             </EntityTypeMapping>
