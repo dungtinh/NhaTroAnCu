@@ -249,8 +249,7 @@
                                     <i class="fas fa-eye"></i> Xem scan
                                 </a>
                             }
-                            <a href="#" class="btn btn-danger btn-custom"
-                               onclick="return confirm('Bạn có chắc muốn kết thúc hợp đồng?') ? (window.location.href='@Url.Action("End", "Contracts", new { id = contract.Id })', false) : false;">
+                            <a href="@Url.Action("End", "Contracts", new { id = contract.Id })" class="btn btn-danger btn-custom">
                                 <i class="fas fa-times-circle"></i> Kết thúc HĐ
                             </a>
                         </div>
@@ -535,7 +534,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="photoModalTitle">Ảnh CCCD</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">                    
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
                 </button>
             </div>
             <div class="modal-body text-center">

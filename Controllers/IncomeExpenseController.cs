@@ -6,8 +6,7 @@ using System.Web.Mvc;
 using Microsoft.AspNet.Identity;
 
 namespace NhaTroAnCu.Controllers
-{
-    [Authorize]
+{   
     public class IncomeExpenseController : Controller
     {
         private NhaTroAnCuEntities db = new NhaTroAnCuEntities();
