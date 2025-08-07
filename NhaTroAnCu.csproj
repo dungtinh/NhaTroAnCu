@@ -367,6 +367,7 @@
     <Content Include="Content\Fonts\fontawesome-webfont.svg" />
     <Content Include="Content\income-expence-action.css" />
     <Content Include="Content\income-expense.css" />
+    <Content Include="Content\income-report.css" />
     <Content Include="Content\navigation.css" />
     <Content Include="Content\room-details.css" />
     <Content Include="Content\roomsindex.css" />

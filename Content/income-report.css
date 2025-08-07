@@ -1,0 +1,80 @@
+﻿
+.report-header {
+    margin-bottom: 20px;
+    padding: 20px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.summary-boxes {
+    margin-bottom: 10px;
+}
+
+.summary-box {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+    .summary-box.income {
+        border-top: 4px solid #28a745;
+    }
+
+    .summary-box.expense {
+        border-top: 4px solid #dc3545;
+    }
+
+    .summary-box.balance.positive {
+        border-top: 4px solid #17a2b8;
+    }
+
+    .summary-box.balance.negative {
+        border-top: 4px solid #ffc107;
+    }
+
+    .summary-box h4 {
+        font-size: 1rem;
+        color: #666;
+        margin-bottom: 10px;
+    }
+
+    .summary-box .amount {
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin: 0;
+    }
+
+    .summary-box.income .amount {
+        color: #28a745;
+    }
+
+    .summary-box.expense .amount {
+        color: #dc3545;
+    }
+
+    .summary-box.balance.positive .amount {
+        color: #17a2b8;
+    }
+
+    .summary-box.balance.negative .amount {
+        color: #ffc107;
+    }
+
+.transaction-details {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin-top: 30px;
+}
+
+@media (max-width: 991px) {
+    .row > .col-md-5, .row > .col-md-7 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}

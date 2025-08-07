@@ -6,7 +6,7 @@ using System.Web.Mvc;
 using Microsoft.AspNet.Identity;
 
 namespace NhaTroAnCu.Controllers
-{   
+{
     public class IncomeExpenseController : Controller
     {
         private NhaTroAnCuEntities db = new NhaTroAnCuEntities();
@@ -414,6 +414,15 @@ namespace NhaTroAnCu.Controllers
             ViewBag.TotalExpense = expense;
             ViewBag.Balance = income - expense;
             ViewBag.Transactions = transactions;
+
+            // Controller: Trước khi trả về View
+            var expenseChartData = db.IncomeExpenses
+                .Where(x => x.IncomeExpenseCategory.Type == "Expense" && x.TransactionDate.Month == currentMonth && x.TransactionDate.Year == currentYear)
+                .GroupBy(x => x.IncomeExpenseCategory.Name)
+                .Select(g => new { Category = g.Key, TotalAmount = g.Sum(x => x.Amount) })
+                .ToList();
+
+            ViewBag.ExpenseChartData = expenseChartData;
 
             return View();
         }
