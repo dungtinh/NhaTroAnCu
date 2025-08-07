@@ -28,7 +28,7 @@ namespace NhaTroAnCu.Controllers
                 to = DateTime.ParseExact(toDate, "dd/MM/yyyy", null);
 
             var query = db.IncomeExpenses
-                .Include(i => i.Category)
+                .Include(i => i.IncomeExpenseCategory)
                 .Include(i => i.Room)
                 .Include(i => i.Contract)
                 .AsQueryable();
@@ -40,11 +40,11 @@ namespace NhaTroAnCu.Controllers
             if (!string.IsNullOrEmpty(categoryFilter))
                 query = query.Where(x => x.CategoryId.ToString() == categoryFilter);
             if (!string.IsNullOrEmpty(typeFilter))
-                query = query.Where(x => x.Category.Type == typeFilter);
+                query = query.Where(x => x.IncomeExpenseCategory.Type == typeFilter);
 
             // Tính tổng
-            var totalIncome = query.Where(x => x.Category.Type == "Income").Sum(x => (decimal?)x.Amount) ?? 0;
-            var totalExpense = query.Where(x => x.Category.Type == "Expense").Sum(x => (decimal?)x.Amount) ?? 0;
+            var totalIncome = query.Where(x => x.IncomeExpenseCategory.Type == "Income").Sum(x => (decimal?)x.Amount) ?? 0;
+            var totalExpense = query.Where(x => x.IncomeExpenseCategory.Type == "Expense").Sum(x => (decimal?)x.Amount) ?? 0;
 
             var totalItems = query.Count();
 
@@ -56,8 +56,8 @@ namespace NhaTroAnCu.Controllers
                 .Select(x => new IncomeExpenseItemViewModel
                 {
                     Id = x.Id,
-                    CategoryName = x.Category.Name,
-                    Type = x.Category.Type,
+                    CategoryName = x.IncomeExpenseCategory.Name,
+                    Type = x.IncomeExpenseCategory.Type,
                     Amount = x.Amount,
                     TransactionDate = x.TransactionDate,
                     Description = x.Description,
@@ -112,7 +112,7 @@ namespace NhaTroAnCu.Controllers
         {
             if (ModelState.IsValid)
             {
-                var incomeExpense = new IncomeExpense
+                var incomeExpense = new IncomeExpens
                 {
                     CategoryId = model.CategoryId,
                     ContractId = model.ContractId,
@@ -327,7 +327,7 @@ namespace NhaTroAnCu.Controllers
 
                 if (incomeCategory != null)
                 {
-                    var incomeExpense = new IncomeExpense
+                    var incomeExpense = new IncomeExpens
                     {
                         CategoryId = incomeCategory.Id,
                         ContractId = payment.ContractId,
@@ -357,7 +357,7 @@ namespace NhaTroAnCu.Controllers
 
                 if (expenseCategory != null)
                 {
-                    var incomeExpense = new IncomeExpense
+                    var incomeExpense = new IncomeExpens
                     {
                         CategoryId = expenseCategory.Id,
                         ContractId = contractId,
