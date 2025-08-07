@@ -1,0 +1,56 @@
+﻿
+@{
+    ViewBag.Title = "Kết thúc hợp đồng";
+    var contract = ViewBag.Contract as NhaTroAnCu.Models.Contract;
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h4><i class="fas fa-file-contract"></i> Kết thúc hợp đồng</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Bạn đang kết thúc hợp đồng phòng <strong>@contract.Room.Name</strong>
+                    </div>
+
+                    @using (Html.BeginForm("EndConfirm", "Contracts", FormMethod.Post))
+                    {
+                        @Html.Hidden("id", contract.Id)
+
+                        <div class="form-group">
+                            <label>Tiền cọc ban đầu</label>
+                            <input type="text" class="form-control" value="@contract.DepositAmount.ToString("N0") đ" readonly />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Số tiền trả lại</label>
+                            <input type="number" name="refundAmount" class="form-control"
+                                   value="@contract.DepositAmount" max="@contract.DepositAmount" />
+                            <small class="text-muted">Nhập 0 nếu không trả lại tiền cọc</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Ghi chú</label>
+                            <textarea name="refundNote" class="form-control" rows="3"
+                                      placeholder="Lý do giữ lại tiền cọc (nếu có)..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-check"></i> Xác nhận kết thúc
+                            </button>
+                            <a href="@Url.Action("Details", "Rooms", new { id = contract.RoomId })"
+                               class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Hủy
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

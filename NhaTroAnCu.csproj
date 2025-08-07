@@ -239,6 +239,7 @@
     <Compile Include="Controllers\CardReaderController.cs" />
     <Compile Include="Controllers\ContractsController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
+    <Compile Include="Controllers\IncomeExpenseController.cs" />
     <Compile Include="Controllers\ManageController.cs" />
     <Compile Include="Controllers\PaymentsController.cs" />
     <Compile Include="Controllers\ReportSummaryController.cs" />
@@ -285,6 +286,13 @@
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
     <Compile Include="Models\IdentityModels.cs" />
+    <Compile Include="Models\IncomeExpens.cs">
+      <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\IncomeExpenseCategory.cs">
+      <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\IncomeExpenseViewModels.cs" />
     <Compile Include="Models\ManageViewModels.cs" />
     <Compile Include="Models\NhaTroAnCuModel.Context.cs">
       <AutoGen>True</AutoGen>
@@ -307,6 +315,7 @@
     <Compile Include="Models\PaymentHistory.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
+    <Compile Include="Models\PaymentReportViewModel.cs" />
     <Compile Include="Models\ReportSummaryViewModel.cs" />
     <Compile Include="Models\Room.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
@@ -354,7 +363,9 @@
     <Content Include="Content\contract-action.css" />
     <Content Include="Content\CSS\font-awesome.css" />
     <Content Include="Content\CSS\font-awesome.min.css" />
+    <Content Include="Content\datepicker-custom.css" />
     <Content Include="Content\Fonts\fontawesome-webfont.svg" />
+    <Content Include="Content\income-expense.css" />
     <Content Include="Content\navigation.css" />
     <Content Include="Content\room-details.css" />
     <Content Include="Content\roomsindex.css" />
@@ -580,6 +591,10 @@
     <Content Include="Views\TenantContracts\Index.cshtml" />
     <Content Include="Views\Contracts\Edit.cshtml" />
     <Content Include="Views\Shared\_CreateOrEditUtilityBillPartial.cshtml" />
+    <Content Include="Views\IncomeExpense\Index.cshtml" />
+    <Content Include="Views\IncomeExpense\Create.cshtml" />
+    <Content Include="Views\IncomeExpense\Categories.cshtml" />
+    <Content Include="Views\Contracts\End.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Uploads\ContractScans\" />

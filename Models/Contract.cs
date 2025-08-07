@@ -20,6 +20,7 @@ namespace NhaTroAnCu.Models
             this.ContractTenants = new HashSet<ContractTenant>();
             this.PaymentHistories = new HashSet<PaymentHistory>();
             this.ContractExtensionHistories = new HashSet<ContractExtensionHistory>();
+            this.IncomeExpenses = new HashSet<IncomeExpens>();
         }
     
         public int Id { get; set; }
@@ -42,5 +43,7 @@ namespace NhaTroAnCu.Models
         public virtual ICollection<PaymentHistory> PaymentHistories { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<ContractExtensionHistory> ContractExtensionHistories { get; set; }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public virtual ICollection<IncomeExpens> IncomeExpenses { get; set; }
     }
 }

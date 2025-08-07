@@ -1,0 +1,198 @@
+﻿@model NhaTroAnCu.Models.IncomeExpenseListViewModel
+@{
+    ViewBag.Title = "Quản lý Thu Chi";
+}
+
+<link href="~/Content/income-expense.css" rel="stylesheet" />
+
+<div class="income-expense-container">
+    <div class="page-header">
+        <h2><i class="fas fa-money-check-alt"></i> Quản lý Thu Chi</h2>
+        <div class="header-actions">
+            <a href="@Url.Action("Create")" class="btn btn-success">
+                <i class="fas fa-plus"></i> Thêm giao dịch
+            </a>
+            <a href="@Url.Action("Categories")" class="btn btn-info">
+                <i class="fas fa-list"></i> Quản lý danh mục
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+        <div class="summary-card income">
+            <div class="card-icon">
+                <i class="fas fa-arrow-down"></i>
+            </div>
+            <div class="card-content">
+                <div class="card-label">Tổng thu</div>
+                <div class="card-value">@Model.TotalIncome.ToString("N0") đ</div>
+            </div>
+        </div>
+
+        <div class="summary-card expense">
+            <div class="card-icon">
+                <i class="fas fa-arrow-up"></i>
+            </div>
+            <div class="card-content">
+                <div class="card-label">Tổng chi</div>
+                <div class="card-value">@Model.TotalExpense.ToString("N0") đ</div>
+            </div>
+        </div>
+
+        <div class="summary-card balance @(Model.Balance >= 0 ? "positive" : "negative")">
+            <div class="card-icon">
+                <i class="fas fa-balance-scale"></i>
+            </div>
+            <div class="card-content">
+                <div class="card-label">Cân đối</div>
+                <div class="card-value">@Model.Balance.ToString("N0") đ</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-section">
+        <form method="get" class="filter-form">
+            <div class="row">
+                <div class="col-md-2">
+                    <input type="text" name="fromDate" class="form-control datepicker"
+                           placeholder="Từ ngày" value="@(Model.FromDate?.ToString("dd/MM/yyyy"))" />
+                </div>
+                <div class="col-md-2">
+                    <input type="text" name="toDate" class="form-control datepicker"
+                           placeholder="Đến ngày" value="@(Model.ToDate?.ToString("dd/MM/yyyy"))" />
+                </div>
+                <div class="col-md-3">
+                    <select name="categoryFilter" class="form-control">
+                        <option value="">-- Tất cả danh mục --</option>
+                        @foreach (var cat in ViewBag.Categories as List<NhaTroAnCu.Models.IncomeExpenseCategory>)
+                        {
+                            <option value="@cat.Id" @(Model.CategoryFilter == cat.Id.ToString() ? "selected" : "")>
+                                @cat.Name (@(cat.Type == "Income" ? "Thu" : "Chi"))
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="typeFilter" class="form-control">
+                        <option value="">-- Tất cả --</option>
+                        <option value="Income" @(Model.TypeFilter == "Income" ? "selected" : "")>Thu</option>
+                        <option value="Expense" @(Model.TypeFilter == "Expense" ? "selected" : "")>Chi</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter"></i> Lọc
+                    </button>
+                    <a href="@Url.Action("Index")" class="btn btn-secondary">
+                        <i class="fas fa-redo"></i> Làm mới
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="table-container">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Ngày</th>
+                    <th>Danh mục</th>
+                    <th>Loại</th>
+                    <th>Số tiền</th>
+                    <th>Mô tả</th>
+                    <th>Phòng</th>
+                    <th>Số chứng từ</th>
+                    <th width="100">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td>@item.Trans
+                        <td>@item.TransactionDate.ToString("dd/MM/yyyy")</td>
+                        <td>@item.CategoryName</td>
+                        <td>
+                            <span class="badge @(item.Type == "Income" ? "badge-success" : "badge-danger")">
+                                @(item.Type == "Income" ? "Thu" : "Chi")
+                            </span>
+                        </td>
+                        <td class="text-right font-weight-bold @(item.Type == "Income" ? "text-success" : "text-danger")">
+                            @(item.Type == "Income" ? "+" : "-")@item.Amount.ToString("N0") đ
+                        </td>
+                        <td>@item.Description</td>
+                        <td>@item.RoomName</td>
+                        <td>@item.ReferenceNumber</td>
+                        <td>
+                            <a href="@Url.Action("Edit", new { id = item.Id })" class="btn btn-sm btn-warning">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button onclick="deleteTransaction(@item.Id)" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        @if (!Model.Items.Any())
+        {
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-3x text-muted"></i>
+                <p class="mt-3">Không có giao dịch nào</p>
+            </div>
+        }
+    </div>
+
+    <!-- Pagination -->
+    @{
+        int totalPages = (int)Math.Ceiling((double)Model.TotalItems / Model.PageSize);
+    }
+    @if (totalPages > 1)
+    {
+        <nav>
+            <ul class="pagination justify-content-center">
+                @for (int i = 1; i <= totalPages; i++)
+                {
+                    <li class="page-item @(i == Model.Page ? "active" : "")">
+                        <a class="page-link" href="?page=@i&fromDate=@Model.FromDate?.ToString(" dd /MM/yyyy")&toDate =@Model.ToDate ?.ToString("dd /MM/yyyy")&categoryFilter =@Model.CategoryFilter &typeFilter=@Model.TypeFilter">
+                            @i
+                        </a>
+                    </li>
+                    }
+                </ul>
+            </nav>
+            }
+        </div>
+
+        @section Scripts {
+            <script>
+        function deleteTransaction(id) {
+            Swal.fire({
+                title: 'Xác nhận xóa?',
+                text: "Bạn không thể hoàn tác sau khi xóa!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Xóa',
+                cancelButtonText: 'Hủy'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('@Url.Action("Delete")', { id: id }, function(res) {
+                        if (res.success) {
+                            Swal.fire('Đã xóa!', res.message, 'success')
+                                .then(() => location.reload());
+                        } else {
+                            Swal.fire('Lỗi!', res.message, 'error');
+                        }
+                    });
+                }
+            });
+        }
+            </script>
+        }

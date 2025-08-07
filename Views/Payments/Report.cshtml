@@ -1,28 +1,463 @@
-﻿@model IEnumerable<NhaTroAnCu.Models.PaymentHistory>
+﻿@model NhaTroAnCu.Models.PaymentReportViewModel
 @{
-    ViewBag.Title = "Doanh thu tháng";
+    ViewBag.Title = "Báo cáo thu chi";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h2>Doanh thu tháng @Request["month"]/ @Request["year"]</h2>
-
-<table class="table table-bordered">
-    <tr>
-        <th>Phòng</th>
-        <th>Tháng</th>
-        <th>Tổng tiền</th>
-        <th>Ngày nộp</th>
-        <th>Ghi chú</th>
-    </tr>
-    @foreach (var p in Model)
-    {
-        <tr>
-            <td>@p.Room.Name</td>
-            <td>@p.Month/@p.Year</td>
-            <td>@p.TotalAmount.ToString("N0")</td>
-            <td>@p.PaidDate.ToString("dd/MM/yyyy")</td>
-            <td>@p.Note</td>
-        </tr>
+<style>
+    .report-header {
+        background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        position: relative;
+        overflow: hidden;
     }
-</table>
 
-<h3>Tổng cộng: <span class="text-danger">@ViewBag.Total.ToString("N0")</span> đ</h3>
+        .report-header::before {
+            content: "";
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 50%;
+            height: 200%;
+            background: rgba(255, 255, 255, 0.05);
+            transform: rotate(35deg);
+        }
+
+        .report-header h2 {
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+    .statistics-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+        border-top: 4px solid transparent;
+        position: relative;
+    }
+
+        .statistics-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .statistics-card:nth-child(1) .stat-number {
+            color: #3498db;
+        }
+
+        .statistics-card:nth-child(2) .stat-number {
+            color: #2ecc71;
+        }
+
+        .statistics-card:nth-child(3) .stat-number {
+            color: #f39c12;
+        }
+
+        .statistics-card:nth-child(4) .stat-number {
+            color: #e74c3c;
+        }
+
+        .statistics-card:nth-child(1) {
+            border-top-color: #3498db;
+        }
+
+        .statistics-card:nth-child(2) {
+            border-top-color: #2ecc71;
+        }
+
+        .statistics-card:nth-child(3) {
+            border-top-color: #f39c12;
+        }
+
+        .statistics-card:nth-child(4) {
+            border-top-color: #e74c3c;
+        }
+
+        .statistics-card i {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 3rem;
+            opacity: 0.1;
+        }
+
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .stat-label {
+        color: #7f8c8d;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        font-weight: 600;
+    }
+
+    .filter-section {
+        background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+        padding: 25px;
+        border-radius: 15px;
+        margin-bottom: 25px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    }
+
+        .filter-section label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+    .table-container {
+        background: white;
+        padding: 25px;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    }
+
+    .room-stats-table {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+
+        .room-stats-table thead {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+        }
+
+            .room-stats-table thead th {
+                padding: 15px;
+                font-weight: 600;
+                border: none;
+            }
+
+    .payment-table thead {
+        background: linear-gradient(135deg, #16a085 0%, #27ae60 100%);
+        color: white;
+    }
+
+        .payment-table thead th {
+            padding: 15px;
+            font-weight: 600;
+            border: none;
+        }
+
+    .btn-export {
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        border: none;
+        color: white;
+        padding: 10px 25px;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+        .btn-export:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 20px rgba(231, 76, 60, 0.4);
+            color: white;
+            text-decoration: none;
+        }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        border: none;
+        border-radius: 25px;
+        padding: 10px 25px;
+        font-weight: 600;
+    }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 20px rgba(52, 152, 219, 0.4);
+        }
+
+    .pagination .page-link {
+        color: #667eea;
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: #667eea;
+        border-color: #667eea;
+    }
+
+    .badge-success {
+        background: #28a745;
+    }
+
+    .badge-info {
+        background: #17a2b8;
+    }
+</style>
+
+<div class="report-header">
+    <h2 class="mb-0"><i class="fas fa-chart-line"></i> BÁO CÁO THU CHI</h2>
+    <p class="mb-0 mt-2">Thống kê tổng quan toàn bộ hệ thống</p>
+</div>
+
+<!-- Thống kê tổng quan TOÀN BỘ HỆ THỐNG -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="statistics-card">
+            <i class="fas fa-dollar-sign"></i>
+            <div class="stat-number">@Model.OverallStatistics.TotalRevenue.ToString("N0") <small style="font-size: 0.5em;">VNĐ</small></div>
+            <div class="stat-label">Tổng doanh thu</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="statistics-card">
+            <i class="fas fa-receipt"></i>
+            <div class="stat-number">@Model.OverallStatistics.TotalPayments</div>
+            <div class="stat-label">Tổng số lần thu</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="statistics-card">
+            <i class="fas fa-calculator"></i>
+            <div class="stat-number">@Model.OverallStatistics.AveragePayment.ToString("N0") <small style="font-size: 0.5em;">VNĐ</small></div>
+            <div class="stat-label">Trung bình/lần</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="statistics-card">
+            <i class="fas fa-home"></i>
+            <div class="stat-number">@Model.OverallStatistics.RoomCount</div>
+            <div class="stat-label">Số phòng đã thu</div>
+        </div>
+    </div>
+</div>
+
+<!-- Bộ lọc -->
+<div class="filter-section">
+    <form method="get" action="@Url.Action("Report")" class="form-inline">
+        <div class="row w-100">
+            <div class="col-md-3">
+                <div class="form-group w-100">
+                    <label>Phòng:</label>
+                    @Html.DropDownList("roomId", ViewBag.Rooms as SelectList, "-- Tất cả phòng --", new { @class = "form-control w-100" })
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group w-100">
+                    <label>Từ ngày:</label>
+                    <input type="text" name="fromDate" class="form-control datepicker w-100"
+                           value="@Model.FromDate.ToString("dd/MM/yyyy")" autocomplete="off" />
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group w-100">
+                    <label>Đến ngày:</label>
+                    <input type="text" name="toDate" class="form-control datepicker w-100"
+                           value="@Model.ToDate.ToString("dd/MM/yyyy")" autocomplete="off" />
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group w-100 mt-4">
+                    <button type="submit" class="btn btn-primary mr-2">
+                        <i class="fas fa-search"></i> Lọc
+                    </button>
+                    <a href="@Url.Action("ExportToPdf", new { roomId = Model.RoomId, fromDate = Model.FromDate.ToString("dd/MM/yyyy"), toDate = Model.ToDate.ToString("dd/MM/yyyy") })"
+                       class="btn-export" target="_blank">
+                        <i class="fas fa-file-pdf"></i> Xuất PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+<!-- Danh sách chi tiết thanh toán với điều kiện lọc -->
+<div class="table-container">
+    <h4 class="mb-3">
+        <i class="fas fa-list"></i> Chi tiết các lần thanh toán
+        <small class="text-muted">(Từ @Model.FromDate.ToString("dd/MM/yyyy") đến @Model.ToDate.ToString("dd/MM/yyyy"))</small>
+    </h4>
+
+    <!-- Thống kê theo điều kiện lọc -->
+    @if (Model.FilteredStatistics.TotalPayments > 0)
+    {
+        <div class="alert alert-info mb-3">
+            <i class="fas fa-info-circle"></i>
+            <strong>Kết quả lọc:</strong>
+            Tìm thấy <strong>@Model.FilteredStatistics.TotalPayments</strong> lần thanh toán,
+            tổng số tiền: <strong>@Model.FilteredStatistics.TotalRevenue.ToString("N0") VNĐ</strong>,
+            trung bình: <strong>@Model.FilteredStatistics.AveragePayment.ToString("N0") VNĐ</strong>/lần
+            @if (Model.RoomId.HasValue)
+            {
+                <text> - Phòng được chọn</text>
+            }
+        </div>
+    }
+    <div class="table-responsive">
+        <table class="table payment-table">
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>Phòng</th>
+                    <th>Người thuê</th>
+                    <th>Tháng/Năm</th>
+                    <th>Số tiền</th>
+                    <th>Ngày thu</th>
+                    <th>Ghi chú</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Payments != null && Model.Payments.Any())
+                {
+                    int index = (Model.CurrentPage - 1) * Model.PageSize + 1;
+                    foreach (var payment in Model.Payments)
+                    {
+                        <tr>
+                            <td>@index</td>
+                            <td><span class="badge badge-info">@payment.Room.Name</span></td>
+                            <td>
+                                @if (payment.Contract?.ContractTenants != null && payment.Contract.ContractTenants.Any())
+                                {
+                                    @(string.Join(", ", payment.Contract.ContractTenants.Select(ct => ct.Tenant?.FullName)))
+                                }
+                                else
+                                {
+                                    <text>-</text>
+                                }
+                            </td>
+                            <td>@payment.Month/@payment.Year</td>
+                            <td><strong class="text-success">@payment.TotalAmount.ToString("N0") VNĐ</strong></td>
+                            <td>@payment.PaidDate.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@(string.IsNullOrEmpty(payment.Note) ? "-" : payment.Note)</td>
+                        </tr>
+                        index++;
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center">Không có dữ liệu</td>
+                    </tr>
+                }
+            </tbody>
+            @if (Model.Payments != null && Model.Payments.Any())
+            {
+                <tfoot>
+                    <tr class="font-weight-bold bg-light">
+                        <td colspan="4" class="text-right">Tổng trang này:</td>
+                        <td class="text-success">@Model.Payments.Sum(p => p.TotalAmount).ToString("N0") VNĐ</td>
+                        <td colspan="2"></td>
+                    </tr>
+                    <tr class="font-weight-bold bg-warning text-dark">
+                        <td colspan="4" class="text-right">Tổng theo điều kiện lọc:</td>
+                        <td class="text-danger">@Model.FilteredTotalAmount.ToString("N0") VNĐ</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+    </div>
+
+    <!-- Phân trang -->
+    @if (Model.TotalPages > 1)
+    {
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-muted">
+                Hiển thị @((Model.CurrentPage - 1) * Model.PageSize + 1) -
+                @Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalItems)
+                trong tổng số @Model.TotalItems bản ghi
+            </div>
+
+            <nav aria-label="Page navigation">
+                <ul class="pagination mb-0">
+                    <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                        <a class="page-link" href="@Url.Action("Report", new {
+                            page = Model.CurrentPage - 1,
+                            pageSize = Model.PageSize,
+                            roomId = Model.RoomId,
+                            fromDate = Model.FromDate.ToString("dd/MM/yyyy"),
+                            toDate = Model.ToDate.ToString("dd/MM/yyyy")
+                        })">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+
+                    @for (int i = Math.Max(1, Model.CurrentPage - 2);
+                         i <= Math.Min(Model.TotalPages, Model.CurrentPage + 2); i++)
+                    {
+                        <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                            <a class="page-link" href="@Url.Action("Report", new {
+                                page = i,
+                                pageSize = Model.PageSize,
+                                roomId = Model.RoomId,
+                                fromDate = Model.FromDate.ToString("dd/MM/yyyy"),
+                                toDate = Model.ToDate.ToString("dd/MM/yyyy")
+                            })">@i</a>
+                        </li>
+                    }
+
+                    <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                        <a class="page-link" href="@Url.Action("Report", new {
+                            page = Model.CurrentPage + 1,
+                            pageSize = Model.PageSize,
+                            roomId = Model.RoomId,
+                            fromDate = Model.FromDate.ToString("dd/MM/yyyy"),
+                            toDate = Model.ToDate.ToString("dd/MM/yyyy")
+                        })">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Class .datetime đã có sẵn datepicker bootstrap với format dd/mm/yyyy
+            // Không cần khởi tạo lại
+
+            // Hiệu ứng hover cho cards
+            $('.statistics-card').hover(
+                function () { $(this).addClass('shadow-lg'); },
+                function () { $(this).removeClass('shadow-lg'); }
+            );
+
+            // Animation cho số liệu thống kê
+            $('.stat-number').each(function () {
+                var $this = $(this);
+                var originalText = $this.html();
+                var numberOnly = $this.text().replace(/[^0-9]/g, '');
+
+                if (numberOnly) {
+                    $this.prop('Counter', 0).animate({
+                        Counter: numberOnly
+                    }, {
+                        duration: 1000,
+                        easing: 'swing',
+                        step: function (now) {
+                            var num = Math.ceil(now).toLocaleString('vi-VN');
+                            if (originalText.includes('VNĐ')) {
+                                $this.html(num + ' <small>VNĐ</small>');
+                            } else {
+                                $this.text(num);
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Tooltip cho badges
+            $('[data-toggle="tooltip"]').tooltip();
+        });
+    </script>
+}

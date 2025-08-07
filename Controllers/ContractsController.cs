@@ -1,4 +1,5 @@
-﻿using Microsoft.Owin.BuilderProperties;
+﻿using Microsoft.AspNet.Identity;
+using Microsoft.Owin.BuilderProperties;
 using NhaTroAnCu.Models;
 using System;
 using System.Collections.Generic;
@@ -39,6 +40,23 @@ namespace NhaTroAnCu.Controllers
         {
             var contract = db.Contracts.Find(id);
             if (contract == null) return HttpNotFound();
+            ViewBag.Contract = contract;
+            ViewBag.DepositAmount = contract.DepositAmount;
+            return View();
+            //contract.Status = "Ended";
+            //contract.EndDate = DateTime.Now;
+
+            //var room = db.Rooms.Find(contract.RoomId);
+            //if (room != null) room.IsOccupied = false;
+
+            //db.SaveChanges();
+            //return RedirectToAction("index", "Rooms", new { id = contract.RoomId });
+        }
+        [HttpPost]
+        public ActionResult EndConfirm(int id, decimal? refundAmount, string refundNote)
+        {
+            var contract = db.Contracts.Find(id);
+            if (contract == null) return HttpNotFound();
 
             contract.Status = "Ended";
             contract.EndDate = DateTime.Now;
@@ -46,8 +64,33 @@ namespace NhaTroAnCu.Controllers
             var room = db.Rooms.Find(contract.RoomId);
             if (room != null) room.IsOccupied = false;
 
+            // Ghi nhận trả cọc nếu có
+            if (refundAmount.HasValue && refundAmount.Value > 0)
+            {
+                var expenseCategory = db.IncomeExpenseCategories
+                    .FirstOrDefault(c => c.Name == "Trả tiền cọc" && c.IsSystem);
+
+                if (expenseCategory != null)
+                {
+                    var incomeExpense = new IncomeExpense
+                    {
+                        CategoryId = expenseCategory.Id,
+                        ContractId = id,
+                        RoomId = contract.RoomId,
+                        Amount = refundAmount.Value,
+                        TransactionDate = DateTime.Now.Date,
+                        Description = refundNote ?? $"Trả tiền cọc khi kết thúc hợp đồng",
+                        ReferenceNumber = $"DEPOSIT-{id}",
+                        CreatedBy = User.Identity.GetUserId(),
+                        CreatedAt = DateTime.Now
+                    };
+
+                    db.IncomeExpenses.Add(incomeExpense);
+                }
+            }
+
             db.SaveChanges();
-            return RedirectToAction("index", "Rooms", new { id = contract.RoomId });
+            return RedirectToAction("Index", "Rooms");
         }
         public ActionResult ExportContract(int id)
         {

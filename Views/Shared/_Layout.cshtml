@@ -8,6 +8,7 @@
     <link href="~/Content/bootstrap-datepicker.min.css" rel="stylesheet" />
     @Styles.Render("~/Content/css")
     <link href="~/Content/layout.css" rel="stylesheet" />
+    <link href="~/Content/datepicker-custom.css" rel="stylesheet" />
     @Scripts.Render("~/bundles/modernizr")
 </head>
 <body>
@@ -20,7 +21,17 @@
             </button>
             <div class="collapse navbar-collapse d-sm-inline-flex justify-content-between">
                 <ul class="navbar-nav flex-grow-1">
-                    <li>@Html.ActionLink("Danh sách người thuê", "Index", "TenantContracts", new { area = "" }, new { @class = "nav-link" })</li>
+                    <li>
+                        <a class="nav-link" href="@Url.Action("Index", "TenantContracts")">
+                            <i class="fas fa-user"></i> Danh sách người thuê
+                        </a>
+                    </li>
+                    <li>
+                        <a class="nav-link" href="@Url.Action("Report", "Payments")">
+                            <i class="fas fa-chart-line"></i> Báo cáo thu chi
+                        </a>
+                    </li>
+                    <li>@Html.ActionLink("Thu Chi", "Index", "IncomeExpense", new { area = "" }, new { @class = "nav-link" })</li>
                 </ul>
                 @Html.Partial("_LoginPartial")
             </div>
@@ -62,9 +73,28 @@
         }
 
         $(function () {
-            $(".datepicker").datepicker({
+            $(".datepicker, .datetime").datepicker({
                 format: "dd/mm/yyyy",
-                autoclose: true
+                autoclose: true,
+                todayHighlight: true,
+                todayBtn: "linked",
+                clearBtn: true,
+                language: "vi",
+                weekStart: 1,
+                startView: 0,
+                minViewMode: 0,
+                forceParse: false,
+                calendarWeeks: false,
+                orientation: "bottom auto",
+                templates: {
+                    leftArrow: '<i class="fas fa-chevron-left"></i>',
+                    rightArrow: '<i class="fas fa-chevron-right"></i>'
+                }
+            });
+
+            // Thêm animation khi mở datepicker
+            $('.datepicker, .datetime').on('show.bs.datepicker', function (e) {
+                $('.datepicker-dropdown').hide().fadeIn(300);
             });
 
             // Add fade-in animation to body content
