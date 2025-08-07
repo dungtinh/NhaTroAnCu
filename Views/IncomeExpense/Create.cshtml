@@ -3,7 +3,7 @@
 @{
     ViewBag.Title = "Thêm giao dịch";
 }
-
+<link href="~/Content/income-expence-action.css" rel="stylesheet" />
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8">
@@ -35,24 +35,6 @@
                                 new { @class = "form-control datepicker" })
                             @Html.ValidationMessageFor(m => m.TransactionDate, "", new { @class = "text-danger" })
                         </div>
-
-                        <div class="form-group" id="roomSection" style="display:none;">
-                            <label>Phòng (tùy chọn)</label>
-                            @Html.DropDownListFor(m => m.RoomId, new SelectList(ViewBag.Rooms, "Id", "Name"),
-                                "-- Chọn phòng --", new { @class = "form-control" })
-                        </div>
-
-                        <div class="form-group" id="contractSection" style="display:none;">
-                            <label>Hợp đồng (tùy chọn)</label>
-                            <select name="ContractId" class="form-control">
-                                <option value="">-- Chọn hợp đồng --</option>
-                                @foreach (var contract in ViewBag.Contracts)
-                                {
-                                    <option value="@contract.Id">@contract.Display</option>
-                                }
-                            </select>
-                        </div>
-
                         <div class="form-group">
                             <label>Số chứng từ</label>
                             @Html.TextBoxFor(m => m.ReferenceNumber, new { @class = "form-control" })
@@ -80,9 +62,9 @@
 
 @section Scripts {
     <script>
-        $(function() {
+        $(function () {
             // Hiển thị/ẩn section phòng và hợp đồng tùy theo danh mục
-            $('#categorySelect').change(function() {
+            $('#categorySelect').change(function () {
                 var selectedText = $(this).find('option:selected').text().toLowerCase();
                 if (selectedText.includes('phòng')) {
                     $('#roomSection, #contractSection').show();

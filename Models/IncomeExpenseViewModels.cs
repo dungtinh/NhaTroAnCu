@@ -23,6 +23,7 @@ namespace NhaTroAnCu.Models
     {
         public int Id { get; set; }
         public string CategoryName { get; set; }
+        public bool CategoryIsSystem { get; set; }
         public string Type { get; set; }
         public decimal Amount { get; set; }
         public DateTime TransactionDate { get; set; }

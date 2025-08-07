@@ -112,11 +112,10 @@
                 @foreach (var item in Model.Items)
                 {
                     <tr>
-                        <td>@item.Trans
                         <td>@item.TransactionDate.ToString("dd/MM/yyyy")</td>
                         <td>@item.CategoryName</td>
                         <td>
-                            <span class="badge @(item.Type == "Income" ? "badge-success" : "badge-danger")">
+                            <span class="badge @(item.Type == "Income" ? "bg-success" : "bg-danger")">
                                 @(item.Type == "Income" ? "Thu" : "Chi")
                             </span>
                         </td>
@@ -127,12 +126,17 @@
                         <td>@item.RoomName</td>
                         <td>@item.ReferenceNumber</td>
                         <td>
-                            <a href="@Url.Action("Edit", new { id = item.Id })" class="btn btn-sm btn-warning">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <button onclick="deleteTransaction(@item.Id)" class="btn btn-sm btn-danger">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            @if (!item.CategoryIsSystem)
+                            {
+                                <!-- Hiển thị nút sửa/xóa nếu không phải hệ thống -->
+                                <a href="@Url.Action("Edit", new { id = item.Id })" class="btn btn-warning btn-sm">Sửa</a>
+                                <a href="javascript:void(0)" onclick="deleteTransaction(@item.Id)" class="btn btn-danger btn-sm">Xóa</a>
+                            }
+                            else
+                            {
+                                <!-- Nếu là hệ thống, có thể chỉ hiển thị trạng thái hoặc không gì -->
+                                <span class="text-muted">Hệ thống</span>
+                            }
                         </td>
                     </tr>
                 }
@@ -159,18 +163,19 @@
                 @for (int i = 1; i <= totalPages; i++)
                 {
                     <li class="page-item @(i == Model.Page ? "active" : "")">
-                        <a class="page-link" href="?page=@i&fromDate=@Model.FromDate?.ToString(" dd /MM/yyyy")&toDate =@Model.ToDate ?.ToString("dd /MM/yyyy")&categoryFilter =@Model.CategoryFilter &typeFilter=@Model.TypeFilter">
+                        <a class="page-link" href='?page=@i&fromDate=@Model.FromDate?.ToString("dd/MM/yyyy")&toDate =@Model.ToDate?.ToString("dd/MM/yyyy")&categoryFilter =@Model.CategoryFilter &typeFilter=@Model.TypeFilter'>
                             @i
                         </a>
                     </li>
-                    }
-                </ul>
-            </nav>
-            }
-        </div>
+                }
+            </ul>
+        </nav>
+    }
+</div>
 
-        @section Scripts {
-            <script>
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
         function deleteTransaction(id) {
             Swal.fire({
                 title: 'Xác nhận xóa?',
@@ -194,5 +199,5 @@
                 }
             });
         }
-            </script>
-        }
+    </script>
+}

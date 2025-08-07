@@ -31,7 +31,11 @@
                             <i class="fas fa-chart-line"></i> Báo cáo thu chi
                         </a>
                     </li>
-                    <li>@Html.ActionLink("Thu Chi", "Index", "IncomeExpense", new { area = "" }, new { @class = "nav-link" })</li>
+                    <li>
+                        <a class="nav-link" href="@Url.Action("Index", "IncomeExpense")">
+                            <i class="fas fa-money-check-alt"></i> Thu chi
+                        </a>
+                    </li>
                 </ul>
                 @Html.Partial("_LoginPartial")
             </div>
