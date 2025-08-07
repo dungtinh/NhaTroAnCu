@@ -57,6 +57,7 @@ namespace NhaTroAnCu.Controllers
                 {
                     Id = x.Id,
                     CategoryName = x.IncomeExpenseCategory.Name,
+                    CategoryIsSystem = x.IncomeExpenseCategory.IsSystem,
                     Type = x.IncomeExpenseCategory.Type,
                     Amount = x.Amount,
                     TransactionDate = x.TransactionDate,
@@ -297,22 +298,13 @@ namespace NhaTroAnCu.Controllers
         private void LoadViewBagData()
         {
             ViewBag.Categories = new SelectList(
-                db.IncomeExpenseCategories.Where(c => c.IsActive).OrderBy(c => c.Type).ThenBy(c => c.Name),
+                db.IncomeExpenseCategories.Where(c => c.IsActive && !c.IsSystem).OrderBy(c => c.Type).ThenBy(c => c.Name),
                 "Id", "Name");
 
             ViewBag.Rooms = new SelectList(
                 db.Rooms.OrderBy(r => r.Name),
                 "Id", "Name");
-
-            ViewBag.Contracts = db.Contracts
-                .Where(c => c.Status == "Active")
-                .Select(c => new {
-                    c.Id,
-                    Display = "HĐ #" + c.Id + " - Phòng " + c.Room.Name
-                })
-                .ToList();
         }
-
         // Auto record payment from PaymentHistory
         public void RecordRoomPayment(int paymentHistoryId)
         {
@@ -383,6 +375,48 @@ namespace NhaTroAnCu.Controllers
                 db.Dispose();
             }
             base.Dispose(disposing);
+        }
+        // GET: IncomeExpense/GetContractsForRoom
+        public ActionResult GetContractsForRoom(int roomId)
+        {
+            var contracts = db.Contracts
+                .Where(c => c.RoomId == roomId && c.Status == "Active")
+                .Select(c => new
+                {
+                    c.Id,
+                    Display = "HĐ #" + c.Id + " - " + c.StartDate.Day + "/" + c.StartDate.Month + "/" + c.StartDate.Year
+                })
+                .ToList();
+
+            return Json(contracts, JsonRequestBehavior.AllowGet);
+        }
+
+        // GET: IncomeExpense/Report
+        public ActionResult Report(int? month, int? year)
+        {
+            var currentMonth = month ?? DateTime.Now.Month;
+            var currentYear = year ?? DateTime.Now.Year;
+
+            var startDate = new DateTime(currentYear, currentMonth, 1);
+            var endDate = startDate.AddMonths(1).AddDays(-1);
+
+            var transactions = db.IncomeExpenses
+                .Include(i => i.IncomeExpenseCategory)
+                .Where(i => i.TransactionDate >= startDate && i.TransactionDate <= endDate)
+                .OrderBy(i => i.TransactionDate)
+                .ToList();
+
+            var income = transactions.Where(t => t.IncomeExpenseCategory.Type == "Income").Sum(t => t.Amount);
+            var expense = transactions.Where(t => t.IncomeExpenseCategory.Type == "Expense").Sum(t => t.Amount);
+
+            ViewBag.Month = currentMonth;
+            ViewBag.Year = currentYear;
+            ViewBag.TotalIncome = income;
+            ViewBag.TotalExpense = expense;
+            ViewBag.Balance = income - expense;
+            ViewBag.Transactions = transactions;
+
+            return View();
         }
     }
 }

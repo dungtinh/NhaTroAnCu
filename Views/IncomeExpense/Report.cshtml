@@ -1,0 +1,174 @@
+﻿@{
+    ViewBag.Title = "Báo cáo thu chi";
+    var transactions = ViewBag.Transactions as List<NhaTroAnCu.Models.IncomeExpens>;
+}
+
+<div class="container">
+    <div class="report-header">
+        <h2><i class="fas fa-chart-line"></i> Báo cáo thu chi tháng @ViewBag.Month/@ViewBag.Year</h2>
+
+        <form method="get" class="form-inline">
+            <select name="month" class="form-control mr-2">
+                @for (int m = 1; m <= 12; m++)
+                {
+                    <option value="@m" @(m == ViewBag.Month ? "selected" : "")>Tháng @m</option>
+                }
+            </select>
+            <select name="year" class="form-control mr-2">
+                @for (int y = DateTime.Now.Year - 2; y <= DateTime.Now.Year + 1; y++)
+                {
+                    <option value="@y" @(y == ViewBag.Year ? "selected" : "")>@y</option>
+                }
+            </select>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-search"></i> Xem
+            </button>
+        </form>
+    </div>
+
+    <!-- Summary -->
+    <div class="row summary-boxes">
+        <div class="col-md-4">
+            <div class="summary-box income">
+                <h4>Tổng thu</h4>
+                <p class="amount">+@ViewBag.TotalIncome.ToString("N0") đ</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="summary-box expense">
+                <h4>Tổng chi</h4>
+                <p class="amount">-@ViewBag.TotalExpense.ToString("N0") đ</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="summary-box balance @(ViewBag.Balance >= 0 ? "positive" : "negative")">
+                <h4>Cân đối</h4>
+                <p class="amount">@ViewBag.Balance.ToString("N0") đ</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction Details -->
+    <div class="transaction-details">
+        <h4>Chi tiết giao dịch</h4>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Ngày</th>
+                    <th>Danh mục</th>
+                    <th>Mô tả</th>
+                    <th>Thu</th>
+                    <th>Chi</th>
+                    <th>Số dư</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    decimal balance = 0;
+                    foreach (var trans in transactions)
+                    {
+                        if (trans.IncomeExpenseCategory.Type == "Income")
+                        {
+                            balance += trans.Amount;
+                        }
+                        else
+                        {
+                            balance -= trans.Amount;
+                        }
+                        <tr>
+                            <td>@trans.TransactionDate.ToString("dd/MM")</td>
+                            <td>@trans.IncomeExpenseCategory.Name</td>
+                            <td>@trans.Description</td>
+                            <td class="text-success">
+                                @(trans.IncomeExpenseCategory.Type == "Income" ? trans.Amount.ToString("N0") : "")
+                            </td>
+                            <td class="text-danger">
+                                @(trans.IncomeExpenseCategory.Type == "Expense" ? trans.Amount.ToString("N0") : "")
+                            </td>
+                            <td class="font-weight-bold @(balance >= 0 ? "text-primary" : "text-danger")">
+                                @balance.ToString("N0")
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .report-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding: 20px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .summary-boxes {
+        margin-bottom: 30px;
+    }
+
+    .summary-box {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+        .summary-box.income {
+            border-top: 4px solid #28a745;
+        }
+
+        .summary-box.expense {
+            border-top: 4px solid #dc3545;
+        }
+
+        .summary-box.balance.positive {
+            border-top: 4px solid #17a2b8;
+        }
+
+        .summary-box.balance.negative {
+            border-top: 4px solid #ffc107;
+        }
+
+        .summary-box h4 {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .summary-box .amount {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .summary-box.income .amount {
+            color: #28a745;
+        }
+
+        .summary-box.expense .amount {
+            color: #dc3545;
+        }
+
+        .summary-box.balance.positive .amount {
+            color: #17a2b8;
+        }
+
+        .summary-box.balance.negative .amount {
+            color: #ffc107;
+        }
+
+    .transaction-details {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+</style>

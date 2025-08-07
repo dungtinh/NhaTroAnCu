@@ -1,0 +1,269 @@
+﻿
+@model NhaTroAnCu.Models.CreateIncomeExpenseViewModel
+@{
+    ViewBag.Title = "Sửa giao dịch";
+}
+<link href="~/Content/income-expence-action.css" rel="stylesheet" />
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-white">
+                    <h4><i class="fas fa-edit"></i> Sửa thông tin giao dịch</h4>
+                </div>
+                <div class="card-body">
+                    @using (Html.BeginForm())
+                    {
+                        @Html.AntiForgeryToken()
+
+                        if (TempData["Error"] != null)
+                        {
+                            <div class="alert alert-danger alert-dismissible fade show">
+                                <button type="button" class="close" data-dismiss="alert">&times;</button>
+                                <i class="fas fa-exclamation-circle"></i> @TempData["Error"]
+                            </div>
+                        }
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        <i class="fas fa-list"></i> Danh mục
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    @Html.DropDownListFor(m => m.CategoryId, (SelectList)ViewBag.Categories,
+                                        "-- Chọn danh mục --", new { @class = "form-control", id = "categorySelect" })
+                                    @Html.ValidationMessageFor(m => m.CategoryId, "", new { @class = "text-danger small" })
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        <i class="fas fa-money-bill-wave"></i> Số tiền
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    @Html.TextBoxFor(m => m.Amount, new { @class = "form-control money", placeholder = "0" })
+                                    @Html.ValidationMessageFor(m => m.Amount, "", new { @class = "text-danger small" })
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        <i class="fas fa-calendar-alt"></i> Ngày giao dịch
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    @Html.TextBoxFor(m => m.TransactionDate, "{0:dd/MM/yyyy}",
+                                        new { @class = "form-control datepicker", placeholder = "dd/mm/yyyy" })
+                                    @Html.ValidationMessageFor(m => m.TransactionDate, "", new { @class = "text-danger small" })
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        <i class="fas fa-file-invoice"></i> Số chứng từ
+                                    </label>
+                                    @Html.TextBoxFor(m => m.ReferenceNumber,
+                                        new { @class = "form-control", placeholder = "VD: HD001, PC001..." })
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="font-weight-bold">
+                                <i class="fas fa-sticky-note"></i> Mô tả chi tiết
+                            </label>
+                            @Html.TextAreaFor(m => m.Description,
+                                new { @class = "form-control", rows = 4, placeholder = "Nhập mô tả chi tiết về giao dịch..." })
+                            @Html.ValidationMessageFor(m => m.Description, "", new { @class = "text-danger small" })
+                        </div>
+
+                        <!-- Preview Section -->
+                        <div class="card bg-light mb-3" id="previewSection" style="display:none;">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-eye"></i> Xem trước thông tin
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">Loại giao dịch:</small>
+                                        <div id="previewType" class="font-weight-bold"></div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted">Số tiền:</small>
+                                        <div id="previewAmount" class="font-weight-bold"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-save"></i> Cập nhật
+                            </button>
+                            <button type="button" class="btn btn-info" onclick="previewTransaction()">
+                                <i class="fas fa-eye"></i> Xem trước
+                            </button>
+                            <a href="@Url.Action("Index")" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Quay lại
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Help Card -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-info-circle text-info"></i> Hướng dẫn
+                    </h6>
+                    <ul class="small mb-0">
+                        <li>Các trường có dấu <span class="text-danger">*</span> là bắt buộc</li>
+                        <li>Chọn phòng/hợp đồng nếu giao dịch liên quan đến khách thuê</li>
+                        <li>Số chứng từ giúp đối chiếu với sổ sách kế toán</li>
+                        <li>Mô tả chi tiết giúp tra cứu dễ dàng hơn</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        $(function() {
+            // Initialize datepicker
+            $('.datepicker').datepicker({
+                format: 'dd/mm/yyyy',
+                autoclose: true,
+                todayHighlight: true,
+                language: 'vi'
+            });
+
+            // Check initial category
+            checkCategoryType();
+
+            // Show/hide room and contract sections based on category
+            $('#categorySelect').change(function() {
+                checkCategoryType();
+            });
+
+            // Load contracts when room changes
+            $('#roomSelect').change(function() {
+                var roomId = $(this).val();
+                if (roomId) {
+                    loadContractsForRoom(roomId);
+                } else {
+                    $('#contractSelect').html('<option value="">-- Chọn hợp đồng --</option>');
+                }
+            });
+
+            // Auto-format amount input
+            $('.money').on('input', function() {
+                updatePreview();
+            });
+
+            // Set initial contract value if exists
+            var currentContractId = @(Model.ContractId ?? 0);
+            if (currentContractId > 0) {
+                $('#contractSelect').val(currentContractId);
+            }
+        });
+
+        function checkCategoryType() {
+            var selectedText = $('#categorySelect option:selected').text().toLowerCase();
+            var categoryId = $('#categorySelect').val();
+
+            // Show related section for room-related categories
+            if (selectedText.includes('phòng') || selectedText.includes('thuê') ||
+                selectedText.includes('cọc') || categoryId == '1' || categoryId == '2') {
+                $('#relatedSection').slideDown();
+
+                // Auto-select room if contract is selected
+                var contractId = $('#contractSelect').val();
+                if (contractId) {
+                    var roomId = $('#contractSelect option:selected').data('room-id');
+                    if (roomId) {
+                        $('#roomSelect').val(roomId);
+                    }
+                }
+            } else {
+                $('#relatedSection').slideUp();
+                $('#roomSelect, #contractSelect').val('');
+            }
+
+            updatePreview();
+        }
+
+        function loadContractsForRoom(roomId) {
+            $.get('@Url.Action("GetContractsForRoom", "IncomeExpense")', { roomId: roomId }, function(data) {
+                var select = $('#contractSelect');
+                select.html('<option value="">-- Chọn hợp đồng --</option>');
+
+                $.each(data, function(i, item) {
+                    var selected = item.Id == @(Model.ContractId ?? 0) ? 'selected' : '';
+                    select.append('<option value="' + item.Id + '" ' + selected + '>' + item.Display + '</option>');
+                });
+            });
+        }
+
+        function previewTransaction() {
+            var category = $('#categorySelect option:selected').text();
+            var amount = getMoney('.money') || 0;
+            var type = category.toLowerCase().includes('thu') ||
+                      $('#categorySelect option:selected').text().includes('Thu') ? 'Income' : 'Expense';
+
+            if (category && amount > 0) {
+                $('#previewType').html(
+                    '<span class="badge ' + (type == 'Income' ? 'bg-success' : 'bg-danger') + '">' +
+                    category + '</span>'
+                );
+
+                $('#previewAmount').html(
+                    '<span class="' + (type == 'Income' ? 'text-success' : 'text-danger') + '">' +
+                    (type == 'Income' ? '+' : '-') + formatMoney(amount) + ' đ</span>'
+                );
+
+                $('#previewSection').slideDown();
+            } else {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Thiếu thông tin',
+                    text: 'Vui lòng chọn danh mục và nhập số tiền để xem trước!',
+                    confirmButtonColor: '#ffc107'
+                });
+            }
+        }
+
+        function updatePreview() {
+            if ($('#previewSection').is(':visible')) {
+                previewTransaction();
+            }
+        }
+
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('vi-VN').format(amount);
+        }
+
+        // Confirm before leaving if form has changes
+        var formChanged = false;
+        $('form :input').change(function() {
+            formChanged = true;
+        });
+
+        $(window).on('beforeunload', function() {
+            if (formChanged) {
+                return 'Bạn có thay đổi chưa lưu. Bạn có chắc muốn rời khỏi trang?';
+            }
+        });
+
+        $('form').submit(function() {
+            formChanged = false;
+        });
+    </script>
+}

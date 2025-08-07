@@ -365,6 +365,7 @@
     <Content Include="Content\CSS\font-awesome.min.css" />
     <Content Include="Content\datepicker-custom.css" />
     <Content Include="Content\Fonts\fontawesome-webfont.svg" />
+    <Content Include="Content\income-expence-action.css" />
     <Content Include="Content\income-expense.css" />
     <Content Include="Content\navigation.css" />
     <Content Include="Content\room-details.css" />
@@ -595,6 +596,8 @@
     <Content Include="Views\IncomeExpense\Create.cshtml" />
     <Content Include="Views\IncomeExpense\Categories.cshtml" />
     <Content Include="Views\Contracts\End.cshtml" />
+    <Content Include="Views\IncomeExpense\Edit.cshtml" />
+    <Content Include="Views\IncomeExpense\Report.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Uploads\ContractScans\" />

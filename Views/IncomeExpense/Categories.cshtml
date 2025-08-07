@@ -39,11 +39,11 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between mb-2">
                         <span>Danh mục thu:</span>
-                        <span class="badge badge-success">@Model.IncomeCount</span>
+                        <span class="badge bg-success">@Model.IncomeCount</span>
                     </div>
                     <div class="d-flex justify-content-between">
                         <span>Danh mục chi:</span>
-                        <span class="badge badge-danger">@Model.ExpenseCount</span>
+                        <span class="badge bg-danger">@Model.ExpenseCount</span>
                     </div>
                 </div>
             </div>
@@ -74,22 +74,22 @@
                                                value="@cat.Name" style="display:none;" />
                                     </td>
                                     <td>
-                                        <span class="badge @(cat.Type == "Income" ? "badge-success" : "badge-danger")">
+                                        <span class="badge @(cat.Type == "Income" ? "bg-success" : "bg-danger")">
                                             @(cat.Type == "Income" ? "Thu" : "Chi")
                                         </span>
                                     </td>
                                     <td>
                                         @if (cat.IsSystem)
                                         {
-                                            <span class="badge badge-primary">Hệ thống</span>
+                                            <span class="badge bg-primary">Hệ thống</span>
                                         }
                                         else if (cat.IsActive)
                                         {
-                                            <span class="badge badge-success">Hoạt động</span>
+                                            <span class="badge bg-success">Hoạt động</span>
                                         }
                                         else
                                         {
-                                            <span class="badge badge-secondary">Đã ẩn</span>
+                                            <span class="badge bg-secondary">Đã ẩn</span>
                                         }
                                     </td>
                                     <td>
