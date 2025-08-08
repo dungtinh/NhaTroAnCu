@@ -12,17 +12,17 @@ namespace NhaTroAnCu.Helpers
             db = dbContext;
         }
 
-        public int GetHighestWaterIndexEnd(int roomId, int month, int year)
+        public int GetHighestWaterIndexEnd(int roomId)
         {
             var prevBills = db.UtilityBills
-                .Where(b => b.RoomId == roomId && (b.Year < year || (b.Year == year && b.Month < month)) && b.WaterIndexEnd.HasValue)
+                .Where(b => b.RoomId == roomId)
                 .ToList();
-            
+
             if (prevBills.Count > 0)
             {
                 return prevBills.Max(b => b.WaterIndexEnd.Value);
             }
-            
+
             return 0;
         }
     }

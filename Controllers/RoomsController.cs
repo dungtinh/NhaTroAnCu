@@ -205,7 +205,7 @@ public class RoomsController : Controller
 
         // Lấy chỉ số nước tháng trước của hợp đồng hiện tại
         var service = new UtilityBillService(db);
-        ViewBag.WaterPrev = service.GetHighestWaterIndexEnd(id, currentMonth, currentYear);
+        ViewBag.WaterPrev = service.GetHighestWaterIndexEnd(id);
 
         return View(room);
     }
