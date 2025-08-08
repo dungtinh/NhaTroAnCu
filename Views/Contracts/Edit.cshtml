@@ -60,6 +60,13 @@
                     @Html.TextBoxFor(m => m.WaterPrice, new { @class = "form-control money" })
                 </div>
             </div>
+
+            <div class="form-row">
+                <div class="form-group col-md-12">
+                    <label><i class="fas fa-sticky-note"></i> Ghi chú</label>
+                    @Html.TextAreaFor(m => m.Note, new { @class = "form-control", rows = 3 })
+                </div>
+            </div>
         </div>
 
         <!-- Deposit Status -->

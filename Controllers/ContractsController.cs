@@ -39,6 +39,24 @@ namespace NhaTroAnCu.Controllers
                 db.IncomeExpenseCategories.Add(category);
                 db.SaveChanges();
             }
+
+            // Also ensure "Trả tiền cọc" category exists for refund functionality
+            var refundCategoryExists = db.IncomeExpenseCategories
+                .Any(c => c.Name == "Trả tiền cọc" && c.IsSystem);
+
+            if (!refundCategoryExists)
+            {
+                var refundCategory = new IncomeExpenseCategory
+                {
+                    Name = "Trả tiền cọc",
+                    Type = "Expense",
+                    IsSystem = true,
+                    IsActive = true,
+                    CreatedAt = DateTime.Now
+                };
+                db.IncomeExpenseCategories.Add(refundCategory);
+                db.SaveChanges();
+            }
         }
 
         // Check if deposit has been collected for a contract
@@ -517,6 +535,7 @@ namespace NhaTroAnCu.Controllers
                 DepositAmount = contract.DepositAmount,
                 ElectricityPrice = contract.ElectricityPrice,
                 WaterPrice = contract.WaterPrice,
+                Note = contract.Note,
                 Tenants = contract.ContractTenants.Select(ct => new TenantEditModel
                 {
                     Id = ct.TenantId,
@@ -766,7 +785,11 @@ namespace NhaTroAnCu.Controllers
             // Handle deposit collection if requested
             if (vm.CollectDepositNow && vm.DepositCollectionAmount.HasValue && vm.DepositCollectionAmount.Value > 0)
             {
-                RecordDepositCollection(contract.Id, vm.DepositCollectionAmount.Value, "Thu tiền cọc khi ký hợp đồng");
+                // Double check that deposit wasn't already collected to prevent duplicates
+                if (!IsDepositCollected(contract.Id))
+                {
+                    RecordDepositCollection(contract.Id, vm.DepositCollectionAmount.Value, "Thu tiền cọc khi ký hợp đồng");
+                }
             }
 
             return RedirectToAction("Index", "Rooms");
@@ -1068,6 +1091,7 @@ namespace NhaTroAnCu.Controllers
             contract.DepositAmount = vm.DepositAmount;
             contract.ElectricityPrice = vm.ElectricityPrice;
             contract.WaterPrice = vm.WaterPrice;
+            contract.Note = vm.Note;
 
             // Handle tenant mapping
             var oldTenantIds = contract.ContractTenants.Select(ct => ct.TenantId).ToList();

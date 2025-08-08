@@ -120,9 +120,9 @@
 
                 <div class="form-row">
                     <div class="form-group col-md-6">
-                        <div class="custom-control custom-checkbox">
-                            @Html.CheckBoxFor(m => m.CollectDepositNow, new { @class = "custom-control-input", id = "collectDepositNow" })
-                            <label class="custom-control-label" for="collectDepositNow">
+                        <div class="form-check">
+                            @Html.CheckBoxFor(m => m.CollectDepositNow, new { @class = "form-check-input", id = "collectDepositNow" })
+                            <label class="form-check-label" for="collectDepositNow">
                                 <i class="fas fa-money-bill-wave"></i> Thu cọc ngay khi ký hợp đồng
                             </label>
                         </div>
