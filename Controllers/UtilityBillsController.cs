@@ -105,7 +105,7 @@ namespace NhaTroAnCu.Controllers
             int currentMonth = now.Month, currentYear = now.Year;
 
             var service = new UtilityBillService(db);
-            int waterPrev = service.GetHighestWaterIndexEnd(roomId, currentMonth, currentYear);
+            int waterPrev = service.GetHighestWaterIndexEnd(roomId);
 
             var vm = new UtilityBillCreateViewModel
             {
