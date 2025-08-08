@@ -129,7 +129,13 @@ namespace NhaTroAnCu.Controllers
         {
             try
             {
-                var bill = db.UtilityBills.FirstOrDefault(b => b.RoomId == vm.RoomId && b.Month == vm.Month && b.Year == vm.Year);
+                // Tìm phiếu báo tiền theo RoomId, Month, Year VÀ ContractId
+                var bill = db.UtilityBills.FirstOrDefault(b =>
+                    b.RoomId == vm.RoomId &&
+                    b.Month == vm.Month &&
+                    b.Year == vm.Year &&
+                    b.ContractId == vm.ContractId);
+
                 if (bill == null)
                 {
                     bill = new UtilityBill();
@@ -139,7 +145,7 @@ namespace NhaTroAnCu.Controllers
                 bill.RoomId = vm.RoomId;
                 bill.Month = vm.Month;
                 bill.Year = vm.Year;
-                bill.ContractId = vm.ContractId;
+                bill.ContractId = vm.ContractId; // Đảm bảo lưu ContractId
                 bill.WaterIndexStart = vm.WaterIndexStart;
                 bill.WaterIndexEnd = vm.WaterIndexEnd;
                 bill.ElectricityAmount = vm.ElectricityAmount;
@@ -156,11 +162,11 @@ namespace NhaTroAnCu.Controllers
 
                 db.SaveChanges();
 
-                return Json(new { success = true });
+                return Json(new { success = true, message = "Đã lưu phiếu báo tiền thành công!" });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = ex.Message });
+                return Json(new { success = false, message = "Lỗi: " + ex.Message });
             }
         }
     }

@@ -1,5 +1,6 @@
 ﻿using NhaTroAnCu.Models;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Web.Mvc;
 
@@ -31,53 +32,75 @@ namespace NhaTroAnCu.Controllers
             int rentedRooms = rentedRoomIds.Count;
             int unrentedRooms = totalRooms - rentedRooms;
 
-            // Phòng đã thu tiền tháng
-            var paidRoomIds = db.PaymentHistories
-                .Where(p => p.Month == selectedMonth && p.Year == selectedYear)
-                .Select(p => p.RoomId)
-                .Distinct()
+            // Lấy danh sách hợp đồng đang active trong tháng
+            var activeContracts = db.Contracts
+                .Where(c => c.Status == "Active"
+                    && c.StartDate <= filterDate
+                    && (c.EndDate == null || c.EndDate >= new DateTime(selectedYear, selectedMonth, 1)))
                 .ToList();
 
-            int paidRooms = paidRoomIds.Count;
-            int unpaidRooms = rentedRooms - paidRooms; // chỉ xét phòng đã thuê mà chưa thu tiền
+            // Phòng đã thu tiền trong tháng (kiểm tra theo ContractId)
+            var paidRoomIds = new List<int>();
+            foreach (var contract in activeContracts)
+            {
+                var hasPaid = db.PaymentHistories
+                    .Any(p => p.RoomId == contract.RoomId
+                        && p.ContractId == contract.Id
+                        && p.Month == selectedMonth
+                        && p.Year == selectedYear);
 
+                if (hasPaid)
+                {
+                    paidRoomIds.Add(contract.RoomId);
+                }
+            }
+
+            int paidRooms = paidRoomIds.Distinct().Count();
+            int unpaidRooms = rentedRooms - paidRooms;
+
+            // Tổng tiền đã thu trong tháng
             decimal totalAmount = db.PaymentHistories
                 .Where(p => p.Month == selectedMonth && p.Year == selectedYear)
                 .Sum(p => (decimal?)p.TotalAmount) ?? 0;
 
             double density = totalRooms == 0 ? 0 : (double)rentedRooms / totalRooms;
-            // Tìm các phòng đang thuê từ trước tháng hiện tại
-            var activeContractRoomIds = db.Contracts
-                .Where(c => c.Status == "Active" &&
-                    c.StartDate < new DateTime(selectedYear, selectedMonth, 1))
-                .Select(c => c.RoomId)
-                .Distinct()
-                .ToList();
 
-            // Tìm các phòng đó chưa thanh toán đủ các tháng trước tháng hiện tại
-            var overdueRoomIds = activeContractRoomIds.Where(roomId =>
+            // Tìm các phòng còn nợ tháng trước
+            var overdueRoomIds = new List<int>();
+
+            foreach (var contract in activeContracts)
             {
-                // Xác định hợp đồng đang hoạt động cho phòng này
-                var contract = db.Contracts.FirstOrDefault(c => c.RoomId == roomId && c.Status == "Active" && c.StartDate < new DateTime(selectedYear, selectedMonth, 1));
-                if (contract == null) return false;
+                // Kiểm tra xem hợp đồng này đã tồn tại từ tháng trước không
+                if (contract.StartDate < new DateTime(selectedYear, selectedMonth, 1))
+                {
+                    // Lấy danh sách các tháng từ khi bắt đầu hợp đồng đến tháng trước tháng hiện tại
+                    var start = contract.StartDate;
+                    var end = new DateTime(selectedYear, selectedMonth, 1).AddMonths(-1);
 
-                // Danh sách các tháng chưa thanh toán từ StartDate đến tháng hiện tại - 1
-                var start = contract.StartDate;
-                var end = new DateTime(selectedYear, selectedMonth, 1).AddMonths(-1);
+                    var missingPayments = new List<DateTime>();
 
-                var missingPayments = Enumerable.Range(0, ((end.Year - start.Year) * 12 + end.Month - start.Month) + 1)
-                    .Select(offset => start.AddMonths(offset))
-                    .Where(date =>
-                        !db.PaymentHistories.Any(p =>
-                            p.RoomId == roomId &&
+                    for (var date = start; date <= end; date = date.AddMonths(1))
+                    {
+                        var hasPayment = db.PaymentHistories.Any(p =>
+                            p.RoomId == contract.RoomId &&
+                            p.ContractId == contract.Id &&
                             p.Month == date.Month &&
-                            p.Year == date.Year))
-                    .ToList();
+                            p.Year == date.Year);
 
-                return missingPayments.Any();
-            }).ToList();
+                        if (!hasPayment)
+                        {
+                            missingPayments.Add(date);
+                        }
+                    }
 
-            int overdueRooms = overdueRoomIds.Count;
+                    if (missingPayments.Any())
+                    {
+                        overdueRoomIds.Add(contract.RoomId);
+                    }
+                }
+            }
+
+            int overdueRooms = overdueRoomIds.Distinct().Count();
 
             var model = new ReportSummaryViewModel
             {
@@ -88,7 +111,7 @@ namespace NhaTroAnCu.Controllers
                 UnrentedRooms = unrentedRooms,
                 PaidRooms = paidRooms,
                 UnpaidRooms = unpaidRooms,
-                OverdueRooms = overdueRooms, // Thêm dòng này
+                OverdueRooms = overdueRooms,
                 TotalAmount = totalAmount,
                 Density = density
             };

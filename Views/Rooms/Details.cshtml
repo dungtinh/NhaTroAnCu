@@ -5,14 +5,24 @@
     var currentMonth = now.Month;
     var currentYear = now.Year;
     var contract = Model.Contracts?.FirstOrDefault(c => c.Status == "Active");
-    var bill = Model.UtilityBills?.FirstOrDefault(b => b.Month == currentMonth && b.Year == currentYear);
-    var payments = Model.PaymentHistories?.Where(p => p.Month == currentMonth && p.Year == currentYear).ToList() ?? new List<NhaTroAnCu.Models.PaymentHistory>();
+    //
+    var bill = ViewBag.Bill as NhaTroAnCu.Models.UtilityBill;
+    var payments = contract != null
+        ? Model.PaymentHistories?.Where(p =>
+            p.Month == currentMonth &&
+            p.Year == currentYear &&
+            p.ContractId == contract.Id).ToList() ?? new List<NhaTroAnCu.Models.PaymentHistory>()
+        : new List<NhaTroAnCu.Models.PaymentHistory>();
+
     decimal paidTotal = payments.Sum(x => x.TotalAmount);
     decimal billTotal = bill?.TotalAmount ?? 0;
     decimal debt = billTotal - paidTotal;
+
     var prevBill = Model.UtilityBills?.OrderByDescending(b => b.Year).ThenByDescending(b => b.Month)
         .FirstOrDefault(b => (b.Month == (currentMonth == 1 ? 12 : currentMonth - 1)) && (b.Year == (currentMonth == 1 ? currentYear - 1 : currentYear)));
-    int waterPrev = prevBill?.WaterIndexEnd ?? 0;
+
+    int waterPrev = ViewBag.WaterPrev ?? 0;
+
     decimal waterPrice = contract?.WaterPrice ?? 15000;
     decimal rentPrice = contract?.PriceAgreed ?? Model.DefaultPrice;
     bool isNearingEnd = contract != null &&
@@ -299,24 +309,31 @@
                 </div>
             </div>
 
-            <!-- CURRENT BILL -->
+            <!-- CURRENT BILL Section -->
             <div class="custom-card animate-slide-up" style="animation-delay: 0.2s;">
                 <div class="card-header header-teal">
                     <span>
                         <i class="fas fa-file-invoice-dollar"></i>
                         @if (bill != null)
                         {
-                            <text>Phiếu báo tiền tháng @bill.Month/@bill.Year</text>
+                            <text>Phiếu báo tiền tháng @bill.Month/@bill.Year - HĐ #@bill.ContractId</text>
+                        }
+                        else if (contract != null)
+                        {
+                            <text>Phiếu báo tiền tháng @currentMonth/@currentYear - HĐ #@contract.Id</text>
                         }
                         else
                         {
-                            <text>Phiếu báo tiền tháng @currentMonth/@currentYear</text>
+                            <text>Chưa có hợp đồng hiện tại</text>
                         }
                     </span>
-                    <button class="btn btn-warning btn-sm btn-custom" data-toggle="modal" data-target="#utilityBillModal">
-                        <i class="fas @(bill != null ? "fa-edit" : "fa-plus")"></i>
-                        @(bill != null ? "Sửa phiếu" : "Tạo phiếu")
-                    </button>
+                    @if (contract != null)
+                    {
+                        <button class="btn btn-warning btn-sm btn-custom" data-toggle="modal" data-target="#utilityBillModal">
+                            <i class="fas @(bill != null ? "fa-edit" : "fa-plus")"></i>
+                            @(bill != null ? "Sửa phiếu" : "Tạo phiếu")
+                        </button>
+                    }
                 </div>
                 <div class="card-body">
                     @if (bill != null)
@@ -325,6 +342,8 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <dl>
+                                        <dt><i class="fas fa-file-contract"></i> Mã hợp đồng</dt>
+                                        <dd class="text-info font-weight-bold">#@bill.ContractId</dd>
                                         <dt><i class="fas fa-tachometer-alt"></i> Chỉ số nước đầu</dt>
                                         <dd>@bill.WaterIndexStart</dd>
                                         <dt><i class="fas fa-tachometer-alt"></i> Chỉ số nước cuối</dt>
@@ -365,11 +384,20 @@
                             }
                         </div>
                     }
-                    else
+                    else if (contract != null)
                     {
                         <div class="text-center py-4">
                             <i class="fas fa-file-invoice fa-3x text-muted mb-3"></i>
-                            <p class="text-muted">Chưa có phiếu báo tiền tháng này</p>
+                            <p class="text-muted">Chưa có phiếu báo tiền cho hợp đồng #@contract.Id tháng này</p>
+                            <p class="text-info">Nhấn nút "Tạo phiếu" để tạo phiếu báo tiền mới</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="fas fa-exclamation-circle fa-3x text-warning mb-3"></i>
+                            <p class="text-muted">Không có hợp đồng hiện tại</p>
+                            <p>Vui lòng tạo hợp đồng trước khi tạo phiếu báo tiền</p>
                         </div>
                     }
                 </div>
@@ -458,7 +486,7 @@
                 </div>
             </div>
 
-            <!-- BILL HISTORY -->
+            <!-- BILL HISTORY Section - Cập nhật để hiển thị ContractId -->
             <div class="custom-card animate-slide-up" style="animation-delay: 0.4s;">
                 <div class="card-header header-orange">
                     <span><i class="fas fa-history"></i> Lịch sử phiếu báo tiền</span>
@@ -466,21 +494,37 @@
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table custom-table">
-
-                            <tr>
-                                <th>Tháng/Năm</th>
-                                <th>Tổng tiền</th>
-                                <th>Ghi chú</th>
-                            </tr>
-
+                            <thead>
+                                <tr>
+                                    <th>Tháng/Năm</th>
+                                    <th>Mã HĐ</th>
+                                    <th>Tổng tiền</th>
+                                    <th>Trạng thái</th>
+                                    <th>Ghi chú</th>
+                                </tr>
+                            </thead>
                             <tbody>
-                                @foreach (var b in (Model.UtilityBills ?? new List<NhaTroAnCu.Models.UtilityBill>()).OrderByDescending(x => x.Year).ThenByDescending(x => x.Month))
+                                @foreach (var b in (Model.UtilityBills ?? new List<NhaTroAnCu.Models.UtilityBill>())
+                                    .OrderByDescending(x => x.Year).ThenByDescending(x => x.Month))
                                 {
                                     <tr>
                                         <td>
                                             <span class="badge badge-primary">@b.Month/@b.Year</span>
                                         </td>
-                                        <td class="font-weight-bold">@((b.TotalAmount??0).ToString("N0"))đ</td>
+                                        <td>
+                                            <span class="badge badge-info">#@(b.ContractId ?? 0)</span>
+                                        </td>
+                                        <td class="font-weight-bold">@((b.TotalAmount ?? 0).ToString("N0"))đ</td>
+                                        <td>
+                                            @if (b.BillStatus == "Final")
+                                            {
+                                                <span class="badge badge-success">Đã lập</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-warning">@b.BillStatus</span>
+                                            }
+                                        </td>
                                         <td>@b.BillNote</td>
                                     </tr>
                                 }
