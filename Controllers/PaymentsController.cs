@@ -225,116 +225,138 @@ namespace NhaTroAnCu.Controllers
                 return File(bytes, "application/pdf", $"BaoCaoThuChi_{fromDateTime:yyyyMMdd}_{toDateTime:yyyyMMdd}.pdf");
             }
         }
-
         [HttpPost]
         public ActionResult CollectAjax(int contractId, int roomId, int month, int year, decimal total, string note, decimal extraCharge, decimal discount, int waterCurrent, decimal waterMoney, decimal electricMoney)
         {
-            var payment = new PaymentHistory
+            try
             {
-                ContractId = contractId,
-                RoomId = roomId,
-                Month = month,
-                Year = year,
-                TotalAmount = total,
-                PaidDate = DateTime.Now,
-                Note = note
-            };
-            db.PaymentHistories.Add(payment);
-
-            // Lưu thông tin vào bảng UtilityBills nếu cần
-            var bill = db.UtilityBills.FirstOrDefault(b => b.RoomId == roomId && b.Month == month && b.Year == year && b.ContractId == contractId);
-            if (bill == null)
-            {
-                bill = new UtilityBill
+                // Kiểm tra xem contract có tồn tại và đang active không
+                var contract = db.Contracts.FirstOrDefault(c => c.Id == contractId && c.Status == "Active");
+                if (contract == null)
                 {
-                    RoomId = roomId,
-                    Month = month,
-                    Year = year,
+                    return Json(new { success = false, message = "Hợp đồng không tồn tại hoặc đã kết thúc!" });
+                }
+
+                var payment = new PaymentHistory
+                {
                     ContractId = contractId,
-                    ExtraCharge = extraCharge,
-                    Discount = discount,
-                    Water = waterMoney,
-                    ElectricityAmount = electricMoney,
-                };
-                db.UtilityBills.Add(bill);
-            }
-            else
-            {
-                bill.ExtraCharge = extraCharge;
-                bill.Discount = discount;
-                bill.Water = waterMoney;
-                bill.ElectricityAmount = electricMoney;
-            }
-
-            var waterIndex = db.WaterIndexes.FirstOrDefault(x => x.RoomId == roomId && x.Month == month && x.Year == year);
-            if (waterIndex == null)
-            {
-                waterIndex = new WaterIndex
-                {
                     RoomId = roomId,
                     Month = month,
                     Year = year,
-                    WaterReading = waterCurrent,
+                    TotalAmount = total,
+                    PaidDate = DateTime.Now,
+                    Note = note,
                     CreatedAt = DateTime.Now
                 };
-                db.WaterIndexes.Add(waterIndex);
-            }
-            else
-            {
-                waterIndex.WaterReading = waterCurrent;
-                waterIndex.CreatedAt = DateTime.Now;
-            }
+                db.PaymentHistories.Add(payment);
 
-            db.SaveChanges();
-            return Json(new { success = true });
+                // Lưu hoặc cập nhật thông tin vào bảng UtilityBills
+                var bill = db.UtilityBills.FirstOrDefault(b =>
+                    b.RoomId == roomId &&
+                    b.Month == month &&
+                    b.Year == year &&
+                    b.ContractId == contractId);
+
+                if (bill == null)
+                {
+                    bill = new UtilityBill
+                    {
+                        RoomId = roomId,
+                        Month = month,
+                        Year = year,
+                        ContractId = contractId,
+                        ExtraCharge = extraCharge,
+                        Discount = discount,
+                        Water = waterMoney,
+                        ElectricityAmount = electricMoney,
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now
+                    };
+                    db.UtilityBills.Add(bill);
+                }
+                else
+                {
+                    bill.ExtraCharge = extraCharge;
+                    bill.Discount = discount;
+                    bill.Water = waterMoney;
+                    bill.ElectricityAmount = electricMoney;
+                    bill.UpdatedAt = DateTime.Now;
+                }
+
+                // Cập nhật chỉ số nước
+                var waterIndex = db.WaterIndexes.FirstOrDefault(x =>
+                    x.RoomId == roomId &&
+                    x.Month == month &&
+                    x.Year == year);
+
+                if (waterIndex == null)
+                {
+                    waterIndex = new WaterIndex
+                    {
+                        RoomId = roomId,
+                        Month = month,
+                        Year = year,
+                        WaterReading = waterCurrent,
+                        CreatedAt = DateTime.Now
+                    };
+                    db.WaterIndexes.Add(waterIndex);
+                }
+                else
+                {
+                    waterIndex.WaterReading = waterCurrent;
+                    waterIndex.CreatedAt = DateTime.Now;
+                }
+
+                db.SaveChanges();
+                return Json(new { success = true, message = "Thu tiền thành công!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Lỗi: " + ex.Message });
+            }
         }
 
         [HttpPost]
         public ActionResult CollectPayment(int utilityBillId, decimal amount, string note)
         {
-            var bill = db.UtilityBills.Find(utilityBillId);
-            if (bill == null) return HttpNotFound();
-
-            var payment = new PaymentHistory
+            try
             {
-                RoomId = bill.RoomId,
-                Month = bill.Month,
-                Year = bill.Year,
-                ContractId = bill.ContractId ?? 0,
-                UtilityBillId = utilityBillId,
-                TotalAmount = amount,
-                PaidDate = DateTime.Now,
-                Note = note
-            };
-            db.PaymentHistories.Add(payment);
+                var bill = db.UtilityBills.Find(utilityBillId);
+                if (bill == null)
+                    return Json(new { success = false, message = "Không tìm thấy phiếu báo tiền!" });
 
-            // Tự động ghi nhận vào thu chi
-            var incomeCategory = db.IncomeExpenseCategories
-                .FirstOrDefault(c => c.Name == "Thu tiền phòng" && c.IsSystem);
-
-            if (incomeCategory != null)
-            {
-                var incomeExpense = new IncomeExpens
+                // Kiểm tra xem hợp đồng có còn hiệu lực không
+                if (bill.ContractId.HasValue)
                 {
-                    CategoryId = incomeCategory.Id,
-                    ContractId = bill.ContractId,
+                    var contract = db.Contracts.Find(bill.ContractId.Value);
+                    if (contract == null || contract.Status != "Active")
+                    {
+                        return Json(new { success = false, message = "Hợp đồng không còn hiệu lực!" });
+                    }
+                }
+
+                var payment = new PaymentHistory
+                {
                     RoomId = bill.RoomId,
-                    Amount = amount,
-                    TransactionDate = DateTime.Now.Date,
-                    Description = $"Thu tiền phòng {bill.Room.Name} tháng {bill.Month}/{bill.Year}",
-                    ReferenceNumber = $"BILL-{utilityBillId}",
-                    CreatedBy = "System",
+                    Month = bill.Month,
+                    Year = bill.Year,
+                    ContractId = bill.ContractId ?? 0,
+                    UtilityBillId = utilityBillId,
+                    TotalAmount = amount,
+                    PaidDate = DateTime.Now,
+                    Note = note,
                     CreatedAt = DateTime.Now
                 };
+                db.PaymentHistories.Add(payment);
+                db.SaveChanges();
 
-                db.IncomeExpenses.Add(incomeExpense);
+                return Json(new { success = true, message = "Ghi nhận thanh toán thành công!" });
             }
-
-            db.SaveChanges();
-
-            return Json(new { success = true });
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Lỗi: " + ex.Message });
+            }
         }
-
         protected override void Dispose(bool disposing)
         {
             if (disposing)
@@ -344,5 +366,5 @@ namespace NhaTroAnCu.Controllers
             base.Dispose(disposing);
         }
     }
-  
+
 }

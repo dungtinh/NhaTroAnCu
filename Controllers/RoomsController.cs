@@ -155,20 +155,31 @@ public class RoomsController : Controller
 
         if (activeContract != null)
         {
+            // Tìm phiếu báo tiền theo cả RoomId và ContractId
+            var bill = db.UtilityBills.FirstOrDefault(b =>
+                b.RoomId == id &&
+                b.Month == currentMonth &&
+                b.Year == currentYear &&
+                b.ContractId == activeContract.Id);
+
             var payment = db.PaymentHistories.FirstOrDefault(p =>
                 p.RoomId == id &&
                 p.Month == currentMonth &&
                 p.Year == currentYear &&
                 p.ContractId == activeContract.Id
             );
+
             ViewBag.ActiveContract = activeContract;
             ViewBag.Payment = payment;
+            ViewBag.Bill = bill; // Thêm bill vào ViewBag
         }
         else
         {
             ViewBag.ActiveContract = null;
             ViewBag.Payment = null;
+            ViewBag.Bill = null;
         }
+
         ViewBag.CurrentMonth = currentMonth;
         ViewBag.CurrentYear = currentYear;
 
@@ -191,14 +202,27 @@ public class RoomsController : Controller
         ViewBag.ExtraCharge = extraCharge;
         ViewBag.Discount = discount;
 
+        // Lấy chỉ số nước tháng trước của hợp đồng hiện tại
         var prevMonth = currentMonth == 1 ? 12 : currentMonth - 1;
         var prevYear = currentMonth == 1 ? currentYear - 1 : currentYear;
-        var prevIndex = db.WaterIndexes
-            .Where(x => x.RoomId == id && x.Month == prevMonth && x.Year == prevYear)
-            .OrderByDescending(x => x.CreatedAt)
-            .Select(x => x.WaterReading)
-            .FirstOrDefault();
-        ViewBag.WaterPrev = prevIndex;
+
+        // Ưu tiên lấy từ phiếu báo tiền của hợp đồng trước đó
+        if (activeContract != null)
+        {
+            var prevBill = db.UtilityBills
+                .Where(b => b.RoomId == id && b.ContractId == activeContract.Id &&
+                    ((b.Month == prevMonth && b.Year == prevYear) ||
+                     (b.Month < currentMonth && b.Year == currentYear)))
+                .OrderByDescending(b => b.Year)
+                .ThenByDescending(b => b.Month)
+                .FirstOrDefault();
+
+            ViewBag.WaterPrev = prevBill?.WaterIndexEnd ?? 0;
+        }
+        else
+        {
+            ViewBag.WaterPrev = 0;
+        }
 
         return View(room);
     }
