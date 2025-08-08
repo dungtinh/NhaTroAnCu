@@ -1,0 +1,21 @@
+@model NhaTroAnCu.Models.ContractDetailViewModel
+
+<!-- ... các trường khác ... -->
+
+<div class="form-group">
+    <label>Trạng thái đặt cọc:</label>
+    @if (Model.DepositCollected)
+    {
+        <span class="text-success">Đã thu</span>
+        <span>(@Model.DepositCollectedAmount.ToString("n0") đ)</span>
+    }
+    else
+    {
+        <span class="text-danger">Chưa thu</span>
+        <form asp-action="CollectDeposit" asp-route-id="@Model.Id" method="post">
+            <label>Số tiền cần thu:</label>
+            <input name="amount" type="number" class="form-control" value="@Model.DepositAmount" min="0"/>
+            <button type="submit" class="btn btn-primary mt-2">Thu cọc</button>
+        </form>
+    }
+</div>
