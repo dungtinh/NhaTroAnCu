@@ -2,3 +2,5 @@ bin/itextsharp.dll
 /bin
 /.vs
 /obj
+/.vs
+/.idea
