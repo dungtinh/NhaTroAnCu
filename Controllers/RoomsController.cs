@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Web.Mvc;
 using NhaTroAnCu.Models;
+using NhaTroAnCu.Helpers;
 
 public class RoomsController : Controller
 {
@@ -203,26 +204,8 @@ public class RoomsController : Controller
         ViewBag.Discount = discount;
 
         // Lấy chỉ số nước tháng trước của hợp đồng hiện tại
-        var prevMonth = currentMonth == 1 ? 12 : currentMonth - 1;
-        var prevYear = currentMonth == 1 ? currentYear - 1 : currentYear;
-
-        // Ưu tiên lấy từ phiếu báo tiền của hợp đồng trước đó
-        if (activeContract != null)
-        {
-            var prevBill = db.UtilityBills
-                .Where(b => b.RoomId == id && b.ContractId == activeContract.Id &&
-                    ((b.Month == prevMonth && b.Year == prevYear) ||
-                     (b.Month < currentMonth && b.Year == currentYear)))
-                .OrderByDescending(b => b.Year)
-                .ThenByDescending(b => b.Month)
-                .FirstOrDefault();
-
-            ViewBag.WaterPrev = prevBill?.WaterIndexEnd ?? 0;
-        }
-        else
-        {
-            ViewBag.WaterPrev = 0;
-        }
+        var service = new UtilityBillService(db);
+        ViewBag.WaterPrev = service.GetHighestWaterIndexEnd(id, currentMonth, currentYear);
 
         return View(room);
     }

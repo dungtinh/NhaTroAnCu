@@ -1,4 +1,5 @@
 ﻿using NhaTroAnCu.Models;
+using NhaTroAnCu.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -103,13 +104,8 @@ namespace NhaTroAnCu.Controllers
             var contract = db.Contracts.FirstOrDefault(c => c.RoomId == roomId && c.Status == "Active");
             int currentMonth = now.Month, currentYear = now.Year;
 
-            var prevBill = db.UtilityBills
-                .Where(b => b.RoomId == roomId && (
-                    (b.Month == (currentMonth == 1 ? 12 : currentMonth - 1)) &&
-                    (b.Year == (currentMonth == 1 ? currentYear - 1 : currentYear))
-                ))
-                .OrderByDescending(b => b.Year).ThenByDescending(b => b.Month)
-                .FirstOrDefault();
+            var service = new UtilityBillService(db);
+            int waterPrev = service.GetHighestWaterIndexEnd(roomId, currentMonth, currentYear);
 
             var vm = new UtilityBillCreateViewModel
             {
@@ -117,7 +113,7 @@ namespace NhaTroAnCu.Controllers
                 ContractId = contract?.Id ?? 0,
                 Month = currentMonth,
                 Year = currentYear,
-                WaterIndexStart = prevBill?.WaterIndexEnd ?? 0,
+                WaterIndexStart = waterPrev,
                 WaterPrice = contract?.WaterPrice ?? 15000,
                 RentAmount = contract?.PriceAgreed ?? room.DefaultPrice
             };
