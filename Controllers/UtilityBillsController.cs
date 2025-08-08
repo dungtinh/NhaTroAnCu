@@ -13,6 +13,19 @@ namespace NhaTroAnCu.Controllers
     {
         private NhaTroAnCuEntities db = new NhaTroAnCuEntities();
 
+        private int GetHighestWaterIndexEnd(int roomId, int month, int year)
+        {
+            var prevBills = db.UtilityBills
+                .Where(b => b.RoomId == roomId && (b.Year < year || (b.Year == year && b.Month < month)) && b.WaterIndexEnd.HasValue)
+                .ToList();
+
+            if (prevBills.Count > 0)
+            {
+                return prevBills.Max(b => b.WaterIndexEnd.Value);
+            }
+            return 0;
+        }
+
         // GET: /UtilityBills/CreateBill?roomId=5&month=7&year=2025
         public ActionResult CreateBill(int roomId, int month, int year)
         {
@@ -44,13 +57,14 @@ namespace NhaTroAnCu.Controllers
             else
             {
                 // Trường hợp chưa có bill, khởi tạo mặc định
+                int waterIndexStart = GetHighestWaterIndexEnd(roomId, month, year);
                 vm = new UtilityBillCreateViewModel
                 {
                     RoomId = roomId,
                     Month = month,
                     Year = year,
                     ContractId = contract?.Id ?? 0,
-                    WaterIndexStart = 0,
+                    WaterIndexStart = waterIndexStart,
                     WaterIndexEnd = 0,
                     ElectricityAmount = 0,
                     WaterPrice = 15000,
@@ -103,13 +117,7 @@ namespace NhaTroAnCu.Controllers
             var contract = db.Contracts.FirstOrDefault(c => c.RoomId == roomId && c.Status == "Active");
             int currentMonth = now.Month, currentYear = now.Year;
 
-            var prevBill = db.UtilityBills
-                .Where(b => b.RoomId == roomId && (
-                    (b.Month == (currentMonth == 1 ? 12 : currentMonth - 1)) &&
-                    (b.Year == (currentMonth == 1 ? currentYear - 1 : currentYear))
-                ))
-                .OrderByDescending(b => b.Year).ThenByDescending(b => b.Month)
-                .FirstOrDefault();
+            int waterIndexStart = GetHighestWaterIndexEnd(roomId, currentMonth, currentYear);
 
             var vm = new UtilityBillCreateViewModel
             {
@@ -117,7 +125,7 @@ namespace NhaTroAnCu.Controllers
                 ContractId = contract?.Id ?? 0,
                 Month = currentMonth,
                 Year = currentYear,
-                WaterIndexStart = prevBill?.WaterIndexEnd ?? 0,
+                WaterIndexStart = waterIndexStart,
                 WaterPrice = contract?.WaterPrice ?? 15000,
                 RentAmount = contract?.PriceAgreed ?? room.DefaultPrice
             };
