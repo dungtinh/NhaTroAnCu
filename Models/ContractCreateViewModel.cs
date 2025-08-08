@@ -18,7 +18,9 @@ namespace NhaTroAnCu.Models
         public decimal ElectricityPrice { get; set; }
         public decimal WaterPrice { get; set; }
 
-
+        // Deposit collection options
+        public bool CollectDepositNow { get; set; }
+        public decimal? DepositCollectionAmount { get; set; }
 
         // Danh sách người thuê
         public List<TenantInputModel> Tenants { get; set; } = new List<TenantInputModel>();

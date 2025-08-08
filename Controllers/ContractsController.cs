@@ -20,9 +20,99 @@ namespace NhaTroAnCu.Controllers
     {
         private NhaTroAnCuEntities db = new NhaTroAnCuEntities();
 
+        // Ensure "Thu tiền cọc" system category exists
+        private void EnsureDepositIncomeCategory()
+        {
+            var categoryExists = db.IncomeExpenseCategories
+                .Any(c => c.Name == "Thu tiền cọc" && c.IsSystem);
+
+            if (!categoryExists)
+            {
+                var category = new IncomeExpenseCategory
+                {
+                    Name = "Thu tiền cọc",
+                    Type = "Income",
+                    IsSystem = true,
+                    IsActive = true,
+                    CreatedAt = DateTime.Now
+                };
+                db.IncomeExpenseCategories.Add(category);
+                db.SaveChanges();
+            }
+        }
+
+        // Check if deposit has been collected for a contract
+        private bool IsDepositCollected(int contractId)
+        {
+            return db.IncomeExpenses
+                .Any(ie => ie.ContractId == contractId && 
+                          ie.IncomeExpenseCategory.Name == "Thu tiền cọc" && 
+                          ie.IncomeExpenseCategory.IsSystem);
+        }
+
+        // Record deposit collection
+        private void RecordDepositCollection(int contractId, decimal amount, string description = null)
+        {
+            EnsureDepositIncomeCategory();
+            
+            var contract = db.Contracts.Find(contractId);
+            if (contract == null) return;
+
+            var incomeCategory = db.IncomeExpenseCategories
+                .FirstOrDefault(c => c.Name == "Thu tiền cọc" && c.IsSystem);
+
+            if (incomeCategory != null)
+            {
+                var incomeExpense = new IncomeExpens
+                {
+                    CategoryId = incomeCategory.Id,
+                    ContractId = contractId,
+                    RoomId = contract.RoomId,
+                    Amount = amount,
+                    TransactionDate = DateTime.Now.Date,
+                    Description = description ?? "Thu tiền cọc khi ký hợp đồng",
+                    ReferenceNumber = $"DEPOSIT-IN-{contractId}",
+                    CreatedBy = User.Identity.GetUserId(),
+                    CreatedAt = DateTime.Now
+                };
+
+                db.IncomeExpenses.Add(incomeExpense);
+                db.SaveChanges();
+            }
+        }
+
+        // POST: /Contracts/CollectDeposit
+        [HttpPost]
+        public ActionResult CollectDeposit(int contractId, decimal amount, string description = null)
+        {
+            // Check if deposit already collected
+            if (IsDepositCollected(contractId))
+            {
+                return Json(new { success = false, message = "Tiền cọc đã được thu cho hợp đồng này." });
+            }
+
+            // Validate amount
+            if (amount <= 0)
+            {
+                return Json(new { success = false, message = "Số tiền thu cọc phải lớn hơn 0." });
+            }
+
+            try
+            {
+                RecordDepositCollection(contractId, amount, description ?? "Thu tiền cọc");
+                return Json(new { success = true, message = "Đã thu tiền cọc thành công." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Có lỗi xảy ra: " + ex.Message });
+            }
+        }
+
         // GET: /Contracts/Create?roomId=5
         public ActionResult Create(int roomId)
         {
+            EnsureDepositIncomeCategory(); // Ensure category exists
+            
             var room = db.Rooms.Find(roomId);
             ViewBag.RoomId = new SelectList(db.Rooms.Where(r => !r.IsOccupied), "Id", "Name");
             return View(new ContractCreateViewModel()
@@ -32,6 +122,8 @@ namespace NhaTroAnCu.Controllers
                 DepositAmount = room.DefaultPrice,
                 ElectricityPrice = 3500,
                 WaterPrice = 15000,
+                CollectDepositNow = false,
+                DepositCollectionAmount = room.DefaultPrice
             });
         }
 
@@ -440,6 +532,20 @@ namespace NhaTroAnCu.Controllers
                 }).ToList()
             };
 
+            // Check deposit collection status
+            var depositCollection = db.IncomeExpenses
+                .Include(ie => ie.IncomeExpenseCategory)
+                .FirstOrDefault(ie => ie.ContractId == id && 
+                               ie.IncomeExpenseCategory.Name == "Thu tiền cọc" && 
+                               ie.IncomeExpenseCategory.IsSystem);
+
+            if (depositCollection != null)
+            {
+                vm.IsDepositCollected = true;
+                vm.CollectedDepositAmount = depositCollection.Amount;
+                vm.DepositCollectionDate = depositCollection.TransactionDate;
+            }
+
             ViewBag.RoomList = new SelectList(db.Rooms, "Id", "Name", vm.RoomId);
             return View(vm);
         }
@@ -656,6 +762,13 @@ namespace NhaTroAnCu.Controllers
             }
 
             db.SaveChanges();
+
+            // Handle deposit collection if requested
+            if (vm.CollectDepositNow && vm.DepositCollectionAmount.HasValue && vm.DepositCollectionAmount.Value > 0)
+            {
+                RecordDepositCollection(contract.Id, vm.DepositCollectionAmount.Value, "Thu tiền cọc khi ký hợp đồng");
+            }
+
             return RedirectToAction("Index", "Rooms");
         }
 

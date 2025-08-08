@@ -62,6 +62,67 @@
             </div>
         </div>
 
+        <!-- Deposit Status -->
+        <div class="edit-card">
+            <div class="section-title">
+                <i class="fas fa-piggy-bank"></i>
+                Trạng thái tiền cọc
+            </div>
+
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label><i class="fas fa-info-circle"></i> Trạng thái thu cọc</label>
+                    <div class="status-display">
+                        @if (Model.IsDepositCollected)
+                        {
+                            <span class="badge badge-success">
+                                <i class="fas fa-check-circle"></i> Đã thu cọc
+                            </span>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    Số tiền: <strong>@Model.CollectedDepositAmount?.ToString("N0") VNĐ</strong><br/>
+                                    Ngày thu: <strong>@Model.DepositCollectionDate?.ToString("dd/MM/yyyy")</strong>
+                                </small>
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="badge badge-warning">
+                                <i class="fas fa-exclamation-triangle"></i> Chưa thu cọc
+                            </span>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    Tiền đặt cọc: <strong>@Model.DepositAmount.ToString("N0") VNĐ</strong>
+                                </small>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="form-group col-md-6">
+                    @if (!Model.IsDepositCollected)
+                    {
+                        <label><i class="fas fa-money-bill-wave"></i> Thu tiền cọc</label>
+                        <div class="input-group">
+                            <input type="number" id="collectDepositAmount" class="form-control" value="@Model.DepositAmount" placeholder="Số tiền thu cọc" />
+                            <div class="input-group-append">
+                                <button type="button" id="btnCollectDeposit" class="btn btn-success">
+                                    <i class="fas fa-hand-holding-usd"></i> Thu cọc
+                                </button>
+                            </div>
+                        </div>
+                        <small class="text-muted">Nhập số tiền thực tế thu được</small>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            Tiền cọc đã được thu. Xem chi tiết trong phần Thu chi.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
         <!-- Tenant Information -->
         <div class="edit-card">
             <div class="section-title">
@@ -803,5 +864,70 @@
                 }
             });
         }
+
+        // Handle deposit collection
+        $('#btnCollectDeposit').click(function() {
+            var amount = $('#collectDepositAmount').val();
+            var contractId = @Model.Id;
+            
+            if (!amount || amount <= 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Số tiền không hợp lệ',
+                    text: 'Vui lòng nhập số tiền lớn hơn 0.',
+                    confirmButtonText: 'Đã hiểu'
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Xác nhận thu cọc',
+                text: `Bạn có chắc chắn muốn thu ${parseFloat(amount).toLocaleString('vi-VN')} VNĐ tiền cọc?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Xác nhận',
+                cancelButtonText: 'Hủy'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '@Url.Action("CollectDeposit", "Contracts")',
+                        type: 'POST',
+                        data: {
+                            contractId: contractId,
+                            amount: amount,
+                            description: 'Thu tiền cọc từ giao diện sửa hợp đồng'
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Thành công',
+                                    text: response.message,
+                                    confirmButtonText: 'Đóng'
+                                }).then(() => {
+                                    // Reload page to update deposit status
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Lỗi',
+                                    text: response.message,
+                                    confirmButtonText: 'Đóng'
+                                });
+                            }
+                        },
+                        error: function() {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Lỗi',
+                                text: 'Có lỗi xảy ra khi thu tiền cọc.',
+                                confirmButtonText: 'Đóng'
+                            });
+                        }
+                    });
+                }
+            });
+        });
     </script>
 }

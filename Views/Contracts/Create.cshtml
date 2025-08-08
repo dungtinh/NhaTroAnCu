@@ -115,6 +115,30 @@
                 </div>
 
                 <div class="section-title mt-4">
+                    <i class="fas fa-piggy-bank"></i> Đặt cọc
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <div class="custom-control custom-checkbox">
+                            @Html.CheckBoxFor(m => m.CollectDepositNow, new { @class = "custom-control-input", id = "collectDepositNow" })
+                            <label class="custom-control-label" for="collectDepositNow">
+                                <i class="fas fa-money-bill-wave"></i> Thu cọc ngay khi ký hợp đồng
+                            </label>
+                        </div>
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i> 
+                            Nếu chọn, sẽ tự động tạo phiếu thu cọc trong hệ thống
+                        </small>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label><i class="fas fa-dollar-sign"></i> Số tiền thu cọc</label>
+                        @Html.TextBoxFor(m => m.DepositCollectionAmount, new { @class = "form-control money", id = "depositCollectionAmount", disabled = "disabled" })
+                        <small class="text-muted">Mặc định bằng tiền đặt cọc, có thể thay đổi</small>
+                    </div>
+                </div>
+
+                <div class="section-title mt-4">
                     <i class="fas fa-users"></i> Thông tin người thuê
                 </div>
 
@@ -645,6 +669,28 @@
             // Set tenant index for existing inputs
             $('input[type="file"][name="TenantPhotos"]').each(function (index) {
                 $(this).attr('data-tenant-index', index);
+            });
+
+            // Handle deposit collection UI
+            $('#collectDepositNow').change(function() {
+                var isChecked = $(this).is(':checked');
+                $('#depositCollectionAmount').prop('disabled', !isChecked);
+                if (isChecked) {
+                    // Copy deposit amount if not already set
+                    var depositAmount = $('input[name="DepositAmount"]').val();
+                    if (!$('#depositCollectionAmount').val() && depositAmount) {
+                        $('#depositCollectionAmount').val(depositAmount);
+                    }
+                } else {
+                    $('#depositCollectionAmount').val('');
+                }
+            });
+
+            // Sync deposit amount with collection amount if auto-fill enabled
+            $('input[name="DepositAmount"]').change(function() {
+                if ($('#collectDepositNow').is(':checked')) {
+                    $('#depositCollectionAmount').val($(this).val());
+                }
             });
         });
 

@@ -23,7 +23,15 @@ namespace NhaTroAnCu.Models
         [Display(Name = "Giá nước")]
         public decimal WaterPrice { get; set; }
 
+        [Display(Name = "Ghi chú")]
+        public string Note { get; set; }
+
         public List<TenantEditModel> Tenants { get; set; } = new List<TenantEditModel>();
+
+        // Deposit status info - for display only
+        public bool IsDepositCollected { get; set; }
+        public decimal? CollectedDepositAmount { get; set; }
+        public DateTime? DepositCollectionDate { get; set; }
     }
 
     public class TenantEditModel
