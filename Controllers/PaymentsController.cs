@@ -368,7 +368,7 @@ namespace NhaTroAnCu.Controllers
                     db.IncomeExpenseCategories.Add(incomeCategory);
                     db.SaveChanges();
                 }
-                var income = new IncomeExpens
+                var income = new IncomeExpense
                 {
                     CategoryId = incomeCategory.Id,
                     Amount = amount,

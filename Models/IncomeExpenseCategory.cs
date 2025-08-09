@@ -17,7 +17,7 @@ namespace NhaTroAnCu.Models
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public IncomeExpenseCategory()
         {
-            this.IncomeExpenses = new HashSet<IncomeExpens>();
+            this.IncomeExpenses = new HashSet<IncomeExpense>();
         }
     
         public int Id { get; set; }
@@ -29,6 +29,6 @@ namespace NhaTroAnCu.Models
         public Nullable<System.DateTime> UpdatedAt { get; set; }
     
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<IncomeExpens> IncomeExpenses { get; set; }
+        public virtual ICollection<IncomeExpense> IncomeExpenses { get; set; }
     }
 }

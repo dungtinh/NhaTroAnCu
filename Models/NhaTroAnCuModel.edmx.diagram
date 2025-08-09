@@ -33,7 +33,7 @@
         <EntityTypeShape EntityType="NhaTroAnCuModel.ContractExtensionHistory" Width="1.5" PointX="5.25" PointY="14" />
         <AssociationConnector Association="NhaTroAnCuModel.FK__ContractE__Contr__2180FB33" />
         <EntityTypeShape EntityType="NhaTroAnCuModel.IncomeExpenseCategory" Width="1.5" PointX="3" PointY="22.125" />
-        <EntityTypeShape EntityType="NhaTroAnCuModel.IncomeExpens" Width="1.5" PointX="5.25" PointY="0.75" />
+        <EntityTypeShape EntityType="NhaTroAnCuModel.IncomeExpense" Width="1.5" PointX="5.25" PointY="0.75" />
         <AssociationConnector Association="NhaTroAnCuModel.FK__IncomeExp__Contr__339FAB6E" />
         <AssociationConnector Association="NhaTroAnCuModel.FK__IncomeExp__Categ__32AB8735" />
         <AssociationConnector Association="NhaTroAnCuModel.FK__IncomeExp__RoomI__3493CFA7" />

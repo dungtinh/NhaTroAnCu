@@ -12,10 +12,10 @@ namespace NhaTroAnCu.Models
     using System;
     using System.Collections.Generic;
     
-    public partial class IncomeExpens
+    public partial class IncomeExpense
     {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
-        public IncomeExpens()
+        public IncomeExpense()
         {
             this.Contracts = new HashSet<Contract>();
         }
