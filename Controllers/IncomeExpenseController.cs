@@ -113,7 +113,7 @@ namespace NhaTroAnCu.Controllers
         {
             if (ModelState.IsValid)
             {
-                var incomeExpense = new IncomeExpens
+                var incomeExpense = new IncomeExpense
                 {
                     CategoryId = model.CategoryId,
                     ContractId = model.ContractId,
@@ -319,7 +319,7 @@ namespace NhaTroAnCu.Controllers
 
                 if (incomeCategory != null)
                 {
-                    var incomeExpense = new IncomeExpens
+                    var incomeExpense = new IncomeExpense
                     {
                         CategoryId = incomeCategory.Id,
                         ContractId = payment.ContractId,
@@ -349,7 +349,7 @@ namespace NhaTroAnCu.Controllers
 
                 if (expenseCategory != null)
                 {
-                    var incomeExpense = new IncomeExpens
+                    var incomeExpense = new IncomeExpense
                     {
                         CategoryId = expenseCategory.Id,
                         ContractId = contractId,
@@ -458,7 +458,7 @@ namespace NhaTroAnCu.Controllers
                 }
 
                 // Create income record
-                var income = new IncomeExpens
+                var income = new IncomeExpense
                 {
                     CategoryId = depositCategory.Id,
                     Amount = amount,

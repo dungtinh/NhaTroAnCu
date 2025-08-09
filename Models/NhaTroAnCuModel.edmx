@@ -739,7 +739,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             <End Role="ContractExtensionHistory" EntitySet="ContractExtensionHistories" />
           </AssociationSet>
           <EntitySet Name="IncomeExpenseCategories" EntityType="NhaTroAnCuModel.IncomeExpenseCategory" />
-          <EntitySet Name="IncomeExpenses" EntityType="NhaTroAnCuModel.IncomeExpens" />
+          <EntitySet Name="IncomeExpenses" EntityType="NhaTroAnCuModel.IncomeExpense" />
           <AssociationSet Name="FK__IncomeExp__Contr__339FAB6E" Association="NhaTroAnCuModel.FK__IncomeExp__Contr__339FAB6E">
             <End Role="Contract" EntitySet="Contracts" />
             <End Role="IncomeExpens" EntitySet="IncomeExpenses" />
@@ -970,7 +970,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="UpdatedAt" Type="DateTime" Precision="3" />
           <NavigationProperty Name="IncomeExpenses" Relationship="NhaTroAnCuModel.FK__IncomeExp__Categ__32AB8735" FromRole="IncomeExpenseCategory" ToRole="IncomeExpens" />
         </EntityType>
-        <EntityType Name="IncomeExpens">
+        <EntityType Name="IncomeExpense">
           <Key>
             <PropertyRef Name="Id" />
           </Key>
@@ -992,7 +992,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
         </EntityType>
         <Association Name="FK__IncomeExp__Contr__339FAB6E">
           <End Type="NhaTroAnCuModel.Contract" Role="Contract" Multiplicity="0..1" />
-          <End Type="NhaTroAnCuModel.IncomeExpens" Role="IncomeExpens" Multiplicity="*" />
+          <End Type="NhaTroAnCuModel.IncomeExpense" Role="IncomeExpens" Multiplicity="*" />
           <ReferentialConstraint>
             <Principal Role="Contract">
               <PropertyRef Name="Id" />
@@ -1004,7 +1004,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
         </Association>
         <Association Name="FK__IncomeExp__Categ__32AB8735">
           <End Type="NhaTroAnCuModel.IncomeExpenseCategory" Role="IncomeExpenseCategory" Multiplicity="1" />
-          <End Type="NhaTroAnCuModel.IncomeExpens" Role="IncomeExpens" Multiplicity="*" />
+          <End Type="NhaTroAnCuModel.IncomeExpense" Role="IncomeExpens" Multiplicity="*" />
           <ReferentialConstraint>
             <Principal Role="IncomeExpenseCategory">
               <PropertyRef Name="Id" />
@@ -1016,7 +1016,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
         </Association>
         <Association Name="FK__IncomeExp__RoomI__3493CFA7">
           <End Type="NhaTroAnCuModel.Room" Role="Room" Multiplicity="0..1" />
-          <End Type="NhaTroAnCuModel.IncomeExpens" Role="IncomeExpens" Multiplicity="*" />
+          <End Type="NhaTroAnCuModel.IncomeExpense" Role="IncomeExpens" Multiplicity="*" />
           <ReferentialConstraint>
             <Principal Role="Room">
               <PropertyRef Name="Id" />
@@ -1027,7 +1027,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           </ReferentialConstraint>
         </Association>
         <Association Name="FK__Contracts__Depos__4C6B5938">
-          <End Type="NhaTroAnCuModel.IncomeExpens" Role="IncomeExpens" Multiplicity="0..1" />
+          <End Type="NhaTroAnCuModel.IncomeExpense" Role="IncomeExpens" Multiplicity="0..1" />
           <End Type="NhaTroAnCuModel.Contract" Role="Contract" Multiplicity="*" />
           <ReferentialConstraint>
             <Principal Role="IncomeExpens">
@@ -1270,7 +1270,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             </EntityTypeMapping>
           </EntitySetMapping>
           <EntitySetMapping Name="IncomeExpenses">
-            <EntityTypeMapping TypeName="NhaTroAnCuModel.IncomeExpens">
+            <EntityTypeMapping TypeName="NhaTroAnCuModel.IncomeExpense">
               <MappingFragment StoreEntitySet="IncomeExpenses">
                 <ScalarProperty Name="UpdatedAt" ColumnName="UpdatedAt" />
                 <ScalarProperty Name="CreatedAt" ColumnName="CreatedAt" />

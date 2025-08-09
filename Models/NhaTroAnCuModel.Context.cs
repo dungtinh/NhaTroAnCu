@@ -41,6 +41,6 @@ namespace NhaTroAnCu.Models
         public virtual DbSet<UtilityBill> UtilityBills { get; set; }
         public virtual DbSet<ContractExtensionHistory> ContractExtensionHistories { get; set; }
         public virtual DbSet<IncomeExpenseCategory> IncomeExpenseCategories { get; set; }
-        public virtual DbSet<IncomeExpens> IncomeExpenses { get; set; }
+        public virtual DbSet<IncomeExpense> IncomeExpenses { get; set; }
     }
 }

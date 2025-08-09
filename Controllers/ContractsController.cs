@@ -72,7 +72,7 @@ namespace NhaTroAnCu.Controllers
 
                 if (expenseCategory != null)
                 {
-                    var incomeExpense = new IncomeExpens
+                    var incomeExpense = new IncomeExpense
                     {
                         CategoryId = expenseCategory.Id,
                         ContractId = id,

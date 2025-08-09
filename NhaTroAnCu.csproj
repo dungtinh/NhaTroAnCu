@@ -286,7 +286,7 @@
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
     <Compile Include="Models\IdentityModels.cs" />
-    <Compile Include="Models\IncomeExpens.cs">
+    <Compile Include="Models\IncomeExpense.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
     <Compile Include="Models\IncomeExpenseCategory.cs">
