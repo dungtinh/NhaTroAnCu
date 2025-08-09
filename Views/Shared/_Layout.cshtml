@@ -28,15 +28,15 @@
                         </a>
                     </li>
                     <li>
-                        <a class="nav-link" href="@Url.Action("Report", "Payments")">
+                        <a class="nav-link" href="@Url.Action("Index", "IncomeExpense")">
                             <i class="fas fa-chart-line"></i> Báo cáo tiền phòng
                         </a>
                     </li>
-                    <li>
-                        <a class="nav-link" href="@Url.Action("Index", "IncomeExpense")">
-                            <i class="fas fa-money-check-alt"></i> Thu chi
-                        </a>
-                    </li>
+                    @*<li>
+                            <a class="nav-link" href="@Url.Action("Report", "Payments")">
+                                <i class="fas fa-chart-line"></i> Báo cáo tiền phòng
+                            </a>
+                        </li>*@
                 </ul>
                 @Html.Partial("_LoginPartial")
             </div>

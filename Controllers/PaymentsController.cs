@@ -9,6 +9,7 @@ using iTextSharp.text;
 using iTextSharp.text.pdf;
 using System.IO;
 using System.Globalization;
+using System.Diagnostics.Contracts;
 
 namespace NhaTroAnCu.Controllers
 {
@@ -326,9 +327,10 @@ namespace NhaTroAnCu.Controllers
                     return Json(new { success = false, message = "Không tìm thấy phiếu báo tiền!" });
 
                 // Kiểm tra xem hợp đồng có còn hiệu lực không
+                NhaTroAnCu.Models.Contract contract = null;
                 if (bill.ContractId.HasValue)
                 {
-                    var contract = db.Contracts.Find(bill.ContractId.Value);
+                    contract = db.Contracts.Find(bill.ContractId.Value);
                     if (contract == null || contract.Status != "Active")
                     {
                         return Json(new { success = false, message = "Hợp đồng không còn hiệu lực!" });
@@ -348,6 +350,36 @@ namespace NhaTroAnCu.Controllers
                     CreatedAt = DateTime.Now
                 };
                 db.PaymentHistories.Add(payment);
+                db.SaveChanges();
+
+                var incomeCategory = db.IncomeExpenseCategories
+                   .FirstOrDefault(c => c.Name == "Thu tiền phòng" && c.IsSystem);
+
+                if (incomeCategory == null)
+                {
+                    // Create if not exists
+                    incomeCategory = new IncomeExpenseCategory
+                    {
+                        Name = "Thu tiền phòng",
+                        Type = "Income",
+                        IsSystem = true,
+                        CreatedAt = DateTime.Now
+                    };
+                    db.IncomeExpenseCategories.Add(incomeCategory);
+                    db.SaveChanges();
+                }
+                var income = new IncomeExpens
+                {
+                    CategoryId = incomeCategory.Id,
+                    Amount = amount,
+                    Description = payment.Note ?? $"Thu tiền phòng {contract.Room.Name}",
+                    TransactionDate = DateTime.Now,
+                    RoomId = contract.RoomId,
+                    ContractId = contract.Id,
+                    CreatedBy = User.Identity.Name ?? "System",
+                    CreatedAt = DateTime.Now
+                };
+                db.IncomeExpenses.Add(income);
                 db.SaveChanges();
 
                 return Json(new { success = true, message = "Ghi nhận thanh toán thành công!" });

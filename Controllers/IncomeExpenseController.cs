@@ -4,6 +4,7 @@ using System.Data.Entity;
 using System.Linq;
 using System.Web.Mvc;
 using Microsoft.AspNet.Identity;
+using System.Diagnostics.Contracts;
 
 namespace NhaTroAnCu.Controllers
 {
@@ -425,6 +426,69 @@ namespace NhaTroAnCu.Controllers
             ViewBag.ExpenseChartData = expenseChartData;
 
             return View();
+        }
+        [HttpPost]
+        public ActionResult CreateDeposit(int contractId, decimal amount, string description = null)
+        {
+            try
+            {
+                var contract = db.Contracts.Find(contractId);
+                if (contract == null)
+                    return Json(new { success = false, message = "Không tìm thấy hợp đồng" });
+
+                if (contract.DepositCollected)
+                    return Json(new { success = false, message = "Tiền cọc đã được thu trước đó" });
+
+                // Get deposit category
+                var depositCategory = db.IncomeExpenseCategories
+                    .FirstOrDefault(c => c.Name == "Thu tiền cọc" && c.IsSystem);
+
+                if (depositCategory == null)
+                {
+                    // Create if not exists
+                    depositCategory = new IncomeExpenseCategory
+                    {
+                        Name = "Thu tiền cọc",
+                        Type = "Income",
+                        IsSystem = true,
+                        CreatedAt = DateTime.Now
+                    };
+                    db.IncomeExpenseCategories.Add(depositCategory);
+                    db.SaveChanges();
+                }
+
+                // Create income record
+                var income = new IncomeExpens
+                {
+                    CategoryId = depositCategory.Id,
+                    Amount = amount,
+                    Description = description ?? $"Thu tiền cọc phòng {contract.Room.Name}",
+                    TransactionDate = DateTime.Now,
+                    RoomId = contract.RoomId,
+                    ContractId = contractId,
+                    CreatedBy = User.Identity.Name ?? "System",
+                    CreatedAt = DateTime.Now
+                };
+
+                db.IncomeExpenses.Add(income);
+                db.SaveChanges();
+
+                // Update contract
+                contract.DepositCollected = true;
+                contract.DepositCollectedDate = DateTime.Now;
+                contract.DepositIncomeId = income.Id;
+                db.SaveChanges();
+
+                return Json(new
+                {
+                    success = true,
+                    message = $"Đã thu tiền cọc {amount:N0}đ thành công!"
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Lỗi: " + ex.Message });
+            }
         }
     }
 }

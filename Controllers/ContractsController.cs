@@ -587,7 +587,8 @@ namespace NhaTroAnCu.Controllers
                 Note = vm.Note,
                 Status = "Active",
                 ElectricityPrice = vm.ElectricityPrice,
-                WaterPrice = vm.WaterPrice
+                WaterPrice = vm.WaterPrice,
+                DepositCollected = false // Mặc định chưa thu cọc
             };
 
             db.Contracts.Add(contract);

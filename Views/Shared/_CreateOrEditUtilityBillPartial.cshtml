@@ -12,7 +12,8 @@
             <div class="col-md-6">
                 <div class="form-group mb-2">
                     <label>Chỉ số nước tháng trước</label>
-                    <input type="number" class="form-control" id="waterPrev" value="@Model.WaterIndexStart" readonly />
+                    @*<input type="number" class="form-control" id="waterPrev" value="@Model.WaterIndexStart" readonly />*@
+                    @Html.TextBoxFor(m => m.WaterIndexStart, new { @class = "form-control", id = "waterPrev", type = "number", @Value = Model.WaterIndexStart, @readonly = "readonly" })
                 </div>
                 <div class="form-group mb-2">
                     <label>Chỉ số nước tháng này</label>

@@ -117,7 +117,49 @@
                                 <div class="h5 mb-0">@contract.DepositAmount.ToString("N0")đ</div>
                             </div>
                         </div>
-
+                        <div class="mb-3">
+                            <small class="text-muted">Ghi nhận tiền đặt cọc</small>
+                            @if (contract.DepositCollected)
+                            {
+                                <div class="alert alert-success d-flex align-items-center">
+                                    <i class="fas fa-check-circle fa-lg mr-2"></i>
+                                    <div>
+                                        <strong>Đã thu tiền đặt cọc:</strong>
+                                        <span class="font-weight-bold">@contract.IncomeExpens.Amount.ToString("N0")đ</span>
+                                        <br />
+                                        <span>Ngày thu: @(contract.DepositCollectedDate?.ToString("dd/MM/yyyy HH:mm"))</span>
+                                        @if (!string.IsNullOrEmpty(contract.IncomeExpens.Description))
+                                        {
+                                            <div><i class="fas fa-sticky-note"></i> @contract.IncomeExpens.Description</div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <form id="depositForm" method="post" action="@Url.Action("CreateDeposit", "IncomeExpense")">
+                                    @Html.Hidden("contractId", contract.Id)
+                                    <div class="row align-items-end">
+                                        <div class="col-md-4">
+                                            <label>Số tiền đặt cọc</label>
+                                            <input name="amount" class="form-control money" value="@contract.DepositAmount" min="0" required />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>Ghi chú</label>
+                                            <input type="text" name="description" class="form-control" placeholder="Ghi chú (nếu có)" />
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="submit" class="btn btn-success w-100">
+                                                <i class="fas fa-check"></i> Ghi nhận
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                                <div class="alert alert-info mt-2">
+                                    <i class="fas fa-info-circle"></i> Số tiền đề xuất mặc định là <b>@contract.DepositAmount.ToString("N0")đ</b> theo hợp đồng, bạn có thể thay đổi số tiền thực nộp!
+                                </div>
+                            }
+                        </div>
                         <div class="row mb-3">
                             <div class="col-6">
                                 <small class="text-muted">Ngày vào</small>
@@ -344,7 +386,7 @@
                                         <dt><i class="fas fa-file-contract"></i> Mã hợp đồng</dt>
                                         <dd class="text-info font-weight-bold">#@bill.ContractId</dd>
                                         <dt><i class="fas fa-tachometer-alt"></i> Chỉ số nước đầu</dt>
-                                        <dd>@bill.WaterIndexStart</dd>
+                                        <dd>@waterPrev</dd>
                                         <dt><i class="fas fa-tachometer-alt"></i> Chỉ số nước cuối</dt>
                                         <dd>@bill.WaterIndexEnd</dd>
                                         <dt><i class="fas fa-tint"></i> Tiền nước</dt>
@@ -775,8 +817,41 @@
                 }
             );
         });
+        $('#depositForm').submit(function (e) {
+            e.preventDefault();
+            var form = $(this);
+            var btn = form.find('button[type="submit"]');
+            btn.html('<i class="fas fa-spinner fa-spin"></i> Đang xử lý...').prop('disabled', true);
+            $.post(form.attr('action'), form.serialize(), function (res) {
+                if (res.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Thành công!',
+                        text: 'Đã ghi nhận tiền đặt cọc!',
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi!',
+                        text: res.message || 'Có lỗi xảy ra'
+                    });
+                    btn.html('<i class="fas fa-check"></i> Ghi nhận').prop('disabled', false);
+                }
+            }).fail(function () {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Lỗi!',
+                    text: 'Không thể kết nối server'
+                });
+                btn.html('<i class="fas fa-check"></i> Ghi nhận').prop('disabled', false);
+            });
+        });
     </script>
-   
+
     <!-- Include existing scripts -->
     <script src="~/Scripts/Scripts_TaoPhieuBaoTien.js"></script>
 }
