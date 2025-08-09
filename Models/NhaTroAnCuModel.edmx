@@ -94,6 +94,9 @@
           <Property Name="ElectricityPrice" Type="decimal" Precision="18" Scale="2" Nullable="false" />
           <Property Name="WaterPrice" Type="decimal" Precision="18" Scale="2" Nullable="false" />
           <Property Name="ContractScanFilePath" Type="nvarchar" MaxLength="250" />
+          <Property Name="DepositCollected" Type="bit" Nullable="false" />
+          <Property Name="DepositCollectedDate" Type="datetime" />
+          <Property Name="DepositIncomeId" Type="int" />
         </EntityType>
         <EntityType Name="ContractTenants">
           <Key>
@@ -244,6 +247,18 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             </Principal>
             <Dependent Role="ContractExtensionHistory">
               <PropertyRef Name="ContractId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__Contracts__Depos__4C6B5938">
+          <End Role="IncomeExpenses" Type="Self.IncomeExpenses" Multiplicity="0..1" />
+          <End Role="Contracts" Type="Self.Contracts" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="IncomeExpenses">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="Contracts">
+              <PropertyRef Name="DepositIncomeId" />
             </Dependent>
           </ReferentialConstraint>
         </Association>
@@ -434,6 +449,10 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             <End Role="Contracts" EntitySet="Contracts" />
             <End Role="ContractExtensionHistory" EntitySet="ContractExtensionHistory" />
           </AssociationSet>
+          <AssociationSet Name="FK__Contracts__Depos__4C6B5938" Association="Self.FK__Contracts__Depos__4C6B5938">
+            <End Role="IncomeExpenses" EntitySet="IncomeExpenses" />
+            <End Role="Contracts" EntitySet="Contracts" />
+          </AssociationSet>
           <AssociationSet Name="FK__IncomeExp__Categ__32AB8735" Association="Self.FK__IncomeExp__Categ__32AB8735">
             <End Role="IncomeExpenseCategories" EntitySet="IncomeExpenseCategories" />
             <End Role="IncomeExpenses" EntitySet="IncomeExpenses" />
@@ -508,6 +527,10 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="ContractScanFilePath" Type="String" MaxLength="250" FixedLength="false" Unicode="true" />
           <NavigationProperty Name="ContractExtensionHistories" Relationship="NhaTroAnCuModel.FK__ContractE__Contr__2180FB33" FromRole="Contract" ToRole="ContractExtensionHistory" />
           <NavigationProperty Name="IncomeExpenses" Relationship="NhaTroAnCuModel.FK__IncomeExp__Contr__339FAB6E" FromRole="Contract" ToRole="IncomeExpens" />
+          <Property Name="DepositCollected" Type="Boolean" Nullable="false" />
+          <Property Name="DepositCollectedDate" Type="DateTime" Precision="3" />
+          <Property Name="DepositIncomeId" Type="Int32" />
+          <NavigationProperty Name="IncomeExpens" Relationship="NhaTroAnCuModel.FK__Contracts__Depos__4C6B5938" FromRole="Contract" ToRole="IncomeExpens" />
         </EntityType>
         <EntityType Name="ContractTenant">
           <Key>
@@ -728,6 +751,10 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <AssociationSet Name="FK__IncomeExp__RoomI__3493CFA7" Association="NhaTroAnCuModel.FK__IncomeExp__RoomI__3493CFA7">
             <End Role="Room" EntitySet="Rooms" />
             <End Role="IncomeExpens" EntitySet="IncomeExpenses" />
+          </AssociationSet>
+          <AssociationSet Name="FK__Contracts__Depos__4C6B5938" Association="NhaTroAnCuModel.FK__Contracts__Depos__4C6B5938">
+            <End Role="IncomeExpens" EntitySet="IncomeExpenses" />
+            <End Role="Contract" EntitySet="Contracts" />
           </AssociationSet>
         </EntityContainer>
         <EntityType Name="C__MigrationHistory">
@@ -961,6 +988,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <NavigationProperty Name="Contract" Relationship="NhaTroAnCuModel.FK__IncomeExp__Contr__339FAB6E" FromRole="IncomeExpens" ToRole="Contract" />
           <NavigationProperty Name="IncomeExpenseCategory" Relationship="NhaTroAnCuModel.FK__IncomeExp__Categ__32AB8735" FromRole="IncomeExpens" ToRole="IncomeExpenseCategory" />
           <NavigationProperty Name="Room" Relationship="NhaTroAnCuModel.FK__IncomeExp__RoomI__3493CFA7" FromRole="IncomeExpens" ToRole="Room" />
+          <NavigationProperty Name="Contracts" Relationship="NhaTroAnCuModel.FK__Contracts__Depos__4C6B5938" FromRole="IncomeExpens" ToRole="Contract" />
         </EntityType>
         <Association Name="FK__IncomeExp__Contr__339FAB6E">
           <End Type="NhaTroAnCuModel.Contract" Role="Contract" Multiplicity="0..1" />
@@ -998,6 +1026,18 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             </Dependent>
           </ReferentialConstraint>
         </Association>
+        <Association Name="FK__Contracts__Depos__4C6B5938">
+          <End Type="NhaTroAnCuModel.IncomeExpens" Role="IncomeExpens" Multiplicity="0..1" />
+          <End Type="NhaTroAnCuModel.Contract" Role="Contract" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="IncomeExpens">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="Contract">
+              <PropertyRef Name="DepositIncomeId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
       </Schema>
     </edmx:ConceptualModels>
     <!-- C-S mapping content -->
@@ -1007,6 +1047,9 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <EntitySetMapping Name="Contracts">
             <EntityTypeMapping TypeName="NhaTroAnCuModel.Contract">
               <MappingFragment StoreEntitySet="Contracts">
+                <ScalarProperty Name="DepositIncomeId" ColumnName="DepositIncomeId" />
+                <ScalarProperty Name="DepositCollectedDate" ColumnName="DepositCollectedDate" />
+                <ScalarProperty Name="DepositCollected" ColumnName="DepositCollected" />
                 <ScalarProperty Name="ContractScanFilePath" ColumnName="ContractScanFilePath" />
                 <ScalarProperty Name="WaterPrice" ColumnName="WaterPrice" />
                 <ScalarProperty Name="ElectricityPrice" ColumnName="ElectricityPrice" />

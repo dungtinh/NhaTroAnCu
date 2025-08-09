@@ -35,6 +35,9 @@ namespace NhaTroAnCu.Models
         public decimal ElectricityPrice { get; set; }
         public decimal WaterPrice { get; set; }
         public string ContractScanFilePath { get; set; }
+        public bool DepositCollected { get; set; }
+        public Nullable<System.DateTime> DepositCollectedDate { get; set; }
+        public Nullable<int> DepositIncomeId { get; set; }
     
         public virtual Room Room { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
@@ -45,5 +48,6 @@ namespace NhaTroAnCu.Models
         public virtual ICollection<ContractExtensionHistory> ContractExtensionHistories { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<IncomeExpens> IncomeExpenses { get; set; }
+        public virtual IncomeExpens IncomeExpens { get; set; }
     }
 }

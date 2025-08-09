@@ -37,6 +37,7 @@
         <AssociationConnector Association="NhaTroAnCuModel.FK__IncomeExp__Contr__339FAB6E" />
         <AssociationConnector Association="NhaTroAnCuModel.FK__IncomeExp__Categ__32AB8735" />
         <AssociationConnector Association="NhaTroAnCuModel.FK__IncomeExp__RoomI__3493CFA7" />
+        <AssociationConnector Association="NhaTroAnCuModel.FK__Contracts__Depos__4C6B5938" />
       </Diagram>
     </edmx:Diagrams>
   </edmx:Designer>
