@@ -565,7 +565,33 @@ namespace NhaTroAnCu.Controllers
 
             return View(model);
         }
-        // POST: /Contracts/Create
+
+        private string ProcessAndSavePhotos(IEnumerable<HttpPostedFileBase> photos)
+        {
+            if (photos == null || !photos.Any(p => p != null && p.ContentLength > 0))
+                return null;
+
+            var photoPaths = new List<string>();
+            string serverPath = Server.MapPath("~/Uploads/TenantPhotos/");
+
+            if (!Directory.Exists(serverPath))
+                Directory.CreateDirectory(serverPath);
+
+            foreach (var photo in photos.Where(p => p != null && p.ContentLength > 0))
+            {
+                string fileName = Path.GetFileNameWithoutExtension(photo.FileName);
+                string ext = Path.GetExtension(photo.FileName);
+                string uniqueName = $"{fileName}_{Guid.NewGuid():N}{ext}";
+                string savePath = Path.Combine(serverPath, uniqueName);
+
+                photo.SaveAs(savePath);
+                photoPaths.Add($"/Uploads/TenantPhotos/{uniqueName}");
+            }
+
+            return string.Join(";", photoPaths);
+        }
+
+        // Tối ưu Create method
         [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult Create(ContractCreateViewModel vm, IEnumerable<HttpPostedFileBase> TenantPhotos)
@@ -576,97 +602,82 @@ namespace NhaTroAnCu.Controllers
                 return View(vm);
             }
 
-            var contract = new Contract
+            using (var transaction = db.Database.BeginTransaction())
             {
-                RoomId = vm.RoomId,
-                MoveInDate = vm.MoveInDate,
-                StartDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day),
-                EndDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day).AddMonths(vm.Months),
-                PriceAgreed = vm.PriceAgreed,
-                DepositAmount = vm.DepositAmount,
-                Note = vm.Note,
-                Status = "Active",
-                ElectricityPrice = vm.ElectricityPrice,
-                WaterPrice = vm.WaterPrice,
-                DepositCollected = false // Mặc định chưa thu cọc
-            };
-
-            db.Contracts.Add(contract);
-            db.SaveChanges();
-
-            // Group uploaded files by tenant index based on file input names
-            var photosByTenant = GroupPhotosByTenant(TenantPhotos, vm.Tenants.Count);
-
-            for (int i = 0; i < vm.Tenants.Count; i++)
-            {
-                string photoPaths = null;
-                var tenantPhotos = new List<string>();
-
-                // Get photos specifically for this tenant
-                if (photosByTenant.ContainsKey(i))
+                try
                 {
-                    var files = photosByTenant[i];
-                    foreach (var file in files)
+                    // Tạo hợp đồng
+                    var contract = new Contract
                     {
-                        string fileName = Path.GetFileNameWithoutExtension(file.FileName);
-                        string ext = Path.GetExtension(file.FileName);
-                        string uniqueName = fileName + "_" + Guid.NewGuid().ToString("N") + ext;
-                        string serverPath = Server.MapPath("~/Uploads/TenantPhotos/");
-                        if (!Directory.Exists(serverPath)) Directory.CreateDirectory(serverPath);
-                        string savePath = Path.Combine(serverPath, uniqueName);
-                        file.SaveAs(savePath);
-                        tenantPhotos.Add("/Uploads/TenantPhotos/" + uniqueName);
+                        RoomId = vm.RoomId,
+                        MoveInDate = vm.MoveInDate,
+                        StartDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day),
+                        EndDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day).AddMonths(vm.Months),
+                        PriceAgreed = vm.PriceAgreed,
+                        DepositAmount = vm.DepositAmount,
+                        Note = vm.Note,
+                        Status = "Active",
+                        ElectricityPrice = vm.ElectricityPrice,
+                        WaterPrice = vm.WaterPrice
+                    };
+
+                    db.Contracts.Add(contract);
+                    db.SaveChanges();
+
+                    // Xử lý photos theo tenant
+                    var photosByTenant = GroupPhotosByTenant(TenantPhotos, vm.Tenants.Count);
+
+                    // Tạo tenants
+                    for (int i = 0; i < vm.Tenants.Count; i++)
+                    {
+                        var tenantData = vm.Tenants[i];
+                        var tenant = new Tenant
+                        {
+                            FullName = tenantData.FullName,
+                            IdentityCard = tenantData.IdentityCard,
+                            PhoneNumber = tenantData.PhoneNumber,
+                            BirthDate = tenantData.BirthDate,
+                            Gender = tenantData.Gender,
+                            PermanentAddress = tenantData.PermanentAddress,
+                            Photo = photosByTenant.ContainsKey(i)
+                                ? ProcessAndSavePhotos(photosByTenant[i])
+                                : null,
+                            Ethnicity = tenantData.Ethnicity,
+                            VehiclePlate = tenantData.VehiclePlate
+                        };
+
+                        db.Tenants.Add(tenant);
+                        db.SaveChanges();
+
+                        db.ContractTenants.Add(new ContractTenant
+                        {
+                            ContractId = contract.Id,
+                            TenantId = tenant.Id,
+                            CreatedAt = DateTime.Now
+                        });
                     }
+
+                    // Cập nhật trạng thái phòng
+                    var room = db.Rooms.Find(vm.RoomId);
+                    if (room != null)
+                        room.IsOccupied = true;
+
+                    db.SaveChanges();
+                    transaction.Commit();
+
+                    return RedirectToAction("Index", "Rooms");
                 }
-
-                // Save photo paths
-                if (tenantPhotos.Any())
+                catch (Exception ex)
                 {
-                    photoPaths = string.Join(";", tenantPhotos);
+                    transaction.Rollback();
+                    ModelState.AddModelError("", "Có lỗi xảy ra: " + ex.Message);
+                    ViewBag.RoomId = new SelectList(db.Rooms.Where(r => !r.IsOccupied), "Id", "Name");
+                    return View(vm);
                 }
-
-                var t = vm.Tenants[i];
-                var tenant = new Tenant
-                {
-                    FullName = t.FullName,
-                    IdentityCard = t.IdentityCard,
-                    PhoneNumber = t.PhoneNumber,
-                    BirthDate = t.BirthDate,
-                    Gender = t.Gender,
-                    PermanentAddress = t.PermanentAddress,
-                    Photo = photoPaths,
-                    Ethnicity = t.Ethnicity,
-                    VehiclePlate = t.VehiclePlate
-                };
-                db.Tenants.Add(tenant);
-                db.SaveChanges();
-
-                db.ContractTenants.Add(new ContractTenant
-                {
-                    ContractId = contract.Id,
-                    TenantId = tenant.Id,
-                    CreatedAt = DateTime.Now
-                });
             }
-
-            // Mark room as occupied
-            var room = db.Rooms.Find(vm.RoomId);
-            if (room != null)
-            {
-                room.IsOccupied = true;
-            }
-
-            db.SaveChanges();
-            return RedirectToAction("Index", "Rooms");
         }
 
-        /// <summary>
-        /// Enhanced method to group uploaded photos by tenant index
-        /// Supports multiple strategies for associating photos with tenants
-        /// </summary>
-        /// <param name="photos">All uploaded photos</param>
-        /// <param name="tenantCount">Number of tenants</param>
-        /// <returns>Dictionary with tenant index as key and list of photos as value</returns>
+        // Đơn giản hóa GroupPhotosByTenant
         private Dictionary<int, List<HttpPostedFileBase>> GroupPhotosByTenant(IEnumerable<HttpPostedFileBase> photos, int tenantCount)
         {
             var result = new Dictionary<int, List<HttpPostedFileBase>>();
@@ -678,237 +689,22 @@ namespace NhaTroAnCu.Controllers
             if (!photoList.Any())
                 return result;
 
-            // Initialize lists for each tenant
+            // Initialize lists
             for (int i = 0; i < tenantCount; i++)
-            {
                 result[i] = new List<HttpPostedFileBase>();
-            }
 
-            // Strategy 1: Parse tenant index from filename (if modified by frontend)
-            var assignedPhotos = new HashSet<HttpPostedFileBase>();
+            // Distribute photos evenly
+            int photosPerTenant = Math.Max(1, photoList.Count / tenantCount);
+            int currentTenant = 0;
 
             foreach (var photo in photoList)
             {
-                var fileName = Path.GetFileNameWithoutExtension(photo.FileName);
-
-                // Look for pattern like "tenant_0_filename" 
-                if (fileName.StartsWith("tenant_"))
-                {
-                    try
-                    {
-                        var parts = fileName.Split('_');
-                        if (parts.Length >= 2 && int.TryParse(parts[1], out int tenantIndex))
-                        {
-                            if (tenantIndex >= 0 && tenantIndex < tenantCount)
-                            {
-                                result[tenantIndex].Add(photo);
-                                assignedPhotos.Add(photo);
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        // Continue to next strategy if parsing fails
-                    }
-                }
-            }
-
-            // Strategy 2: Group by consecutive batches (for when files are uploaded in order)
-            var unassignedPhotos = photoList.Where(p => !assignedPhotos.Contains(p)).ToList();
-
-            if (unassignedPhotos.Any())
-            {
-                // Calculate photos per tenant (with remainder handling)
-                int photosPerTenant = unassignedPhotos.Count / tenantCount;
-                int remainder = unassignedPhotos.Count % tenantCount;
-
-                int currentIndex = 0;
-
-                for (int tenantIndex = 0; tenantIndex < tenantCount && currentIndex < unassignedPhotos.Count; tenantIndex++)
-                {
-                    // Calculate how many photos this tenant should get
-                    int photosForThisTenant = photosPerTenant + (tenantIndex < remainder ? 1 : 0);
-
-                    // Assign photos to this tenant
-                    for (int j = 0; j < photosForThisTenant && currentIndex < unassignedPhotos.Count; j++)
-                    {
-                        result[tenantIndex].Add(unassignedPhotos[currentIndex]);
-                        currentIndex++;
-                    }
-                }
+                result[currentTenant].Add(photo);
+                if (result[currentTenant].Count >= photosPerTenant && currentTenant < tenantCount - 1)
+                    currentTenant++;
             }
 
             return result;
-        }
-
-        /// <summary>
-        /// Alternative method: Use form field positioning to determine tenant association
-        /// This method assumes the HTML form sends files in the same order as the tenant forms
-        /// </summary>
-        /// <param name="request">Current HTTP request</param>
-        /// <param name="tenantCount">Number of tenants</param>
-        /// <returns>Dictionary with tenant index as key and list of photos as value</returns>
-        private Dictionary<int, List<HttpPostedFileBase>> GroupPhotosByFormPosition(HttpRequestBase request, int tenantCount)
-        {
-            var result = new Dictionary<int, List<HttpPostedFileBase>>();
-
-            // Initialize lists for each tenant
-            for (int i = 0; i < tenantCount; i++)
-            {
-                result[i] = new List<HttpPostedFileBase>();
-            }
-
-            // Get all files for TenantPhotos
-            var allFiles = new List<HttpPostedFileBase>();
-
-            for (int i = 0; i < request.Files.Count; i++)
-            {
-                var file = request.Files[i];
-                if (file != null && file.ContentLength > 0 &&
-                    request.Files.AllKeys[i] == "TenantPhotos")
-                {
-                    allFiles.Add(file);
-                }
-            }
-
-            // Distribute files evenly among tenants
-            if (allFiles.Any())
-            {
-                int photosPerTenant = Math.Max(1, allFiles.Count / tenantCount);
-                int currentTenantIndex = 0;
-                int photosAssignedToCurrentTenant = 0;
-
-                foreach (var file in allFiles)
-                {
-                    result[currentTenantIndex].Add(file);
-                    photosAssignedToCurrentTenant++;
-
-                    // Move to next tenant if current tenant has enough photos
-                    if (photosAssignedToCurrentTenant >= photosPerTenant &&
-                        currentTenantIndex < tenantCount - 1)
-                    {
-                        currentTenantIndex++;
-                        photosAssignedToCurrentTenant = 0;
-                    }
-                }
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// Method to handle file uploads with explicit tenant association
-        /// Call this method instead of the original Create/Edit methods
-        /// </summary>
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult CreateWithTenantPhotos(ContractCreateViewModel vm)
-        {
-            if (!ModelState.IsValid)
-            {
-                ViewBag.RoomId = new SelectList(db.Rooms.Where(r => !r.IsOccupied), "Id", "Name");
-                return View("Create", vm);
-            }
-
-            var contract = new Contract
-            {
-                RoomId = vm.RoomId,
-                MoveInDate = vm.MoveInDate,
-                StartDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day),
-                EndDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day).AddMonths(vm.Months),
-                PriceAgreed = vm.PriceAgreed,
-                DepositAmount = vm.DepositAmount,
-                Note = vm.Note,
-                Status = "Active",
-                ElectricityPrice = vm.ElectricityPrice,
-                WaterPrice = vm.WaterPrice
-            };
-
-            db.Contracts.Add(contract);
-            db.SaveChanges();
-
-            // Use improved photo grouping
-            var photosByTenant = GroupPhotosByFormPosition(Request, vm.Tenants.Count);
-
-            for (int i = 0; i < vm.Tenants.Count; i++)
-            {
-                string photoPaths = ProcessTenantPhotos(photosByTenant.ContainsKey(i) ? photosByTenant[i] : new List<HttpPostedFileBase>());
-
-                var t = vm.Tenants[i];
-                var tenant = new Tenant
-                {
-                    FullName = t.FullName,
-                    IdentityCard = t.IdentityCard,
-                    PhoneNumber = t.PhoneNumber,
-                    BirthDate = t.BirthDate,
-                    Gender = t.Gender,
-                    PermanentAddress = t.PermanentAddress,
-                    Photo = photoPaths,
-                    Ethnicity = t.Ethnicity,
-                    VehiclePlate = t.VehiclePlate
-                };
-
-                db.Tenants.Add(tenant);
-                db.SaveChanges();
-
-                db.ContractTenants.Add(new ContractTenant
-                {
-                    ContractId = contract.Id,
-                    TenantId = tenant.Id,
-                    CreatedAt = DateTime.Now
-                });
-            }
-
-            // Mark room as occupied
-            var room = db.Rooms.Find(vm.RoomId);
-            if (room != null)
-            {
-                room.IsOccupied = true;
-            }
-
-            db.SaveChanges();
-            return RedirectToAction("Index", "Rooms");
-        }
-
-        /// <summary>
-        /// Helper method to process and save photos for a tenant
-        /// </summary>
-        /// <param name="files">List of photo files for this tenant</param>
-        /// <returns>Semicolon-separated string of photo paths</returns>
-        private string ProcessTenantPhotos(List<HttpPostedFileBase> files)
-        {
-            if (files == null || !files.Any())
-                return null;
-
-            var tenantPhotos = new List<string>();
-
-            foreach (var file in files)
-            {
-                if (file != null && file.ContentLength > 0)
-                {
-                    try
-                    {
-                        string fileName = Path.GetFileNameWithoutExtension(file.FileName);
-                        string ext = Path.GetExtension(file.FileName);
-                        string uniqueName = fileName + "_" + Guid.NewGuid().ToString("N") + ext;
-                        string serverPath = Server.MapPath("~/Uploads/TenantPhotos/");
-
-                        if (!Directory.Exists(serverPath))
-                            Directory.CreateDirectory(serverPath);
-
-                        string savePath = Path.Combine(serverPath, uniqueName);
-                        file.SaveAs(savePath);
-                        tenantPhotos.Add("/Uploads/TenantPhotos/" + uniqueName);
-                    }
-                    catch (Exception ex)
-                    {
-                        // Log error but continue processing other files
-                        System.Diagnostics.Debug.WriteLine($"Error saving photo: {ex.Message}");
-                    }
-                }
-            }
-
-            return tenantPhotos.Any() ? string.Join(";", tenantPhotos) : null;
         }
 
         /// <summary>
