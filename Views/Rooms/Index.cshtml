@@ -81,10 +81,20 @@
                             var roomClass = vm.ColorClass == "gray" ? "room-available"
                                           : vm.ColorClass == "green" ? "room-paid"
                                           : vm.ColorClass == "yellow" ? "room-partial"
+                                          : vm.ColorClass == "expired" ? "room-expired"  // Thêm class mới cho phòng hết hạn
                                           : "room-unpaid";
 
                             <div class="room-card @roomClass">
-                                @if (vm.IsContractNearingEnd && vm.ContractEndDate.HasValue)
+
+                                @if (vm.IsContractExpired && vm.ContractEndDate.HasValue)
+                                {
+                                    <!-- Hiển thị cảnh báo đã hết hạn hợp đồng -->
+                                    <div class="contract-expired-warning">
+                                        <i class="fas fa-exclamation-circle"></i>
+                                        Đã hết hạn
+                                    </div>
+                                }
+                                else if (vm.IsContractNearingEnd && vm.ContractEndDate.HasValue)
                                 {
                                     <div class="contract-warning">
                                         <i class="fas fa-exclamation-triangle"></i>

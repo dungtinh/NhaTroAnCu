@@ -303,19 +303,7 @@ body {
         transform: scale(1.05);
     }
 
-.contract-warning {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background: var(--warning-color);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    animation: pulse 2s infinite;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
+
 
 @keyframes pulse {
     0% {
@@ -511,3 +499,114 @@ body {
     .summary-dashboard.light .summary-card.overdue {
         border-left: 4px solid #e74c3c;
     }
+/* Thêm vào file CSS của trang Room Index */
+
+/* Style cho phòng đã hết hạn hợp đồng */
+.room-expired {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%);
+    border: 2px solid #dc3545;
+    box-shadow: 0 0 10px rgba(220, 53, 69, 0.3);
+}
+
+    .room-expired:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 20px rgba(220, 53, 69, 0.4);
+    }
+
+/* Cảnh báo đã hết hạn hợp đồng */
+.contract-expired-warning {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: #dc3545;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    animation: pulse 2s infinite;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.5);
+}
+
+/* Animation nhấp nháy cho cảnh báo hết hạn */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.5);
+    }
+
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 2px 12px rgba(220, 53, 69, 0.8);
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.5);
+    }
+}
+
+/* Style cho text trong phòng hết hạn */
+.room-expired .room-number {
+    color: white;
+    font-weight: bold;
+}
+
+.room-expired .room-tenant {
+    color: white;
+}
+
+.room-expired .text-danger {
+    color: #ffe0e0 !important;
+    font-weight: 600;
+    margin-top: 5px;
+}
+
+/* Icon trong phòng hết hạn */
+.room-expired .edit-icon,
+.room-expired .history-icon {
+    color: white;
+    opacity: 0.9;
+}
+
+    .room-expired .edit-icon:hover,
+    .room-expired .history-icon:hover {
+        color: #ffe0e0;
+        opacity: 1;
+    }
+
+/* Điều chỉnh style cho cảnh báo sắp hết hạn (giữ nguyên) */
+.contract-warning {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: #ffc107;
+    color: #333;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    animation: shake 3s infinite;
+    z-index: 10;
+}
+
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+
+    10%, 30%, 50%, 70%, 90% {
+        transform: translateX(-2px);
+    }
+
+    20%, 40%, 60%, 80% {
+        transform: translateX(2px);
+    }
+}

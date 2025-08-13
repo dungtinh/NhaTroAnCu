@@ -35,51 +35,74 @@ public class RoomsController : Controller
 
     private RoomViewModel GetRoomViewModel(Room room, DateTime filterDate, int selectedMonth, int selectedYear, DateTime now)
     {
+        string colorClass = "gray";
+        bool isContractExpired = false; // Thêm biến kiểm tra hợp đồng đã hết hạn
+
+        // Tìm hợp đồng đang active (bao gồm cả đã hết hạn)
+        var activeContract = room.Contracts
+            .Where(c => c.Status == "Active")
+            .OrderByDescending(c => c.StartDate)
+            .FirstOrDefault();
+
+        // Tìm hợp đồng còn hiệu lực tại thời điểm filter
         var validContract = room.Contracts
-            .FirstOrDefault(c => c.Status == "Active"
-                && c.StartDate <= filterDate
-                && (c.EndDate == null || c.EndDate >= filterDate));
+            .Where(c => c.Status == "Active"
+                        && c.StartDate <= filterDate
+                        && (c.EndDate == null || c.EndDate >= filterDate))
+            .FirstOrDefault();
 
-        var bill = room.UtilityBills
-            .FirstOrDefault(b => b.Month == selectedMonth && b.Year == selectedYear);
+        // Kiểm tra nếu có hợp đồng active nhưng đã hết hạn
+        if (activeContract != null && activeContract.EndDate < filterDate)
+        {
+            isContractExpired = true;
+            // Dùng activeContract thay vì validContract cho phòng hết hạn
+            validContract = activeContract;
+        }
 
-        decimal mustPay = bill?.TotalAmount ?? 0;
+        var bill = room.UtilityBills.FirstOrDefault(b => b.Month == selectedMonth && b.Year == selectedYear);
+
+        decimal mustPay = bill != null ? (bill.TotalAmount ?? 0) : 0;
         decimal paid = room.PaymentHistories
-            .Where(p => p.Month == selectedMonth
-                && p.Year == selectedYear
-                && (validContract == null || p.ContractId == validContract.Id))
+            .Where(p => p.Month == selectedMonth && p.Year == selectedYear && (validContract == null || p.ContractId == validContract.Id))
             .Sum(p => p.TotalAmount);
 
-        string colorClass = DetermineColorClass(validContract, paid, mustPay);
+        // Xác định màu sắc cho phòng
+        if (isContractExpired)
+        {
+            // Phòng đã hết hạn hợp đồng - luôn hiển thị màu đỏ cảnh báo
+            colorClass = "expired"; // Sử dụng class mới cho phòng hết hạn
+        }
+        else if (validContract != null)
+        {
+            if (paid == 0)
+                colorClass = "red";
+            else if (mustPay == 0)
+                colorClass = "gray";
+            else if (paid >= mustPay)
+                colorClass = "green";
+            else
+                colorClass = "yellow";
+        }
 
+        // Tính toán cảnh báo hợp đồng sắp hết hạn
         bool isContractNearingEnd = false;
         DateTime? contractEndDate = validContract?.EndDate;
-
-        if (validContract != null && contractEndDate.HasValue)
+        if (validContract != null && !isContractExpired) // Không cảnh báo sắp hết hạn nếu đã hết hạn
         {
-            var daysLeft = (contractEndDate.Value - now).TotalDays;
+            var daysLeft = (validContract.EndDate - now).TotalDays;
             isContractNearingEnd = daysLeft > 0 && daysLeft <= 31;
         }
 
-        return new RoomViewModel
+        return new NhaTroAnCu.Models.RoomViewModel
         {
             Room = room,
             ColorClass = colorClass,
             TenantName = validContract?.ContractTenants?.FirstOrDefault()?.Tenant?.FullName ?? "",
             IsContractNearingEnd = isContractNearingEnd,
+            IsContractExpired = isContractExpired, // Thêm property mới
             ContractEndDate = contractEndDate
         };
     }
-
-    private string DetermineColorClass(Contract contract, decimal paid, decimal mustPay)
-    {
-        if (contract == null) return "gray";
-        if (paid == 0) return "red";
-        if (mustPay == 0) return "gray";
-        if (paid >= mustPay) return "green";
-        return "yellow";
-    }
-
     public ActionResult Details(int id)
     {
         var room = db.Rooms.Find(id);
