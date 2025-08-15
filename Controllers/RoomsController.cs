@@ -2,6 +2,7 @@
 using System.Data.Entity;
 using System.Linq;
 using System.Web.Mvc;
+using DocumentFormat.OpenXml.Office2010.Excel;
 using NhaTroAnCu.Models;
 
 public class RoomsController : Controller
@@ -129,12 +130,19 @@ public class RoomsController : Controller
 
         if (activeContract != null)
         {
+            var bill = db.UtilityBills.FirstOrDefault(b =>
+                b.RoomId == room.Id &&
+                b.Month == currentMonth &&
+                b.Year == currentYear &&
+                b.ContractId == activeContract.Id);
+
             var payment = db.PaymentHistories
                 .FirstOrDefault(p => p.RoomId == room.Id
                     && p.Month == currentMonth
                     && p.Year == currentYear
                     && p.ContractId == activeContract.Id);
 
+            ViewBag.Bill = bill; // Thêm bill vào ViewBag
             ViewBag.Payment = payment;
 
             // Tính extra/discount cho tháng đầu
