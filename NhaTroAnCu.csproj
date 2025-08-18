@@ -268,8 +268,7 @@
     <Compile Include="Models\Contract.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
-    <Compile Include="Models\ContractCreateViewModel.cs" />
-    <Compile Include="Models\ContractEditViewModel.cs" />
+    <Compile Include="Models\ContractViewModel.cs" />
     <Compile Include="Models\ContractExtensionHistory.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
@@ -572,7 +571,6 @@
     <Content Include="Views\Rooms\Create.cshtml" />
     <Content Include="Views\Rooms\Edit.cshtml" />
     <Content Include="Views\Rooms\Delete.cshtml" />
-    <Content Include="Views\ReportSummary\_MonthSummary.cshtml" />
     <Content Include="Views\TenantContracts\Index.cshtml" />
     <Content Include="Views\Contracts\Edit.cshtml" />
     <Content Include="Views\Shared\_CreateOrEditUtilityBillPartial.cshtml" />

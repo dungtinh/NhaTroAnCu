@@ -1,5 +1,5 @@
+﻿using NhaTroAnCu.Models;
 using System.Linq;
-using NhaTroAnCu.Models;
 
 namespace NhaTroAnCu.Helpers
 {
@@ -7,20 +7,40 @@ namespace NhaTroAnCu.Helpers
     {
         private NhaTroAnCuEntities db;
 
-        public UtilityBillService(NhaTroAnCuEntities dbContext)
+        public UtilityBillService(NhaTroAnCuEntities context)
         {
-            db = dbContext;
+            db = context;
         }
 
+        /// <summary>
+        /// Lấy chỉ số nước cao nhất của hợp đồng
+        /// </summary>
+        public int GetHighestWaterIndexEndForContract(int contractId)
+        {
+            if (contractId == 0) return 0;
+
+            var lastBill = db.UtilityBills
+                .Where(b => b.ContractId == contractId)
+                .OrderByDescending(b => b.Year)
+                .ThenByDescending(b => b.Month)
+                .FirstOrDefault();
+
+            return lastBill?.WaterIndexEnd ?? 0;
+        }
+
+        /// <summary>
+        /// Lấy chỉ số nước cao nhất của phòng (dùng cho trường hợp tương thích cũ)
+        /// </summary>
         public int GetHighestWaterIndexEnd(int roomId)
         {
-            var prevBills = db.UtilityBills
-                .Where(b => b.RoomId == roomId)
-                .ToList();
+            // Tìm hợp đồng active của phòng
+            var activeContract = db.Contracts
+                .Where(c => c.Status == "Active" && c.ContractRooms.Any(cr => cr.RoomId == roomId))
+                .FirstOrDefault();
 
-            if (prevBills.Count > 0)
+            if (activeContract != null)
             {
-                return prevBills.Max(b => b.WaterIndexEnd.Value);
+                return GetHighestWaterIndexEndForContract(activeContract.Id);
             }
 
             return 0;
