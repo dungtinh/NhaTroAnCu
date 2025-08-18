@@ -249,6 +249,7 @@
     </Compile>
     <Compile Include="Helpers\CustomPdfPageEventHelper.cs" />
     <Compile Include="Helpers\TenantPhotoHelper.cs" />
+    <Compile Include="Helpers\DateTimeHelper.cs" />
     <Compile Include="Helpers\UtilityBillService.cs" />
     <Compile Include="Models\AccountViewModels.cs" />
     <Compile Include="Models\AddressEntities.cs" />
@@ -371,7 +372,8 @@
     <Content Include="Content\bootstrap.min.css" />
     <Content Include="Content\bootstrap.rtl.css" />
     <Content Include="Content\bootstrap.rtl.min.css" />
-    <Content Include="Content\contract-action.css" />
+    <Content Include="Content\CSS\contract-details.css" />
+    <Content Include="Content\CSS\contract-action.css" />
     <Content Include="Content\CSS\font-awesome.css" />
     <Content Include="Content\CSS\font-awesome.min.css" />
     <Content Include="Content\datepicker-custom.css" />
@@ -467,6 +469,7 @@
     <Content Include="Scripts\jquery.validate.min.js" />
     <Content Include="Scripts\jquery.validate.unobtrusive.js" />
     <Content Include="Scripts\jquery.validate.unobtrusive.min.js" />
+    <Content Include="Scripts\js\datepicker.js" />
     <Content Include="Scripts\locales\bootstrap-datepicker-en-CA.min.js" />
     <Content Include="Scripts\locales\bootstrap-datepicker.ar-tn.min.js" />
     <Content Include="Scripts\locales\bootstrap-datepicker.ar.min.js" />
@@ -598,6 +601,7 @@
     <Content Include="Views\IncomeExpense\Edit.cshtml" />
     <Content Include="Views\IncomeExpense\Report.cshtml" />
     <Content Include="Views\Rooms\_EmployeeManagement.cshtml" />
+    <Content Include="Views\Contracts\Details.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Uploads\ContractScans\" />

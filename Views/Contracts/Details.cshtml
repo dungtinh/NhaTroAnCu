@@ -1,0 +1,428 @@
+﻿@model NhaTroAnCu.Models.Contract
+
+@{
+    ViewBag.Title = "Chi tiết hợp đồng #" + Model.Id;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var isCompanyContract = Model.ContractType == "Company";
+    var contractStatus = Model.Status;
+    var statusClass = contractStatus == "Active" ? "success" :
+                     contractStatus == "Ended" ? "secondary" : "warning";
+    var statusText = contractStatus == "Active" ? "Đang hiệu lực" :
+                    contractStatus == "Ended" ? "Đã kết thúc" : "Tạm dừng";
+}
+<link href="~/Content/CSS/contract-details.css" rel="stylesheet" />
+
+<div class="contract-details-container">
+    <!-- Header -->
+    <div class="contract-header">
+        <div class="contract-header-content">
+            <div class="contract-title">
+                <h1>
+                    <i class="fas fa-file-contract"></i>
+                    Hợp Đồng
+                    <span class="contract-id">#@Model.Id</span>
+                </h1>
+                <div class="contract-meta">
+                    <div class="meta-item">
+                        <i class="fas fa-calendar"></i>
+                        @Model.StartDate.ToString("dd/MM/yyyy") - @Model.EndDate.ToString("dd/MM/yyyy")
+                    </div>
+                    <div class="meta-item">
+                        <i class="fas fa-@(isCompanyContract ? "building" : "user")"></i>
+                        @(isCompanyContract ? "Khách Công Ty" : "Khách Cá Nhân")
+                    </div>
+                    <span class="status-badge @statusClass">
+                        <i class="fas fa-circle"></i>
+                        @statusText
+                    </span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                @if (Model.Status == "Active")
+                {
+                    <a href="@Url.Action("Edit", "Contracts", new { id = Model.Id })" class="btn-action">
+                        <i class="fas fa-edit"></i> Sửa
+                    </a>
+                    <a href="@Url.Action("Extend", "Contracts", new { id = Model.Id })" class="btn-action">
+                        <i class="fas fa-clock"></i> Gia hạn
+                    </a>
+                    <a href="@Url.Action("End", "Contracts", new { id = Model.Id })" class="btn-action">
+                        <i class="fas fa-stop"></i> Kết thúc
+                    </a>
+                }
+                <a href="@Url.Action("Print", "Contracts", new { id = Model.Id })" class="btn-action">
+                    <i class="fas fa-print"></i> In
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Company Info (if company contract) -->
+    @if (isCompanyContract && Model.Company != null)
+    {
+        <div class="company-section">
+            <div class="company-header">
+                <div class="company-logo">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div class="company-info">
+                    <h3>@Model.Company.CompanyName</h3>
+                    <div class="company-tax">
+                        <i class="fas fa-barcode"></i> MST: @Model.Company.TaxCode
+                    </div>
+                </div>
+            </div>
+            <div class="info-grid" style="margin-top: 20px;">
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-user-tie"></i> Người đại diện:</span>
+                    <span class="info-value">@Model.Company.Representative</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-phone"></i> Điện thoại:</span>
+                    <span class="info-value">@Model.Company.RepresentativePhone</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-envelope"></i> Email:</span>
+                    <span class="info-value">@Model.Company.Email</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-map-marker-alt"></i> Địa chỉ:</span>
+                    <span class="info-value">@Model.Company.Address</span>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Contract Information -->
+    <div class="info-grid">
+        <!-- Basic Info -->
+        <div class="info-card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <h3 class="card-title">Thông Tin Chung</h3>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Ngày bắt đầu:</span>
+                <span class="info-value">@Model.StartDate.ToString("dd/MM/yyyy")</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Ngày kết thúc:</span>
+                <span class="info-value">@Model.EndDate.ToString("dd/MM/yyyy")</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Thời hạn:</span>
+                <span class="info-value">@((Model.EndDate - Model.StartDate).Days / 30) tháng</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Ngày chuyển vào:</span>
+                <span class="info-value">@Model.MoveInDate.ToString("dd/MM/yyyy")</span>
+            </div>
+            @if (!string.IsNullOrEmpty(Model.Note))
+            {
+                <div class="info-row">
+                    <span class="info-label">Ghi chú:</span>
+                    <span class="info-value">@Model.Note</span>
+                </div>
+            }
+        </div>
+
+        <!-- Pricing Info -->
+        <div class="info-card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <h3 class="card-title">Thông Tin Giá</h3>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Giá điện:</span>
+                <span class="info-value">@Model.ElectricityPrice.ToString("N0")đ/kWh</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Giá nước:</span>
+                <span class="info-value">@Model.WaterPrice.ToString("N0")đ/m³</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Tổng giá thuê/tháng:</span>
+                <span class="info-value highlight">@Model.PriceAgreed.ToString("N0")đ</span>
+            </div>
+            @if (isCompanyContract)
+            {
+                <div class="info-row">
+                    <span class="info-label">Số phòng:</span>
+                    <span class="info-value">@Model.ContractRooms.Count phòng</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Rooms Section -->
+    <div class="rooms-section">
+        <div class="section-header">
+            <div class="section-title">
+                <i class="fas fa-door-open"></i>
+                Danh Sách Phòng (@Model.ContractRooms.Count)
+            </div>
+            @if (Model.Status == "Active")
+            {
+                <a href="@Url.Action("AddRoom", "Contracts", new { id = Model.Id })" class="btn-primary">
+                    <i class="fas fa-plus"></i> Thêm phòng
+                </a>
+            }
+        </div>
+        <div class="rooms-grid">
+            @foreach (var contractRoom in Model.ContractRooms)
+            {
+                <div class="room-card">
+                    <div class="room-number">
+                        <i class="fas fa-home"></i> @contractRoom.Room.Name
+                    </div>
+                    <div class="room-price">
+                        @contractRoom.PriceAgreed.ToString("N0")đ
+                    </div>
+                    @if (!string.IsNullOrEmpty(contractRoom.Notes))
+                    {
+                        <div style="margin-top: 8px; font-size: 0.85rem; color: #6c757d;">
+                            @contractRoom.Notes
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Tenants Section -->
+    <div class="tenants-section">
+        <div class="section-header">
+            <div class="section-title">
+                <i class="fas fa-users"></i>
+                Danh Sách Người Thuê (@Model.ContractTenants.Count)
+            </div>
+            @if (Model.Status == "Active")
+            {
+                <a href="@Url.Action("AddTenant", "TenantContracts", new { contractId = Model.Id })" class="btn-primary">
+                    <i class="fas fa-user-plus"></i> Thêm người thuê
+                </a>
+            }
+        </div>
+
+        @if (Model.ContractTenants.Any())
+        {
+            <div class="tenants-grid">
+                @foreach (var contractTenant in Model.ContractTenants)
+                {
+                    var tenant = contractTenant.Tenant;
+                    var initials = string.Join("", tenant.FullName.Split(' ').Select(n => n[0]));
+
+                    <div class="tenant-card">
+                        @if (contractTenant == Model.ContractTenants.First())
+                        {
+                            <span class="tenant-badge">Người thuê chính</span>
+                        }
+
+                        <div class="tenant-avatar">
+                            @initials
+                        </div>
+
+                        <div class="tenant-name">@tenant.FullName</div>
+
+                        <div class="tenant-info">
+                            @if (!string.IsNullOrEmpty(tenant.PhoneNumber))
+                            {
+                                <div class="tenant-detail">
+                                    <i class="fas fa-phone"></i>
+                                    @tenant.PhoneNumber
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(tenant.IdentityCard))
+                            {
+                                <div class="tenant-detail">
+                                    <i class="fas fa-id-card"></i>
+                                    @tenant.IdentityCard
+                                </div>
+                            }
+
+                            <div class="tenant-detail">
+                                <i class="fas fa-door-open"></i>
+                                Phòng @contractTenant.Room.Name
+                            </div>
+
+                        </div>
+
+                        @if (Model.Status == "Active")
+                        {
+                            <div style="margin-top: 15px; display: flex; gap: 8px;">
+                                <a href="@Url.Action("Edit", "Tenants", new { id = tenant.Id })"
+                                   class="btn btn-sm btn-outline-primary" style="font-size: 0.85rem;">
+                                    <i class="fas fa-edit"></i> Sửa
+                                </a>
+                                @if (contractTenant != Model.ContractTenants.First())
+                                {
+                                    <a href="@Url.Action("RemoveTenant", "TenantContracts", new { id = contractTenant.Id })"
+                                       class="btn btn-sm btn-outline-danger" style="font-size: 0.85rem;">
+                                        <i class="fas fa-times"></i> Xóa
+                                    </a>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div style="text-align: center; padding: 40px; color: #6c757d;">
+                <i class="fas fa-users" style="font-size: 48px; margin-bottom: 15px;"></i>
+                <p>Chưa có người thuê nào trong hợp đồng này</p>
+            </div>
+        }
+    </div>
+
+    <!-- Financial Summary -->
+    <div class="financial-summary">
+        <div class="section-title" style="color: white;">
+            <i class="fas fa-chart-line"></i>
+            Tổng Quan Tài Chính
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-item">
+                <div class="summary-value">
+                    @Model.PriceAgreed.ToString("N0")đ
+                </div>
+                <div class="summary-label">Tiền thuê/tháng</div>
+            </div>
+
+            <div class="summary-item">
+                <div class="summary-value">
+                    @Model.ContractRooms.Count
+                </div>
+                <div class="summary-label">Số phòng</div>
+            </div>
+
+            <div class="summary-item">
+                <div class="summary-value">
+                    @Model.ContractTenants.Count
+                </div>
+                <div class="summary-label">Số người thuê</div>
+            </div>
+
+            <div class="summary-item">
+                <div class="summary-value">
+                    @{
+                        var totalMonths = (Model.EndDate - Model.StartDate).Days / 30;
+                        var totalValue = Model.PriceAgreed * totalMonths;
+                    }
+                    @totalValue.ToString("N0")đ
+                </div>
+                <div class="summary-label">Tổng giá trị HĐ</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Extension History -->
+    @if (Model.ContractExtensionHistories != null && Model.ContractExtensionHistories.Any())
+    {
+        <div class="info-card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fas fa-history"></i>
+                </div>
+                <h3 class="card-title">Lịch Sử Gia Hạn</h3>
+            </div>
+
+            <div class="history-timeline">
+                @foreach (var history in Model.ContractExtensionHistories.OrderByDescending(h => h.ExtendedAt))
+                {
+                    <div class="history-item">
+                        <div class="history-marker"></div>
+                        <div class="history-content">
+                            <div class="history-date">
+                                <i class="fas fa-calendar"></i> @history.ExtendedAt.ToString("dd/MM/yyyy")
+                            </div>
+                            <div>
+                                Gia hạn @history.ExtendMonths tháng -
+                                Từ @(history.OldEndDate?.ToString("dd/MM/yyyy")) đến @(history.NewEndDate?.ToString("dd/MM/yyyy"))
+                            </div>
+                            @if (!string.IsNullOrEmpty(history.Note))
+                            {
+                                <div style="margin-top: 5px; color: #6c757d; font-size: 0.9rem;">
+                                    <i class="fas fa-sticky-note"></i> @history.Note
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Action Buttons -->
+    <div class="bottom-actions">
+        <a href="@Url.Action("Index", "Contracts")" class="btn-secondary">
+            <i class="fas fa-arrow-left"></i> Quay lại danh sách
+        </a>
+
+        @if (Model.Status == "Active")
+        {
+            <a href="@Url.Action("CreateBill", "UtilityBills", new { contractId = Model.Id })" class="btn-primary">
+                <i class="fas fa-file-invoice"></i> Tạo hóa đơn
+            </a>
+
+            <a href="@Url.Action("Extend", "Contracts", new { id = Model.Id })" class="btn-primary">
+                <i class="fas fa-clock"></i> Gia hạn hợp đồng
+            </a>
+
+            <a href="@Url.Action("End", "Contracts", new { id = Model.Id })" class="btn-danger">
+                <i class="fas fa-stop"></i> Kết thúc hợp đồng
+            </a>
+        }
+
+        <a href="@Url.Action("Print", "Contracts", new { id = Model.Id })" class="btn-primary">
+            <i class="fas fa-print"></i> In hợp đồng
+        </a>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Confirmation for ending contract
+            $('.btn-danger').on('click', function (e) {
+                if (!confirm('Bạn có chắc chắn muốn kết thúc hợp đồng này?')) {
+                    e.preventDefault();
+                }
+            });
+
+            // Tooltip initialization
+            $('[data-toggle="tooltip"]').tooltip();
+
+            // Animation on scroll
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver(function (entries) {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.info-card, .rooms-section, .tenants-section').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'all 0.5s ease';
+                observer.observe(el);
+            });
+        });
+    </script>
+}

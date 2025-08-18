@@ -36,19 +36,25 @@ namespace NhaTroAnCu.Models
 
         public string Note { get; set; }
 
-        [Range(0, double.MaxValue, ErrorMessage = "Tiền cọc phải lớn hơn hoặc bằng 0")]
-        public decimal DepositAmount { get; set; }
-
         // ===== CHO KHÁCH HÀNG CÁ NHÂN =====
         public int? SingleRoomId { get; set; }
-        public decimal? SingleRoomPrice { get; set; }        
+        public decimal? SingleRoomPrice { get; set; }
 
-        // ===== CHO KHÁCH HÀNG CÔNG TY =====
-        public CompanyInputModel Company { get; set; }
-        public List<RoomSelectionModel> SelectedRooms { get; set; } = new List<RoomSelectionModel>();
-        public List<TenantInputModel> Tenants { get; set; } = new List<TenantInputModel>();
-    }
+        // CHO KHÁCH HÀNG CÔNG TY
+        public Company Company { get; set; }
 
+        // Thay đổi từ IEnumerable sang List và khởi tạo
+        public List<RoomSelectionModel> SelectedRooms { get; set; }
+        public List<Tenant> Tenants { get; set; }
+
+
+        public ContractCreateViewModel()
+        {
+            Company = new Company();
+            SelectedRooms = new List<RoomSelectionModel>();
+            Tenants = new List<Tenant>();
+        }
+    }    
     public class ContractEditViewModel
     {
         public int Id { get; set; }
@@ -100,7 +106,7 @@ namespace NhaTroAnCu.Models
     }
 
     // ViewModel cho Room Details khi thêm nhân viên
-    
+
 
     public class ContractHistoryViewModel
     {
@@ -207,7 +213,7 @@ namespace NhaTroAnCu.Models
         // Thống kê
         public int MaxTenantCount { get; set; } = 4; // Giới hạn số người/phòng
         public bool CanAddMore => CurrentTenants.Count < MaxTenantCount;
-    }    
+    }
 
     // ViewModel hiển thị thông tin người thuê (nhân viên công ty)
     public class TenantViewModel

@@ -27,7 +27,6 @@ namespace NhaTroAnCu.Controllers
             return View(contracts);
         }
 
-        // GET: /Contracts/Create
         public ActionResult Create(int? roomId)
         {
             var model = new ContractCreateViewModel
@@ -37,7 +36,8 @@ namespace NhaTroAnCu.Controllers
                 ElectricityPrice = 3500,
                 WaterPrice = 15000,
                 Months = 12,
-                ContractType = roomId.HasValue ? "Individual" : null
+                ContractType = roomId.HasValue ? "Individual" : null,
+                SelectedRooms = new List<RoomSelectionModel>() // Khởi tạo list
             };
 
             if (roomId.HasValue)
@@ -50,7 +50,7 @@ namespace NhaTroAnCu.Controllers
                 }
             }
 
-            // Load danh sách phòng trống
+            // Load danh sách phòng trống - Đảm bảo là List
             var availableRooms = db.Rooms
                 .Where(r => !r.IsOccupied)
                 .Select(r => new RoomSelectionModel
@@ -58,9 +58,10 @@ namespace NhaTroAnCu.Controllers
                     RoomId = r.Id,
                     RoomName = r.Name,
                     DefaultPrice = r.DefaultPrice,
-                    AgreedPrice = r.DefaultPrice
+                    AgreedPrice = r.DefaultPrice,
+                    IsSelected = false
                 })
-                .ToList();
+                .ToList(); // Chắc chắn convert to List
 
             ViewBag.AvailableRooms = availableRooms;
 
@@ -72,6 +73,21 @@ namespace NhaTroAnCu.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Create(ContractCreateViewModel model)
         {
+            if (Request.Form["StartDate"] != null)
+            {
+                var startDateStr = Request.Form["StartDate"];
+                var parsedDate = DateTimeHelper.ParseDate(startDateStr);
+                if (parsedDate.HasValue)
+                    model.StartDate = parsedDate.Value;
+            }
+
+            if (Request.Form["MoveInDate"] != null)
+            {
+                var moveInDateStr = Request.Form["MoveInDate"];
+                var parsedDate = DateTimeHelper.ParseDate(moveInDateStr);
+                if (parsedDate.HasValue)
+                    model.MoveInDate = parsedDate.Value;
+            }
             using (var transaction = db.Database.BeginTransaction())
             {
                 try
@@ -127,6 +143,9 @@ namespace NhaTroAnCu.Controllers
         // Xử lý tạo hợp đồng công ty
         private Contract CreateCompanyContract(ContractCreateViewModel model, Contract contract)
         {
+            // Debug logging
+            System.Diagnostics.Debug.WriteLine($"SelectedRooms count: {model.SelectedRooms?.Count ?? 0}");
+
             // 1. Tạo hoặc cập nhật thông tin công ty
             Company company;
             var existingCompany = db.Companies
@@ -135,14 +154,12 @@ namespace NhaTroAnCu.Controllers
             if (existingCompany != null)
             {
                 company = existingCompany;
-                // Cập nhật thông tin công ty
+                // Update company info
                 company.CompanyName = model.Company.CompanyName;
                 company.Address = model.Company.Address;
                 company.Representative = model.Company.Representative;
                 company.RepresentativePhone = model.Company.RepresentativePhone;
                 company.Email = model.Company.Email;
-                company.BankAccount = model.Company.BankAccount;
-                company.BankName = model.Company.BankName;
                 company.UpdatedAt = DateTime.Now;
             }
             else
@@ -152,13 +169,9 @@ namespace NhaTroAnCu.Controllers
                     CompanyName = model.Company.CompanyName,
                     TaxCode = model.Company.TaxCode,
                     Address = model.Company.Address,
-                    Phone = model.Company.Phone,
                     Email = model.Company.Email,
                     Representative = model.Company.Representative,
                     RepresentativePhone = model.Company.RepresentativePhone,
-                    RepresentativeEmail = model.Company.RepresentativeEmail,
-                    BankAccount = model.Company.BankAccount,
-                    BankName = model.Company.BankName,
                     CreatedAt = DateTime.Now,
                     IsActive = true
                 };
@@ -169,43 +182,59 @@ namespace NhaTroAnCu.Controllers
             contract.CompanyId = company.Id;
 
             // 2. Lưu contract
-            contract.PriceAgreed = 0; // Sẽ tính tổng sau
+            contract.PriceAgreed = 0;
             db.Contracts.Add(contract);
             db.SaveChanges();
 
             // 3. Tạo ContractRooms cho các phòng được chọn
             decimal totalPrice = 0;
-            if (model.SelectedRooms != null)
+            int roomCount = 0;
+
+            if (model.SelectedRooms != null && model.SelectedRooms.Any())
             {
                 foreach (var roomSelection in model.SelectedRooms.Where(r => r.IsSelected))
                 {
+                    // Debug log
+                    System.Diagnostics.Debug.WriteLine($"Processing room: {roomSelection.RoomId}, Price: {roomSelection.AgreedPrice}");
+
+                    // Kiểm tra phòng tồn tại
+                    var room = db.Rooms.Find(roomSelection.RoomId);
+                    if (room == null)
+                    {
+                        throw new Exception($"Phòng với ID {roomSelection.RoomId} không tồn tại");
+                    }
+
+                    // Kiểm tra phòng còn trống
+                    if (room.IsOccupied)
+                    {
+                        throw new Exception($"Phòng {room.Name} đã được thuê");
+                    }
+
                     var contractRoom = new ContractRoom
                     {
                         ContractId = contract.Id,
                         RoomId = roomSelection.RoomId,
-                        PriceAgreed = roomSelection.AgreedPrice,
+                        PriceAgreed = roomSelection.AgreedPrice > 0 ? roomSelection.AgreedPrice : room.DefaultPrice,
                         Notes = roomSelection.Notes
                     };
+
                     db.ContractRooms.Add(contractRoom);
-                    totalPrice += roomSelection.AgreedPrice;
+                    totalPrice += contractRoom.PriceAgreed;
+                    roomCount++;
 
                     // Cập nhật trạng thái phòng
-                    var room = db.Rooms.Find(roomSelection.RoomId);
-                    if (room != null)
-                    {
-                        room.IsOccupied = true;
-                    }
+                    room.IsOccupied = true;
                 }
+            }
+
+            // Kiểm tra có phòng nào được chọn không
+            if (roomCount == 0)
+            {
+                throw new Exception("Vui lòng chọn ít nhất một phòng cho hợp đồng công ty");
             }
 
             // Cập nhật tổng giá trị hợp đồng
             contract.PriceAgreed = totalPrice;
-
-            // 4. Ghi nhận tiền cọc nếu có
-            if (model.DepositAmount > 0)
-            {
-                RecordDeposit(contract.Id, model.DepositAmount, company.CompanyName);
-            }
 
             db.SaveChanges();
             return contract;
@@ -322,66 +351,13 @@ namespace NhaTroAnCu.Controllers
             room.IsOccupied = true;
             db.SaveChanges();
 
-            // Ghi nhận tiền cọc nếu có
-            if (model.DepositAmount > 0)
-            {
-                var firstTenant = db.ContractTenants
-                    .Include(ct => ct.Tenant)
-                    .FirstOrDefault(ct => ct.ContractId == contract.Id);
-
-                var depositorName = firstTenant?.Tenant?.FullName ?? "Khách thuê";
-                RecordDeposit(contract.Id, model.DepositAmount, depositorName);
-            }
-
             // 7. Cập nhật trạng thái phòng
             room.IsOccupied = true;
-
-            // 8. Ghi nhận tiền cọc nếu có
-            if (model.DepositAmount > 0)
-            {
-                var tenantName = model.Tenants.FirstOrDefault()?.FullName ?? "Khách hàng";
-                RecordDeposit(contract.Id, model.DepositAmount, tenantName);
-            }
 
             db.SaveChanges();
             return contract;
         }
 
-        // Helper method để ghi nhận tiền cọc
-        private void RecordDeposit(int contractId, decimal amount, string customerName)
-        {
-            var incomeCategory = db.IncomeExpenseCategories
-                .FirstOrDefault(c => c.Name == "Thu tiền cọc" && c.IsSystem);
-
-            if (incomeCategory == null)
-            {
-                // Tạo category nếu chưa có
-                incomeCategory = new IncomeExpenseCategory
-                {
-                    Name = "Thu tiền cọc",
-                    Type = "Income",
-                    IsSystem = true,
-                    IsActive = true,
-                    CreatedAt = DateTime.Now
-                };
-                db.IncomeExpenseCategories.Add(incomeCategory);
-                db.SaveChanges();
-            }
-
-            var incomeExpense = new IncomeExpense
-            {
-                CategoryId = incomeCategory.Id,
-                ContractId = contractId,
-                Amount = amount,
-                TransactionDate = DateTime.Now.Date,
-                Description = $"Thu tiền cọc từ {customerName} - HĐ #{contractId}",
-                ReferenceNumber = $"DEPOSIT-{contractId}",
-                CreatedBy = User.Identity.GetUserId(),
-                CreatedAt = DateTime.Now
-            };
-
-            db.IncomeExpenses.Add(incomeExpense);
-        }
 
         // GET: /Contracts/Details/5
         public ActionResult Details(int id)

@@ -14,24 +14,13 @@
                 <div class="card-body">
                     <div class="alert alert-warning">
                         <i class="fas fa-exclamation-triangle"></i>
-                        Bạn đang kết thúc hợp đồng phòng <strong>@contract.Room.Name</strong>
+                        Bạn đang kết thúc hợp đồng phòng
                     </div>
 
                     @using (Html.BeginForm("EndConfirm", "Contracts", FormMethod.Post))
                     {
                         @Html.Hidden("id", contract.Id)
 
-                        <div class="form-group">
-                            <label>Tiền cọc ban đầu</label>
-                            <input type="text" class="form-control" value="@contract.DepositAmount.ToString("N0") đ" readonly />
-                        </div>
-
-                        <div class="form-group">
-                            <label>Số tiền trả lại</label>
-                            <input name="refundAmount" class="form-control money"
-                                   value="@contract.DepositAmount" max="@contract.DepositAmount" />
-                            <small class="text-muted">Nhập 0 nếu không trả lại tiền cọc</small>
-                        </div>
 
                         <div class="form-group">
                             <label>Ghi chú</label>
@@ -43,7 +32,7 @@
                             <button type="submit" class="btn btn-danger">
                                 <i class="fas fa-check"></i> Xác nhận kết thúc
                             </button>
-                            <a href="@Url.Action("Details", "Rooms", new { id = contract.RoomId })"
+                            <a href="@Url.Action("Details", "Rooms", new { id = contract.ContractRooms.First().RoomId })"
                                class="btn btn-secondary">
                                 <i class="fas fa-times"></i> Hủy
                             </a>
