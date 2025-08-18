@@ -1,4 +1,5 @@
-﻿using NhaTroAnCu.Models;
+﻿using NhaTroAnCu.Helpers;
+using NhaTroAnCu.Models;
 using System;
 using System.Collections.Generic;
 using System.Data.Entity;
@@ -43,7 +44,7 @@ namespace NhaTroAnCu.Controllers
 
                 var viewModel = new TenantViewModel
                 {
-                  
+
                 };
 
                 // Apply filter
@@ -104,10 +105,18 @@ namespace NhaTroAnCu.Controllers
                     return View(tenant);
                 }
 
-                // Handle photo upload
+                // Sử dụng TenantPhotoHelper để handle photo upload
                 if (photoFile != null && photoFile.ContentLength > 0)
                 {
-                    tenant.Photo = SaveTenantPhoto(photoFile);
+                    try
+                    {
+                        tenant.Photo = TenantPhotoHelper.SaveTenantPhoto(photoFile, tenant.IdentityCard);
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        ModelState.AddModelError("", ex.Message);
+                        return View(tenant);
+                    }
                 }
 
                 db.Tenants.Add(tenant);
@@ -128,59 +137,6 @@ namespace NhaTroAnCu.Controllers
             {
                 return HttpNotFound();
             }
-            return View(tenant);
-        }
-
-        // POST: /Tenants/Edit/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Edit(Tenant tenant, HttpPostedFileBase photoFile)
-        {
-            if (ModelState.IsValid)
-            {
-                // Check duplicate IdentityCard (excluding current tenant)
-                var existingTenant = db.Tenants
-                    .FirstOrDefault(t => t.IdentityCard == tenant.IdentityCard && t.Id != tenant.Id);
-
-                if (existingTenant != null)
-                {
-                    ModelState.AddModelError("IdentityCard", "Số CCCD này đã tồn tại trong hệ thống");
-                    return View(tenant);
-                }
-
-                var tenantInDb = db.Tenants.Find(tenant.Id);
-                if (tenantInDb == null)
-                {
-                    return HttpNotFound();
-                }
-
-                // Update fields
-                tenantInDb.FullName = tenant.FullName;
-                tenantInDb.IdentityCard = tenant.IdentityCard;
-                tenantInDb.PhoneNumber = tenant.PhoneNumber;
-                tenantInDb.BirthDate = tenant.BirthDate;
-                tenantInDb.Gender = tenant.Gender;
-                tenantInDb.PermanentAddress = tenant.PermanentAddress;
-                tenantInDb.Ethnicity = tenant.Ethnicity;
-                tenantInDb.VehiclePlate = tenant.VehiclePlate;
-
-                // Handle photo upload
-                if (photoFile != null && photoFile.ContentLength > 0)
-                {
-                    // Delete old photo if exists
-                    if (!string.IsNullOrEmpty(tenantInDb.Photo))
-                    {
-                        DeleteOldPhoto(tenantInDb.Photo);
-                    }
-                    tenantInDb.Photo = SaveTenantPhoto(photoFile);
-                }
-
-                db.SaveChanges();
-
-                TempData["Success"] = "Đã cập nhật thông tin người thuê!";
-                return RedirectToAction("Details", new { id = tenant.Id });
-            }
-
             return View(tenant);
         }
 
@@ -244,25 +200,76 @@ namespace NhaTroAnCu.Controllers
             TempData["Success"] = "Đã xóa người thuê thành công!";
             return RedirectToAction("Index");
         }
-
-        // Helper methods
-        private string SaveTenantPhoto(HttpPostedFileBase photo)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Edit(Tenant tenant, HttpPostedFileBase photoFile)
         {
-            if (photo == null || photo.ContentLength == 0)
-                return null;
+            if (ModelState.IsValid)
+            {
+                var existingTenant = db.Tenants.Find(tenant.Id);
+                if (existingTenant == null)
+                {
+                    return HttpNotFound();
+                }
 
-            string fileName = Path.GetFileNameWithoutExtension(photo.FileName);
-            string ext = Path.GetExtension(photo.FileName);
-            string uniqueName = $"tenant_{DateTime.Now.Ticks}_{Guid.NewGuid():N}{ext}";
-            string serverPath = Server.MapPath("~/Uploads/TenantPhotos/");
+                // Cập nhật thông tin
+                existingTenant.FullName = tenant.FullName;
+                existingTenant.PhoneNumber = tenant.PhoneNumber;
+                existingTenant.BirthDate = tenant.BirthDate;
+                existingTenant.Gender = tenant.Gender;
+                existingTenant.PermanentAddress = tenant.PermanentAddress;
+                existingTenant.Ethnicity = tenant.Ethnicity;
+                existingTenant.VehiclePlate = tenant.VehiclePlate;
 
-            if (!Directory.Exists(serverPath))
-                Directory.CreateDirectory(serverPath);
+                // Xử lý upload ảnh mới
+                if (photoFile != null && photoFile.ContentLength > 0)
+                {
+                    try
+                    {
+                        // Xóa ảnh cũ nếu có
+                        if (!string.IsNullOrEmpty(existingTenant.Photo))
+                        {
+                            TenantPhotoHelper.DeleteTenantPhoto(existingTenant.Photo);
+                        }
 
-            string savePath = Path.Combine(serverPath, uniqueName);
-            photo.SaveAs(savePath);
+                        // Lưu ảnh mới
+                        existingTenant.Photo = TenantPhotoHelper.SaveTenantPhoto(photoFile, existingTenant.IdentityCard);
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        ModelState.AddModelError("", ex.Message);
+                        return View(tenant);
+                    }
+                }
 
-            return $"/Uploads/TenantPhotos/{uniqueName}";
+                db.Entry(existingTenant).State = EntityState.Modified;
+                db.SaveChanges();
+
+                TempData["Success"] = "Đã cập nhật thông tin người thuê!";
+                return RedirectToAction("Details", new { id = tenant.Id });
+            }
+
+            return View(tenant);
+        }
+
+        // POST: /Tenants/DeletePhoto/5
+        [HttpPost]
+        public ActionResult DeletePhoto(int id)
+        {
+            var tenant = db.Tenants.Find(id);
+            if (tenant != null && !string.IsNullOrEmpty(tenant.Photo))
+            {
+                // Xóa file ảnh
+                TenantPhotoHelper.DeleteTenantPhoto(tenant.Photo);
+
+                // Cập nhật database
+                tenant.Photo = null;
+                db.SaveChanges();
+
+                return Json(new { success = true, message = "Đã xóa ảnh thành công" });
+            }
+
+            return Json(new { success = false, message = "Không tìm thấy ảnh" });
         }
 
         private void DeleteOldPhoto(string photoPath)

@@ -248,6 +248,7 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Helpers\CustomPdfPageEventHelper.cs" />
+    <Compile Include="Helpers\TenantPhotoHelper.cs" />
     <Compile Include="Helpers\UtilityBillService.cs" />
     <Compile Include="Models\AccountViewModels.cs" />
     <Compile Include="Models\AddressEntities.cs" />

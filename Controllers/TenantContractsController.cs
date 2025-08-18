@@ -1,4 +1,5 @@
-﻿using NhaTroAnCu.Models;
+﻿using NhaTroAnCu.Helpers;
+using NhaTroAnCu.Models;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -105,21 +106,11 @@ namespace NhaTroAnCu.Controllers
         // POST: TenantContracts/AddTenant
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult AddTenant(AddTenantToContractViewModel model, HttpPostedFileBase photoFile)
+        public ActionResult AddTenant(AddTenantViewModel model, HttpPostedFileBase photoFile)
         {
             if (!ModelState.IsValid)
             {
-                // Reload contract data
-                model.Contract = db.Contracts
-                    .Include(c => c.ContractRooms.Select(cr => cr.Room))
-                    .FirstOrDefault(c => c.Id == model.ContractId);
-
-                model.AvailableRooms = model.Contract.ContractRooms.Select(cr => new SelectListItem
-                {
-                    Value = cr.RoomId.ToString(),
-                    Text = cr.Room.Name
-                }).ToList();
-
+                // Reload data for view
                 return View(model);
             }
 
@@ -140,10 +131,18 @@ namespace NhaTroAnCu.Controllers
                         VehiclePlate = model.VehiclePlate
                     };
 
-                    // Xử lý upload ảnh
+                    // Sử dụng TenantPhotoHelper để xử lý upload ảnh
                     if (photoFile != null && photoFile.ContentLength > 0)
                     {
-                        tenant.Photo = SaveTenantPhoto(photoFile);
+                        try
+                        {
+                            tenant.Photo = TenantPhotoHelper.SaveTenantPhoto(photoFile, tenant.IdentityCard);
+                        }
+                        catch (InvalidOperationException ex)
+                        {
+                            ModelState.AddModelError("", ex.Message);
+                            return View(model);
+                        }
                     }
 
                     db.Tenants.Add(tenant);
@@ -154,7 +153,7 @@ namespace NhaTroAnCu.Controllers
                     {
                         ContractId = model.ContractId,
                         TenantId = tenant.Id,
-                        RoomId = model.RoomId,
+                        RoomId = model.RoomId.Value,
                         CreatedAt = DateTime.Now
                     };
 
@@ -170,18 +169,6 @@ namespace NhaTroAnCu.Controllers
                 {
                     transaction.Rollback();
                     ModelState.AddModelError("", "Có lỗi xảy ra: " + ex.Message);
-
-                    // Reload data for view
-                    model.Contract = db.Contracts
-                        .Include(c => c.ContractRooms.Select(cr => cr.Room))
-                        .FirstOrDefault(c => c.Id == model.ContractId);
-
-                    model.AvailableRooms = model.Contract.ContractRooms.Select(cr => new SelectListItem
-                    {
-                        Value = cr.RoomId.ToString(),
-                        Text = cr.Room.Name
-                    }).ToList();
-
                     return View(model);
                 }
             }
@@ -290,25 +277,6 @@ namespace NhaTroAnCu.Controllers
             return RedirectToAction("Details", "Contracts", new { id = contractTenant.ContractId });
         }
 
-        // Helper method to save tenant photo
-        private string SaveTenantPhoto(HttpPostedFileBase photo)
-        {
-            if (photo == null || photo.ContentLength == 0)
-                return null;
-
-            string fileName = Path.GetFileNameWithoutExtension(photo.FileName);
-            string ext = Path.GetExtension(photo.FileName);
-            string uniqueName = $"{fileName}_{Guid.NewGuid():N}{ext}";
-            string serverPath = Server.MapPath("~/Uploads/TenantPhotos/");
-
-            if (!Directory.Exists(serverPath))
-                Directory.CreateDirectory(serverPath);
-
-            string savePath = Path.Combine(serverPath, uniqueName);
-            photo.SaveAs(savePath);
-
-            return $"/Uploads/TenantPhotos/{uniqueName}";
-        }
 
         protected override void Dispose(bool disposing)
         {
@@ -320,59 +288,5 @@ namespace NhaTroAnCu.Controllers
         }
     }
 
-    // ViewModels
-    public class TenantContractViewModel
-    {
-        public int Id { get; set; }
-        public int TenantId { get; set; }
-        public string TenantName { get; set; }
-        public string IdentityCard { get; set; }
-        public string PhoneNumber { get; set; }
-        public int RoomId { get; set; }
-        public string RoomName { get; set; }
-        public int ContractId { get; set; }
-        public string ContractStatus { get; set; }
-        public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
-        public DateTime MoveInDate { get; set; }
-        public string Photo { get; set; }
-    }
-
-    public class AddTenantToContractViewModel
-    {
-        public int ContractId { get; set; }
-        public Contract Contract { get; set; }
-
-        [Required(ErrorMessage = "Vui lòng chọn phòng")]
-        public int RoomId { get; set; }
-
-        [Required(ErrorMessage = "Vui lòng nhập họ tên")]
-        public string FullName { get; set; }
-
-        [Required(ErrorMessage = "Vui lòng nhập số CCCD")]
-        public string IdentityCard { get; set; }
-
-        public string PhoneNumber { get; set; }
-        public DateTime? BirthDate { get; set; }
-        public string Gender { get; set; }
-        public string PermanentAddress { get; set; }
-        public string Ethnicity { get; set; }
-        public string VehiclePlate { get; set; }
-
-        public List<SelectListItem> AvailableRooms { get; set; }
-    }
-
-    public class ChangeTenantRoomViewModel
-    {
-        public int ContractTenantId { get; set; }
-        public string TenantName { get; set; }
-        public int CurrentRoomId { get; set; }
-        public string CurrentRoomName { get; set; }
-        public int ContractId { get; set; }
-
-        [Required(ErrorMessage = "Vui lòng chọn phòng mới")]
-        public int NewRoomId { get; set; }
-
-        public List<SelectListItem> AvailableRooms { get; set; }
-    }
+    // ViewModels   
 }
