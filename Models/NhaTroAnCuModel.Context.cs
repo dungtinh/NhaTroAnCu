@@ -25,22 +25,21 @@ namespace NhaTroAnCu.Models
             throw new UnintentionalCodeFirstException();
         }
     
-        public virtual DbSet<Contract> Contracts { get; set; }
-        public virtual DbSet<ContractTenant> ContractTenants { get; set; }
-        public virtual DbSet<Notification> Notifications { get; set; }
-        public virtual DbSet<PaymentHistory> PaymentHistories { get; set; }
-        public virtual DbSet<Room> Rooms { get; set; }
-        public virtual DbSet<Tenant> Tenants { get; set; }
         public virtual DbSet<C__MigrationHistory> C__MigrationHistory { get; set; }
         public virtual DbSet<AspNetRole> AspNetRoles { get; set; }
         public virtual DbSet<AspNetUserClaim> AspNetUserClaims { get; set; }
         public virtual DbSet<AspNetUserLogin> AspNetUserLogins { get; set; }
         public virtual DbSet<AspNetUser> AspNetUsers { get; set; }
-        public virtual DbSet<WaterIndex> WaterIndexes { get; set; }
-        public virtual DbSet<FPTReaderAPI> FPTReaderAPIs { get; set; }
-        public virtual DbSet<UtilityBill> UtilityBills { get; set; }
         public virtual DbSet<ContractExtensionHistory> ContractExtensionHistories { get; set; }
+        public virtual DbSet<ContractRoom> ContractRooms { get; set; }
+        public virtual DbSet<Contract> Contracts { get; set; }
+        public virtual DbSet<ContractTenant> ContractTenants { get; set; }
         public virtual DbSet<IncomeExpenseCategory> IncomeExpenseCategories { get; set; }
         public virtual DbSet<IncomeExpense> IncomeExpenses { get; set; }
+        public virtual DbSet<PaymentHistory> PaymentHistories { get; set; }
+        public virtual DbSet<Room> Rooms { get; set; }
+        public virtual DbSet<Tenant> Tenants { get; set; }
+        public virtual DbSet<UtilityBill> UtilityBills { get; set; }
+        public virtual DbSet<FPTReaderAPI> FPTReaderAPIs { get; set; }
     }
 }

@@ -17,16 +17,15 @@ namespace NhaTroAnCu.Models
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public Contract()
         {
-            this.ContractTenants = new HashSet<ContractTenant>();
-            this.PaymentHistories = new HashSet<PaymentHistory>();
             this.ContractExtensionHistories = new HashSet<ContractExtensionHistory>();
+            this.ContractRooms = new HashSet<ContractRoom>();
+            this.ContractTenants = new HashSet<ContractTenant>();
             this.IncomeExpenses = new HashSet<IncomeExpense>();
+            this.UtilityBills = new HashSet<UtilityBill>();
         }
     
         public int Id { get; set; }
-        public int RoomId { get; set; }
         public decimal PriceAgreed { get; set; }
-        public decimal DepositAmount { get; set; }
         public System.DateTime StartDate { get; set; }
         public System.DateTime EndDate { get; set; }
         public string Status { get; set; }
@@ -35,19 +34,16 @@ namespace NhaTroAnCu.Models
         public decimal ElectricityPrice { get; set; }
         public decimal WaterPrice { get; set; }
         public string ContractScanFilePath { get; set; }
-        public bool DepositCollected { get; set; }
-        public Nullable<System.DateTime> DepositCollectedDate { get; set; }
-        public Nullable<int> DepositIncomeId { get; set; }
     
-        public virtual Room Room { get; set; }
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<ContractTenant> ContractTenants { get; set; }
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<PaymentHistory> PaymentHistories { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<ContractExtensionHistory> ContractExtensionHistories { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public virtual ICollection<ContractRoom> ContractRooms { get; set; }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public virtual ICollection<ContractTenant> ContractTenants { get; set; }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<IncomeExpense> IncomeExpenses { get; set; }
-        public virtual IncomeExpense IncomeExpens { get; set; }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public virtual ICollection<UtilityBill> UtilityBills { get; set; }
     }
 }

@@ -78,14 +78,22 @@
           <Property Name="ExtendMonths" Type="int" />
           <Property Name="Note" Type="nvarchar" MaxLength="255" />
         </EntityType>
+        <EntityType Name="ContractRooms">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="ContractId" Type="int" Nullable="false" />
+          <Property Name="RoomId" Type="int" Nullable="false" />
+          <Property Name="PriceAgreed" Type="decimal" Precision="18" Scale="2" Nullable="false" />
+          <Property Name="Notes" Type="nvarchar(max)" />
+        </EntityType>
         <EntityType Name="Contracts">
           <Key>
             <PropertyRef Name="Id" />
           </Key>
           <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
-          <Property Name="RoomId" Type="int" Nullable="false" />
           <Property Name="PriceAgreed" Type="decimal" Precision="18" Scale="2" Nullable="false" />
-          <Property Name="DepositAmount" Type="decimal" Precision="18" Scale="2" Nullable="false" />
           <Property Name="StartDate" Type="date" Nullable="false" />
           <Property Name="EndDate" Type="date" Nullable="false" />
           <Property Name="Status" Type="nvarchar" MaxLength="20" Nullable="false" />
@@ -94,17 +102,15 @@
           <Property Name="ElectricityPrice" Type="decimal" Precision="18" Scale="2" Nullable="false" />
           <Property Name="WaterPrice" Type="decimal" Precision="18" Scale="2" Nullable="false" />
           <Property Name="ContractScanFilePath" Type="nvarchar" MaxLength="250" />
-          <Property Name="DepositCollected" Type="bit" Nullable="false" />
-          <Property Name="DepositCollectedDate" Type="datetime" />
-          <Property Name="DepositIncomeId" Type="int" />
         </EntityType>
         <EntityType Name="ContractTenants">
           <Key>
-            <PropertyRef Name="ContractId" />
-            <PropertyRef Name="TenantId" />
+            <PropertyRef Name="Id" />
           </Key>
-          <Property Name="ContractId" Type="int" Nullable="false" />
+          <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="RoomId" Type="int" Nullable="false" />
           <Property Name="TenantId" Type="int" Nullable="false" />
+          <Property Name="ContractId" Type="int" Nullable="false" />
           <Property Name="CreatedAt" Type="datetime" Nullable="false" />
         </EntityType>
         <!--Errors Found During Generation:
@@ -138,7 +144,6 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
           <Property Name="CategoryId" Type="int" Nullable="false" />
           <Property Name="ContractId" Type="int" />
-          <Property Name="RoomId" Type="int" />
           <Property Name="Amount" Type="decimal" Precision="18" Scale="2" Nullable="false" />
           <Property Name="TransactionDate" Type="date" Nullable="false" />
           <Property Name="Description" Type="nvarchar" MaxLength="500" />
@@ -146,16 +151,6 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="CreatedBy" Type="nvarchar" MaxLength="128" />
           <Property Name="CreatedAt" Type="datetime" Nullable="false" />
           <Property Name="UpdatedAt" Type="datetime" />
-        </EntityType>
-        <EntityType Name="Notifications">
-          <Key>
-            <PropertyRef Name="Id" />
-          </Key>
-          <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
-          <Property Name="TenantId" Type="int" Nullable="false" />
-          <Property Name="Content" Type="nvarchar" MaxLength="255" />
-          <Property Name="CreatedAt" Type="datetime" Nullable="false" />
-          <Property Name="IsRead" Type="bit" Nullable="false" />
         </EntityType>
         <EntityType Name="PaymentHistories">
           <Key>
@@ -209,34 +204,21 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             <PropertyRef Name="Id" />
           </Key>
           <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
-          <Property Name="RoomId" Type="int" Nullable="false" />
           <Property Name="Month" Type="int" Nullable="false" />
           <Property Name="Year" Type="int" Nullable="false" />
-          <Property Name="ContractId" Type="int" />
-          <Property Name="WaterIndexStart" Type="int" />
-          <Property Name="WaterIndexEnd" Type="int" />
-          <Property Name="WaterPrice" Type="decimal" Precision="18" Scale="2" />
-          <Property Name="ElectricityAmount" Type="decimal" Precision="18" Scale="2" />
-          <Property Name="Water" Type="decimal" Precision="18" Scale="2" />
-          <Property Name="RentAmount" Type="decimal" Precision="18" Scale="2" />
-          <Property Name="ExtraCharge" Type="decimal" Precision="18" Scale="2" />
-          <Property Name="Discount" Type="decimal" Precision="18" Scale="2" />
-          <Property Name="TotalAmount" Type="decimal" Precision="18" Scale="2" />
+          <Property Name="ContractId" Type="int" Nullable="false" />
+          <Property Name="WaterIndexStart" Type="int" Nullable="false" />
+          <Property Name="WaterIndexEnd" Type="int" Nullable="false" />
+          <Property Name="ElectricityAmount" Type="decimal" Precision="18" Scale="2" Nullable="false" />
+          <Property Name="WaterAmount" Type="decimal" Precision="18" Scale="2" Nullable="false" />
+          <Property Name="RentAmount" Type="decimal" Precision="18" Scale="2" Nullable="false" />
+          <Property Name="ExtraCharge" Type="decimal" Precision="18" Scale="2" Nullable="false" />
+          <Property Name="Discount" Type="decimal" Precision="18" Scale="2" Nullable="false" />
+          <Property Name="TotalAmount" Type="decimal" Precision="18" Scale="2" Nullable="false" />
           <Property Name="BillNote" Type="nvarchar" MaxLength="250" />
           <Property Name="BillStatus" Type="nvarchar" MaxLength="50" />
-          <Property Name="CreatedAt" Type="datetime" />
-          <Property Name="UpdatedAt" Type="datetime" />
-        </EntityType>
-        <EntityType Name="WaterIndexes">
-          <Key>
-            <PropertyRef Name="Id" />
-          </Key>
-          <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
-          <Property Name="RoomId" Type="int" Nullable="false" />
-          <Property Name="Month" Type="int" Nullable="false" />
-          <Property Name="Year" Type="int" Nullable="false" />
-          <Property Name="WaterReading" Type="int" Nullable="false" />
           <Property Name="CreatedAt" Type="datetime" Nullable="false" />
+          <Property Name="UpdatedAt" Type="datetime" />
         </EntityType>
         <Association Name="FK__ContractE__Contr__2180FB33">
           <End Role="Contracts" Type="Self.Contracts" Multiplicity="1" />
@@ -250,15 +232,41 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             </Dependent>
           </ReferentialConstraint>
         </Association>
-        <Association Name="FK__Contracts__Depos__4C6B5938">
-          <End Role="IncomeExpenses" Type="Self.IncomeExpenses" Multiplicity="0..1" />
-          <End Role="Contracts" Type="Self.Contracts" Multiplicity="*" />
+        <Association Name="FK__ContractT__Contr__6FB49575">
+          <End Role="Contracts" Type="Self.Contracts" Multiplicity="1">
+            <OnDelete Action="Cascade" />
+          </End>
+          <End Role="ContractTenants" Type="Self.ContractTenants" Multiplicity="*" />
           <ReferentialConstraint>
-            <Principal Role="IncomeExpenses">
+            <Principal Role="Contracts">
               <PropertyRef Name="Id" />
             </Principal>
-            <Dependent Role="Contracts">
-              <PropertyRef Name="DepositIncomeId" />
+            <Dependent Role="ContractTenants">
+              <PropertyRef Name="ContractId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__ContractT__RoomI__719CDDE7">
+          <End Role="Rooms" Type="Self.Rooms" Multiplicity="1" />
+          <End Role="ContractTenants" Type="Self.ContractTenants" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Rooms">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="ContractTenants">
+              <PropertyRef Name="RoomId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__ContractT__Tenan__70A8B9AE">
+          <End Role="Tenants" Type="Self.Tenants" Multiplicity="1" />
+          <End Role="ContractTenants" Type="Self.ContractTenants" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Tenants">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="ContractTenants">
+              <PropertyRef Name="TenantId" />
             </Dependent>
           </ReferentialConstraint>
         </Association>
@@ -286,67 +294,27 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             </Dependent>
           </ReferentialConstraint>
         </Association>
-        <Association Name="FK__IncomeExp__RoomI__3493CFA7">
-          <End Role="Rooms" Type="Self.Rooms" Multiplicity="0..1" />
-          <End Role="IncomeExpenses" Type="Self.IncomeExpenses" Multiplicity="*" />
-          <ReferentialConstraint>
-            <Principal Role="Rooms">
-              <PropertyRef Name="Id" />
-            </Principal>
-            <Dependent Role="IncomeExpenses">
-              <PropertyRef Name="RoomId" />
-            </Dependent>
-          </ReferentialConstraint>
-        </Association>
-        <Association Name="FK__Notificat__Tenan__4E88ABD4">
-          <End Role="Tenants" Type="Self.Tenants" Multiplicity="1" />
-          <End Role="Notifications" Type="Self.Notifications" Multiplicity="*" />
-          <ReferentialConstraint>
-            <Principal Role="Tenants">
-              <PropertyRef Name="Id" />
-            </Principal>
-            <Dependent Role="Notifications">
-              <PropertyRef Name="TenantId" />
-            </Dependent>
-          </ReferentialConstraint>
-        </Association>
-        <Association Name="FK__PaymentHi__Utili__1BC821DD">
-          <End Role="UtilityBills" Type="Self.UtilityBills" Multiplicity="0..1" />
-          <End Role="PaymentHistories" Type="Self.PaymentHistories" Multiplicity="*" />
-          <ReferentialConstraint>
-            <Principal Role="UtilityBills">
-              <PropertyRef Name="Id" />
-            </Principal>
-            <Dependent Role="PaymentHistories">
-              <PropertyRef Name="UtilityBillId" />
-            </Dependent>
-          </ReferentialConstraint>
-        </Association>
-        <Association Name="FK_ContractTenants_Contracts">
-          <End Role="Contracts" Type="Self.Contracts" Multiplicity="1">
-            <OnDelete Action="Cascade" />
-          </End>
-          <End Role="ContractTenants" Type="Self.ContractTenants" Multiplicity="*" />
+        <Association Name="FK_ContractRooms_Contracts">
+          <End Role="Contracts" Type="Self.Contracts" Multiplicity="1" />
+          <End Role="ContractRooms" Type="Self.ContractRooms" Multiplicity="*" />
           <ReferentialConstraint>
             <Principal Role="Contracts">
               <PropertyRef Name="Id" />
             </Principal>
-            <Dependent Role="ContractTenants">
+            <Dependent Role="ContractRooms">
               <PropertyRef Name="ContractId" />
             </Dependent>
           </ReferentialConstraint>
         </Association>
-        <Association Name="FK_ContractTenants_Tenants">
-          <End Role="Tenants" Type="Self.Tenants" Multiplicity="1">
-            <OnDelete Action="Cascade" />
-          </End>
-          <End Role="ContractTenants" Type="Self.ContractTenants" Multiplicity="*" />
+        <Association Name="FK_ContractRooms_Rooms">
+          <End Role="Rooms" Type="Self.Rooms" Multiplicity="1" />
+          <End Role="ContractRooms" Type="Self.ContractRooms" Multiplicity="*" />
           <ReferentialConstraint>
-            <Principal Role="Tenants">
+            <Principal Role="Rooms">
               <PropertyRef Name="Id" />
             </Principal>
-            <Dependent Role="ContractTenants">
-              <PropertyRef Name="TenantId" />
+            <Dependent Role="ContractRooms">
+              <PropertyRef Name="RoomId" />
             </Dependent>
           </ReferentialConstraint>
         </Association>
@@ -406,17 +374,15 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             </Dependent>
           </ReferentialConstraint>
         </Association>
-        <Association Name="FK_UtilityBills_Rooms">
-          <End Role="Rooms" Type="Self.Rooms" Multiplicity="1">
-            <OnDelete Action="Cascade" />
-          </End>
+        <Association Name="FK_UtilityBills_Contracts">
+          <End Role="Contracts" Type="Self.Contracts" Multiplicity="1" />
           <End Role="UtilityBills" Type="Self.UtilityBills" Multiplicity="*" />
           <ReferentialConstraint>
-            <Principal Role="Rooms">
+            <Principal Role="Contracts">
               <PropertyRef Name="Id" />
             </Principal>
             <Dependent Role="UtilityBills">
-              <PropertyRef Name="RoomId" />
+              <PropertyRef Name="ContractId" />
             </Dependent>
           </ReferentialConstraint>
         </Association>
@@ -428,16 +394,15 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <EntitySet Name="AspNetUserRoles" EntityType="Self.AspNetUserRoles" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="AspNetUsers" EntityType="Self.AspNetUsers" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="ContractExtensionHistory" EntityType="Self.ContractExtensionHistory" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="ContractRooms" EntityType="Self.ContractRooms" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Contracts" EntityType="Self.Contracts" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="ContractTenants" EntityType="Self.ContractTenants" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="IncomeExpenseCategories" EntityType="Self.IncomeExpenseCategories" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="IncomeExpenses" EntityType="Self.IncomeExpenses" Schema="dbo" store:Type="Tables" />
-          <EntitySet Name="Notifications" EntityType="Self.Notifications" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="PaymentHistories" EntityType="Self.PaymentHistories" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Rooms" EntityType="Self.Rooms" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Tenants" EntityType="Self.Tenants" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="UtilityBills" EntityType="Self.UtilityBills" Schema="dbo" store:Type="Tables" />
-          <EntitySet Name="WaterIndexes" EntityType="Self.WaterIndexes" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="FPTReaderAPI" EntityType="Self.FPTReaderAPI" store:Type="Tables" store:Schema="dbo">
             <DefiningQuery>SELECT 
     [FPTReaderAPI].[ApiKey] AS [ApiKey], 
@@ -449,9 +414,17 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             <End Role="Contracts" EntitySet="Contracts" />
             <End Role="ContractExtensionHistory" EntitySet="ContractExtensionHistory" />
           </AssociationSet>
-          <AssociationSet Name="FK__Contracts__Depos__4C6B5938" Association="Self.FK__Contracts__Depos__4C6B5938">
-            <End Role="IncomeExpenses" EntitySet="IncomeExpenses" />
+          <AssociationSet Name="FK__ContractT__Contr__6FB49575" Association="Self.FK__ContractT__Contr__6FB49575">
             <End Role="Contracts" EntitySet="Contracts" />
+            <End Role="ContractTenants" EntitySet="ContractTenants" />
+          </AssociationSet>
+          <AssociationSet Name="FK__ContractT__RoomI__719CDDE7" Association="Self.FK__ContractT__RoomI__719CDDE7">
+            <End Role="Rooms" EntitySet="Rooms" />
+            <End Role="ContractTenants" EntitySet="ContractTenants" />
+          </AssociationSet>
+          <AssociationSet Name="FK__ContractT__Tenan__70A8B9AE" Association="Self.FK__ContractT__Tenan__70A8B9AE">
+            <End Role="Tenants" EntitySet="Tenants" />
+            <End Role="ContractTenants" EntitySet="ContractTenants" />
           </AssociationSet>
           <AssociationSet Name="FK__IncomeExp__Categ__32AB8735" Association="Self.FK__IncomeExp__Categ__32AB8735">
             <End Role="IncomeExpenseCategories" EntitySet="IncomeExpenseCategories" />
@@ -461,25 +434,13 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             <End Role="Contracts" EntitySet="Contracts" />
             <End Role="IncomeExpenses" EntitySet="IncomeExpenses" />
           </AssociationSet>
-          <AssociationSet Name="FK__IncomeExp__RoomI__3493CFA7" Association="Self.FK__IncomeExp__RoomI__3493CFA7">
-            <End Role="Rooms" EntitySet="Rooms" />
-            <End Role="IncomeExpenses" EntitySet="IncomeExpenses" />
-          </AssociationSet>
-          <AssociationSet Name="FK__Notificat__Tenan__4E88ABD4" Association="Self.FK__Notificat__Tenan__4E88ABD4">
-            <End Role="Tenants" EntitySet="Tenants" />
-            <End Role="Notifications" EntitySet="Notifications" />
-          </AssociationSet>
-          <AssociationSet Name="FK__PaymentHi__Utili__1BC821DD" Association="Self.FK__PaymentHi__Utili__1BC821DD">
-            <End Role="UtilityBills" EntitySet="UtilityBills" />
-            <End Role="PaymentHistories" EntitySet="PaymentHistories" />
-          </AssociationSet>
-          <AssociationSet Name="FK_ContractTenants_Contracts" Association="Self.FK_ContractTenants_Contracts">
+          <AssociationSet Name="FK_ContractRooms_Contracts" Association="Self.FK_ContractRooms_Contracts">
             <End Role="Contracts" EntitySet="Contracts" />
-            <End Role="ContractTenants" EntitySet="ContractTenants" />
+            <End Role="ContractRooms" EntitySet="ContractRooms" />
           </AssociationSet>
-          <AssociationSet Name="FK_ContractTenants_Tenants" Association="Self.FK_ContractTenants_Tenants">
-            <End Role="Tenants" EntitySet="Tenants" />
-            <End Role="ContractTenants" EntitySet="ContractTenants" />
+          <AssociationSet Name="FK_ContractRooms_Rooms" Association="Self.FK_ContractRooms_Rooms">
+            <End Role="Rooms" EntitySet="Rooms" />
+            <End Role="ContractRooms" EntitySet="ContractRooms" />
           </AssociationSet>
           <AssociationSet Name="FK_dbo_AspNetUserClaims_dbo_AspNetUsers_UserId" Association="Self.FK_dbo_AspNetUserClaims_dbo_AspNetUsers_UserId">
             <End Role="AspNetUsers" EntitySet="AspNetUsers" />
@@ -497,8 +458,8 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             <End Role="AspNetUsers" EntitySet="AspNetUsers" />
             <End Role="AspNetUserRoles" EntitySet="AspNetUserRoles" />
           </AssociationSet>
-          <AssociationSet Name="FK_UtilityBills_Rooms" Association="Self.FK_UtilityBills_Rooms">
-            <End Role="Rooms" EntitySet="Rooms" />
+          <AssociationSet Name="FK_UtilityBills_Contracts" Association="Self.FK_UtilityBills_Contracts">
+            <End Role="Contracts" EntitySet="Contracts" />
             <End Role="UtilityBills" EntitySet="UtilityBills" />
           </AssociationSet>
         </EntityContainer>
@@ -506,206 +467,23 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
     <!-- CSDL content -->
     <edmx:ConceptualModels>
       <Schema Namespace="NhaTroAnCuModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
-        <EntityType Name="Contract">
-          <Key>
-            <PropertyRef Name="Id" />
-          </Key>
-          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
-          <Property Name="RoomId" Type="Int32" Nullable="false" />
-          <Property Name="PriceAgreed" Type="Decimal" Precision="18" Scale="2" Nullable="false" />
-          <Property Name="DepositAmount" Type="Decimal" Precision="18" Scale="2" Nullable="false" />
-          <Property Name="StartDate" Type="DateTime" Nullable="false" Precision="0" />
-          <Property Name="EndDate" Type="DateTime" Precision="0" Nullable="false" />
-          <Property Name="Status" Type="String" MaxLength="20" FixedLength="false" Unicode="true" Nullable="false" />
-          <NavigationProperty Name="Room" Relationship="Self.FK__Contracts__RoomI__3C69FB99" FromRole="Contracts" ToRole="Rooms" />
-          <NavigationProperty Name="ContractTenants" Relationship="Self.FK_ContractTenants_Contracts" FromRole="Contracts" ToRole="ContractTenants" />
-          <Property Name="Note" Type="String" MaxLength="500" FixedLength="false" Unicode="true" />
-          <NavigationProperty Name="PaymentHistories" Relationship="NhaTroAnCuModel.FK_PaymentHistories_Contracts" FromRole="Contract" ToRole="PaymentHistory" />
-          <Property Name="MoveInDate" Type="DateTime" Precision="0" Nullable="false" />
-          <Property Name="ElectricityPrice" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
-          <Property Name="WaterPrice" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
-          <Property Name="ContractScanFilePath" Type="String" MaxLength="250" FixedLength="false" Unicode="true" />
-          <NavigationProperty Name="ContractExtensionHistories" Relationship="NhaTroAnCuModel.FK__ContractE__Contr__2180FB33" FromRole="Contract" ToRole="ContractExtensionHistory" />
-          <NavigationProperty Name="IncomeExpenses" Relationship="NhaTroAnCuModel.FK__IncomeExp__Contr__339FAB6E" FromRole="Contract" ToRole="IncomeExpens" />
-          <Property Name="DepositCollected" Type="Boolean" Nullable="false" />
-          <Property Name="DepositCollectedDate" Type="DateTime" Precision="3" />
-          <Property Name="DepositIncomeId" Type="Int32" />
-          <NavigationProperty Name="IncomeExpens" Relationship="NhaTroAnCuModel.FK__Contracts__Depos__4C6B5938" FromRole="Contract" ToRole="IncomeExpens" />
-        </EntityType>
-        <EntityType Name="ContractTenant">
-          <Key>
-            <PropertyRef Name="ContractId" />
-            <PropertyRef Name="TenantId" />
-          </Key>
-          <Property Name="ContractId" Type="Int32" Nullable="false" />
-          <Property Name="TenantId" Type="Int32" Nullable="false" />
-          <Property Name="CreatedAt" Type="DateTime" Nullable="false" Precision="3" />
-          <NavigationProperty Name="Contract" Relationship="Self.FK_ContractTenants_Contracts" FromRole="ContractTenants" ToRole="Contracts" />
-          <NavigationProperty Name="Tenant" Relationship="Self.FK_ContractTenants_Tenants" FromRole="ContractTenants" ToRole="Tenants" />
-        </EntityType>
-        <EntityType Name="Notification">
-          <Key>
-            <PropertyRef Name="Id" />
-          </Key>
-          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
-          <Property Name="TenantId" Type="Int32" Nullable="false" />
-          <Property Name="Content" Type="String" MaxLength="255" FixedLength="false" Unicode="true" />
-          <Property Name="CreatedAt" Type="DateTime" Nullable="false" Precision="3" />
-          <Property Name="IsRead" Type="Boolean" Nullable="false" />
-          <NavigationProperty Name="Tenant" Relationship="Self.FK__Notificat__Tenan__4E88ABD4" FromRole="Notifications" ToRole="Tenants" />
-        </EntityType>
-        <EntityType Name="PaymentHistory">
-          <Key>
-            <PropertyRef Name="Id" />
-          </Key>
-          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
-          <Property Name="RoomId" Type="Int32" Nullable="false" />
-          <Property Name="Month" Type="Int32" Nullable="false" />
-          <Property Name="Year" Type="Int32" Nullable="false" />
-          <Property Name="TotalAmount" Type="Decimal" Precision="18" Scale="2" Nullable="false" />
-          <Property Name="PaidDate" Type="DateTime" Nullable="false" Precision="3" />
-          <Property Name="Note" Type="String" MaxLength="250" FixedLength="false" Unicode="true" />
-          <NavigationProperty Name="Room" Relationship="Self.FK__PaymentHi__RoomI__4AB81AF0" FromRole="PaymentHistories" ToRole="Rooms" />
-          <Property Name="ContractId" Type="Int32" Nullable="false" />
-          <NavigationProperty Name="Contract" Relationship="NhaTroAnCuModel.FK_PaymentHistories_Contracts" FromRole="PaymentHistory" ToRole="Contract" />
-          <Property Name="UtilityBillId" Type="Int32" />
-          <Property Name="CreatedAt" Type="DateTime" Precision="3" />
-          <NavigationProperty Name="UtilityBill" Relationship="NhaTroAnCuModel.FK__PaymentHi__Utili__1BC821DD" FromRole="PaymentHistory" ToRole="UtilityBill" />
-        </EntityType>
-        <EntityType Name="Room">
-          <Key>
-            <PropertyRef Name="Id" />
-          </Key>
-          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
-          <Property Name="Name" Type="String" MaxLength="10" FixedLength="false" Unicode="true" Nullable="false" />
-          <Property Name="Area" Type="String" MaxLength="1" FixedLength="true" Unicode="false" Nullable="false" />
-          <Property Name="Floor" Type="Int32" Nullable="false" />
-          <Property Name="RoomNumber" Type="Int32" Nullable="false" />
-          <Property Name="DefaultPrice" Type="Decimal" Precision="18" Scale="2" Nullable="false" />
-          <Property Name="HasAirCondition" Type="Boolean" Nullable="false" />
-          <Property Name="HasFridge" Type="Boolean" Nullable="false" />
-          <Property Name="IsOccupied" Type="Boolean" Nullable="false" />
-          <NavigationProperty Name="Contracts" Relationship="Self.FK__Contracts__RoomI__3C69FB99" FromRole="Rooms" ToRole="Contracts" />
-          <NavigationProperty Name="PaymentHistories" Relationship="Self.FK__PaymentHi__RoomI__4AB81AF0" FromRole="Rooms" ToRole="PaymentHistories" />
-          <Property Name="HasWaterHeater" Type="Boolean" Nullable="false" />
-          <Property Name="HasBed" Type="Boolean" Nullable="false" />
-          <Property Name="HasWardrobe" Type="Boolean" Nullable="false" />
-          <NavigationProperty Name="UtilityBills" Relationship="NhaTroAnCuModel.FK_UtilityBills_Rooms" FromRole="Room" ToRole="UtilityBill" />
-          <NavigationProperty Name="IncomeExpenses" Relationship="NhaTroAnCuModel.FK__IncomeExp__RoomI__3493CFA7" FromRole="Room" ToRole="IncomeExpens" />
-        </EntityType>
-        <EntityType Name="Tenant">
-          <Key>
-            <PropertyRef Name="Id" />
-          </Key>
-          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
-          <Property Name="FullName" Type="String" MaxLength="100" FixedLength="false" Unicode="true" Nullable="false" />
-          <Property Name="IdentityCard" Type="String" MaxLength="20" FixedLength="false" Unicode="true" Nullable="false" />
-          <Property Name="PhoneNumber" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
-          <Property Name="Photo" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
-          <NavigationProperty Name="ContractTenants" Relationship="Self.FK_ContractTenants_Tenants" FromRole="Tenants" ToRole="ContractTenants" />
-          <NavigationProperty Name="Notifications" Relationship="Self.FK__Notificat__Tenan__4E88ABD4" FromRole="Tenants" ToRole="Notifications" />
-          <Property Name="BirthDate" Type="DateTime" Precision="0" />
-          <Property Name="Gender" Type="String" MaxLength="10" FixedLength="false" Unicode="true" />
-          <Property Name="PermanentAddress" Type="String" MaxLength="255" FixedLength="false" Unicode="true" />
-          <Property Name="Ethnicity" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
-          <Property Name="VehiclePlate" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
-        </EntityType>
-        <Association Name="FK__Contracts__RoomI__3C69FB99">
-          <End Role="Rooms" Type="Self.Room" Multiplicity="1" />
-          <End Role="Contracts" Type="Self.Contract" Multiplicity="*" />
-          <ReferentialConstraint>
-            <Principal Role="Rooms">
-              <PropertyRef Name="Id" />
-            </Principal>
-            <Dependent Role="Contracts">
-              <PropertyRef Name="RoomId" />
-            </Dependent>
-          </ReferentialConstraint>
-        </Association>
-        <Association Name="FK_ContractTenants_Contracts">
-          <End Role="Contracts" Type="Self.Contract" Multiplicity="1">
-            <OnDelete Action="Cascade" />
-          </End>
-          <End Role="ContractTenants" Type="Self.ContractTenant" Multiplicity="*" />
-          <ReferentialConstraint>
-            <Principal Role="Contracts">
-              <PropertyRef Name="Id" />
-            </Principal>
-            <Dependent Role="ContractTenants">
-              <PropertyRef Name="ContractId" />
-            </Dependent>
-          </ReferentialConstraint>
-        </Association>
-        <Association Name="FK_ContractTenants_Tenants">
-          <End Role="Tenants" Type="Self.Tenant" Multiplicity="1">
-            <OnDelete Action="Cascade" />
-          </End>
-          <End Role="ContractTenants" Type="Self.ContractTenant" Multiplicity="*" />
-          <ReferentialConstraint>
-            <Principal Role="Tenants">
-              <PropertyRef Name="Id" />
-            </Principal>
-            <Dependent Role="ContractTenants">
-              <PropertyRef Name="TenantId" />
-            </Dependent>
-          </ReferentialConstraint>
-        </Association>
-        <Association Name="FK__Notificat__Tenan__4E88ABD4">
-          <End Role="Tenants" Type="Self.Tenant" Multiplicity="1" />
-          <End Role="Notifications" Type="Self.Notification" Multiplicity="*" />
-          <ReferentialConstraint>
-            <Principal Role="Tenants">
-              <PropertyRef Name="Id" />
-            </Principal>
-            <Dependent Role="Notifications">
-              <PropertyRef Name="TenantId" />
-            </Dependent>
-          </ReferentialConstraint>
-        </Association>
-        <Association Name="FK__PaymentHi__RoomI__4AB81AF0">
-          <End Role="Rooms" Type="Self.Room" Multiplicity="1" />
-          <End Role="PaymentHistories" Type="Self.PaymentHistory" Multiplicity="*" />
-          <ReferentialConstraint>
-            <Principal Role="Rooms">
-              <PropertyRef Name="Id" />
-            </Principal>
-            <Dependent Role="PaymentHistories">
-              <PropertyRef Name="RoomId" />
-            </Dependent>
-          </ReferentialConstraint>
-        </Association>
         <EntityContainer Name="NhaTroAnCuEntities" annotation:LazyLoadingEnabled="true">
-          <EntitySet Name="Contracts" EntityType="Self.Contract" />
-          <EntitySet Name="ContractTenants" EntityType="Self.ContractTenant" />
-          <EntitySet Name="Notifications" EntityType="Self.Notification" />
-          <EntitySet Name="PaymentHistories" EntityType="Self.PaymentHistory" />
-          <EntitySet Name="Rooms" EntityType="Self.Room" />
-          <EntitySet Name="Tenants" EntityType="Self.Tenant" />
-          <AssociationSet Name="FK__Contracts__RoomI__3C69FB99" Association="Self.FK__Contracts__RoomI__3C69FB99">
-            <End Role="Rooms" EntitySet="Rooms" />
-            <End Role="Contracts" EntitySet="Contracts" />
-          </AssociationSet>
-          <AssociationSet Name="FK_ContractTenants_Contracts" Association="Self.FK_ContractTenants_Contracts">
-            <End Role="Contracts" EntitySet="Contracts" />
-            <End Role="ContractTenants" EntitySet="ContractTenants" />
-          </AssociationSet>
-          <AssociationSet Name="FK_ContractTenants_Tenants" Association="Self.FK_ContractTenants_Tenants">
-            <End Role="Tenants" EntitySet="Tenants" />
-            <End Role="ContractTenants" EntitySet="ContractTenants" />
-          </AssociationSet>
-          <AssociationSet Name="FK__Notificat__Tenan__4E88ABD4" Association="Self.FK__Notificat__Tenan__4E88ABD4">
-            <End Role="Tenants" EntitySet="Tenants" />
-            <End Role="Notifications" EntitySet="Notifications" />
-          </AssociationSet>
-          <AssociationSet Name="FK__PaymentHi__RoomI__4AB81AF0" Association="Self.FK__PaymentHi__RoomI__4AB81AF0">
-            <End Role="Rooms" EntitySet="Rooms" />
-            <End Role="PaymentHistories" EntitySet="PaymentHistories" />
-          </AssociationSet>
           <EntitySet Name="C__MigrationHistory" EntityType="NhaTroAnCuModel.C__MigrationHistory" />
           <EntitySet Name="AspNetRoles" EntityType="NhaTroAnCuModel.AspNetRole" />
           <EntitySet Name="AspNetUserClaims" EntityType="NhaTroAnCuModel.AspNetUserClaim" />
           <EntitySet Name="AspNetUserLogins" EntityType="NhaTroAnCuModel.AspNetUserLogin" />
           <EntitySet Name="AspNetUsers" EntityType="NhaTroAnCuModel.AspNetUser" />
+          <EntitySet Name="ContractExtensionHistories" EntityType="NhaTroAnCuModel.ContractExtensionHistory" />
+          <EntitySet Name="ContractRooms" EntityType="NhaTroAnCuModel.ContractRoom" />
+          <EntitySet Name="Contracts" EntityType="NhaTroAnCuModel.Contract" />
+          <EntitySet Name="ContractTenants" EntityType="NhaTroAnCuModel.ContractTenant" />
+          <EntitySet Name="IncomeExpenseCategories" EntityType="NhaTroAnCuModel.IncomeExpenseCategory" />
+          <EntitySet Name="IncomeExpenses" EntityType="NhaTroAnCuModel.IncomeExpense" />
+          <EntitySet Name="PaymentHistories" EntityType="NhaTroAnCuModel.PaymentHistory" />
+          <EntitySet Name="Rooms" EntityType="NhaTroAnCuModel.Room" />
+          <EntitySet Name="Tenants" EntityType="NhaTroAnCuModel.Tenant" />
+          <EntitySet Name="UtilityBills" EntityType="NhaTroAnCuModel.UtilityBill" />
+          <EntitySet Name="FPTReaderAPIs" EntityType="NhaTroAnCuModel.FPTReaderAPI" />
           <AssociationSet Name="FK_dbo_AspNetUserClaims_dbo_AspNetUsers_UserId" Association="NhaTroAnCuModel.FK_dbo_AspNetUserClaims_dbo_AspNetUsers_UserId">
             <End Role="AspNetUser" EntitySet="AspNetUsers" />
             <End Role="AspNetUserClaim" EntitySet="AspNetUserClaims" />
@@ -714,47 +492,45 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             <End Role="AspNetUser" EntitySet="AspNetUsers" />
             <End Role="AspNetUserLogin" EntitySet="AspNetUserLogins" />
           </AssociationSet>
-          <AssociationSet Name="AspNetUserRoles" Association="NhaTroAnCuModel.AspNetUserRoles">
-            <End Role="AspNetRole" EntitySet="AspNetRoles" />
-            <End Role="AspNetUser" EntitySet="AspNetUsers" />
-          </AssociationSet>
-          <AssociationSet Name="FK_PaymentHistories_Contracts" Association="NhaTroAnCuModel.FK_PaymentHistories_Contracts">
-            <End Role="Contract" EntitySet="Contracts" />
-            <End Role="PaymentHistory" EntitySet="PaymentHistories" />
-          </AssociationSet>
-          <EntitySet Name="WaterIndexes" EntityType="NhaTroAnCuModel.WaterIndex" />
-          <EntitySet Name="FPTReaderAPIs" EntityType="NhaTroAnCuModel.FPTReaderAPI" />
-          <EntitySet Name="UtilityBills" EntityType="NhaTroAnCuModel.UtilityBill" />
-          <AssociationSet Name="FK__PaymentHi__Utili__1BC821DD" Association="NhaTroAnCuModel.FK__PaymentHi__Utili__1BC821DD">
-            <End Role="UtilityBill" EntitySet="UtilityBills" />
-            <End Role="PaymentHistory" EntitySet="PaymentHistories" />
-          </AssociationSet>
-          <AssociationSet Name="FK_UtilityBills_Rooms" Association="NhaTroAnCuModel.FK_UtilityBills_Rooms">
-            <End Role="Room" EntitySet="Rooms" />
-            <End Role="UtilityBill" EntitySet="UtilityBills" />
-          </AssociationSet>
-          <EntitySet Name="ContractExtensionHistories" EntityType="NhaTroAnCuModel.ContractExtensionHistory" />
           <AssociationSet Name="FK__ContractE__Contr__2180FB33" Association="NhaTroAnCuModel.FK__ContractE__Contr__2180FB33">
             <End Role="Contract" EntitySet="Contracts" />
             <End Role="ContractExtensionHistory" EntitySet="ContractExtensionHistories" />
           </AssociationSet>
-          <EntitySet Name="IncomeExpenseCategories" EntityType="NhaTroAnCuModel.IncomeExpenseCategory" />
-          <EntitySet Name="IncomeExpenses" EntityType="NhaTroAnCuModel.IncomeExpense" />
+          <AssociationSet Name="FK_ContractRooms_Contracts" Association="NhaTroAnCuModel.FK_ContractRooms_Contracts">
+            <End Role="Contract" EntitySet="Contracts" />
+            <End Role="ContractRoom" EntitySet="ContractRooms" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ContractRooms_Rooms" Association="NhaTroAnCuModel.FK_ContractRooms_Rooms">
+            <End Role="Room" EntitySet="Rooms" />
+            <End Role="ContractRoom" EntitySet="ContractRooms" />
+          </AssociationSet>
+          <AssociationSet Name="FK__ContractT__Contr__6FB49575" Association="NhaTroAnCuModel.FK__ContractT__Contr__6FB49575">
+            <End Role="Contract" EntitySet="Contracts" />
+            <End Role="ContractTenant" EntitySet="ContractTenants" />
+          </AssociationSet>
           <AssociationSet Name="FK__IncomeExp__Contr__339FAB6E" Association="NhaTroAnCuModel.FK__IncomeExp__Contr__339FAB6E">
             <End Role="Contract" EntitySet="Contracts" />
             <End Role="IncomeExpens" EntitySet="IncomeExpenses" />
+          </AssociationSet>
+          <AssociationSet Name="FK_UtilityBills_Contracts" Association="NhaTroAnCuModel.FK_UtilityBills_Contracts">
+            <End Role="Contract" EntitySet="Contracts" />
+            <End Role="UtilityBill" EntitySet="UtilityBills" />
+          </AssociationSet>
+          <AssociationSet Name="FK__ContractT__RoomI__719CDDE7" Association="NhaTroAnCuModel.FK__ContractT__RoomI__719CDDE7">
+            <End Role="Room" EntitySet="Rooms" />
+            <End Role="ContractTenant" EntitySet="ContractTenants" />
+          </AssociationSet>
+          <AssociationSet Name="FK__ContractT__Tenan__70A8B9AE" Association="NhaTroAnCuModel.FK__ContractT__Tenan__70A8B9AE">
+            <End Role="Tenant" EntitySet="Tenants" />
+            <End Role="ContractTenant" EntitySet="ContractTenants" />
           </AssociationSet>
           <AssociationSet Name="FK__IncomeExp__Categ__32AB8735" Association="NhaTroAnCuModel.FK__IncomeExp__Categ__32AB8735">
             <End Role="IncomeExpenseCategory" EntitySet="IncomeExpenseCategories" />
             <End Role="IncomeExpens" EntitySet="IncomeExpenses" />
           </AssociationSet>
-          <AssociationSet Name="FK__IncomeExp__RoomI__3493CFA7" Association="NhaTroAnCuModel.FK__IncomeExp__RoomI__3493CFA7">
-            <End Role="Room" EntitySet="Rooms" />
-            <End Role="IncomeExpens" EntitySet="IncomeExpenses" />
-          </AssociationSet>
-          <AssociationSet Name="FK__Contracts__Depos__4C6B5938" Association="NhaTroAnCuModel.FK__Contracts__Depos__4C6B5938">
-            <End Role="IncomeExpens" EntitySet="IncomeExpenses" />
-            <End Role="Contract" EntitySet="Contracts" />
+          <AssociationSet Name="AspNetUserRoles" Association="NhaTroAnCuModel.AspNetUserRoles">
+            <End Role="AspNetRole" EntitySet="AspNetRoles" />
+            <End Role="AspNetUser" EntitySet="AspNetUsers" />
           </AssociationSet>
         </EntityContainer>
         <EntityType Name="C__MigrationHistory">
@@ -816,6 +592,176 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <NavigationProperty Name="AspNetUserLogins" Relationship="NhaTroAnCuModel.FK_dbo_AspNetUserLogins_dbo_AspNetUsers_UserId" FromRole="AspNetUser" ToRole="AspNetUserLogin" />
           <NavigationProperty Name="AspNetRoles" Relationship="NhaTroAnCuModel.AspNetUserRoles" FromRole="AspNetUser" ToRole="AspNetRole" />
         </EntityType>
+        <EntityType Name="ContractExtensionHistory">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ContractId" Type="Int32" Nullable="false" />
+          <Property Name="ExtendedAt" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="OldEndDate" Type="DateTime" Precision="3" />
+          <Property Name="NewEndDate" Type="DateTime" Precision="3" />
+          <Property Name="ExtendMonths" Type="Int32" />
+          <Property Name="Note" Type="String" MaxLength="255" FixedLength="false" Unicode="true" />
+          <NavigationProperty Name="Contract" Relationship="NhaTroAnCuModel.FK__ContractE__Contr__2180FB33" FromRole="ContractExtensionHistory" ToRole="Contract" />
+        </EntityType>
+        <EntityType Name="ContractRoom">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ContractId" Type="Int32" Nullable="false" />
+          <Property Name="RoomId" Type="Int32" Nullable="false" />
+          <Property Name="PriceAgreed" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="Notes" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <NavigationProperty Name="Contract" Relationship="NhaTroAnCuModel.FK_ContractRooms_Contracts" FromRole="ContractRoom" ToRole="Contract" />
+          <NavigationProperty Name="Room" Relationship="NhaTroAnCuModel.FK_ContractRooms_Rooms" FromRole="ContractRoom" ToRole="Room" />
+        </EntityType>
+        <EntityType Name="Contract">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="PriceAgreed" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="StartDate" Type="DateTime" Nullable="false" Precision="0" />
+          <Property Name="EndDate" Type="DateTime" Nullable="false" Precision="0" />
+          <Property Name="Status" Type="String" Nullable="false" MaxLength="20" FixedLength="false" Unicode="true" />
+          <Property Name="Note" Type="String" MaxLength="500" FixedLength="false" Unicode="true" />
+          <Property Name="MoveInDate" Type="DateTime" Nullable="false" Precision="0" />
+          <Property Name="ElectricityPrice" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="WaterPrice" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="ContractScanFilePath" Type="String" MaxLength="250" FixedLength="false" Unicode="true" />
+          <NavigationProperty Name="ContractExtensionHistories" Relationship="NhaTroAnCuModel.FK__ContractE__Contr__2180FB33" FromRole="Contract" ToRole="ContractExtensionHistory" />
+          <NavigationProperty Name="ContractRooms" Relationship="NhaTroAnCuModel.FK_ContractRooms_Contracts" FromRole="Contract" ToRole="ContractRoom" />
+          <NavigationProperty Name="ContractTenants" Relationship="NhaTroAnCuModel.FK__ContractT__Contr__6FB49575" FromRole="Contract" ToRole="ContractTenant" />
+          <NavigationProperty Name="IncomeExpenses" Relationship="NhaTroAnCuModel.FK__IncomeExp__Contr__339FAB6E" FromRole="Contract" ToRole="IncomeExpens" />
+          <NavigationProperty Name="UtilityBills" Relationship="NhaTroAnCuModel.FK_UtilityBills_Contracts" FromRole="Contract" ToRole="UtilityBill" />
+        </EntityType>
+        <EntityType Name="ContractTenant">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="RoomId" Type="Int32" Nullable="false" />
+          <Property Name="TenantId" Type="Int32" Nullable="false" />
+          <Property Name="ContractId" Type="Int32" Nullable="false" />
+          <Property Name="CreatedAt" Type="DateTime" Nullable="false" Precision="3" />
+          <NavigationProperty Name="Contract" Relationship="NhaTroAnCuModel.FK__ContractT__Contr__6FB49575" FromRole="ContractTenant" ToRole="Contract" />
+          <NavigationProperty Name="Room" Relationship="NhaTroAnCuModel.FK__ContractT__RoomI__719CDDE7" FromRole="ContractTenant" ToRole="Room" />
+          <NavigationProperty Name="Tenant" Relationship="NhaTroAnCuModel.FK__ContractT__Tenan__70A8B9AE" FromRole="ContractTenant" ToRole="Tenant" />
+        </EntityType>
+        <EntityType Name="IncomeExpenseCategory">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="Name" Type="String" Nullable="false" MaxLength="100" FixedLength="false" Unicode="true" />
+          <Property Name="Type" Type="String" Nullable="false" MaxLength="10" FixedLength="false" Unicode="true" />
+          <Property Name="IsSystem" Type="Boolean" Nullable="false" />
+          <Property Name="IsActive" Type="Boolean" Nullable="false" />
+          <Property Name="CreatedAt" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="UpdatedAt" Type="DateTime" Precision="3" />
+          <NavigationProperty Name="IncomeExpenses" Relationship="NhaTroAnCuModel.FK__IncomeExp__Categ__32AB8735" FromRole="IncomeExpenseCategory" ToRole="IncomeExpens" />
+        </EntityType>
+        <EntityType Name="IncomeExpense">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="CategoryId" Type="Int32" Nullable="false" />
+          <Property Name="ContractId" Type="Int32" />
+          <Property Name="Amount" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="TransactionDate" Type="DateTime" Nullable="false" Precision="0" />
+          <Property Name="Description" Type="String" MaxLength="500" FixedLength="false" Unicode="true" />
+          <Property Name="ReferenceNumber" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="CreatedBy" Type="String" MaxLength="128" FixedLength="false" Unicode="true" />
+          <Property Name="CreatedAt" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="UpdatedAt" Type="DateTime" Precision="3" />
+          <NavigationProperty Name="Contract" Relationship="NhaTroAnCuModel.FK__IncomeExp__Contr__339FAB6E" FromRole="IncomeExpens" ToRole="Contract" />
+          <NavigationProperty Name="IncomeExpenseCategory" Relationship="NhaTroAnCuModel.FK__IncomeExp__Categ__32AB8735" FromRole="IncomeExpens" ToRole="IncomeExpenseCategory" />
+        </EntityType>
+        <EntityType Name="PaymentHistory">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="RoomId" Type="Int32" Nullable="false" />
+          <Property Name="Month" Type="Int32" Nullable="false" />
+          <Property Name="Year" Type="Int32" Nullable="false" />
+          <Property Name="ContractId" Type="Int32" Nullable="false" />
+          <Property Name="UtilityBillId" Type="Int32" />
+          <Property Name="TotalAmount" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="PaidDate" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="Note" Type="String" MaxLength="250" FixedLength="false" Unicode="true" />
+          <Property Name="CreatedAt" Type="DateTime" Precision="3" />
+        </EntityType>
+        <EntityType Name="Room">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="Name" Type="String" Nullable="false" MaxLength="10" FixedLength="false" Unicode="true" />
+          <Property Name="Area" Type="String" Nullable="false" MaxLength="1" FixedLength="true" Unicode="false" />
+          <Property Name="Floor" Type="Int32" Nullable="false" />
+          <Property Name="RoomNumber" Type="Int32" Nullable="false" />
+          <Property Name="DefaultPrice" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="HasAirCondition" Type="Boolean" Nullable="false" />
+          <Property Name="HasFridge" Type="Boolean" Nullable="false" />
+          <Property Name="IsOccupied" Type="Boolean" Nullable="false" />
+          <Property Name="HasWaterHeater" Type="Boolean" Nullable="false" />
+          <Property Name="HasBed" Type="Boolean" Nullable="false" />
+          <Property Name="HasWardrobe" Type="Boolean" Nullable="false" />
+          <NavigationProperty Name="ContractRooms" Relationship="NhaTroAnCuModel.FK_ContractRooms_Rooms" FromRole="Room" ToRole="ContractRoom" />
+          <NavigationProperty Name="ContractTenants" Relationship="NhaTroAnCuModel.FK__ContractT__RoomI__719CDDE7" FromRole="Room" ToRole="ContractTenant" />
+        </EntityType>
+        <EntityType Name="Tenant">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="FullName" Type="String" Nullable="false" MaxLength="100" FixedLength="false" Unicode="true" />
+          <Property Name="IdentityCard" Type="String" Nullable="false" MaxLength="20" FixedLength="false" Unicode="true" />
+          <Property Name="PhoneNumber" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
+          <Property Name="Photo" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="BirthDate" Type="DateTime" Precision="0" />
+          <Property Name="Gender" Type="String" MaxLength="10" FixedLength="false" Unicode="true" />
+          <Property Name="PermanentAddress" Type="String" MaxLength="255" FixedLength="false" Unicode="true" />
+          <Property Name="Ethnicity" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="VehiclePlate" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
+          <NavigationProperty Name="ContractTenants" Relationship="NhaTroAnCuModel.FK__ContractT__Tenan__70A8B9AE" FromRole="Tenant" ToRole="ContractTenant" />
+        </EntityType>
+        <EntityType Name="UtilityBill">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="Month" Type="Int32" Nullable="false" />
+          <Property Name="Year" Type="Int32" Nullable="false" />
+          <Property Name="ContractId" Type="Int32" Nullable="false" />
+          <Property Name="WaterIndexStart" Type="Int32" Nullable="false" />
+          <Property Name="WaterIndexEnd" Type="Int32" Nullable="false" />
+          <Property Name="ElectricityAmount" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="WaterAmount" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="RentAmount" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="ExtraCharge" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="Discount" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="TotalAmount" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="BillNote" Type="String" MaxLength="250" FixedLength="false" Unicode="true" />
+          <Property Name="BillStatus" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="CreatedAt" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="UpdatedAt" Type="DateTime" Precision="3" />
+          <NavigationProperty Name="Contract" Relationship="NhaTroAnCuModel.FK_UtilityBills_Contracts" FromRole="UtilityBill" ToRole="Contract" />
+        </EntityType>
+        <EntityType Name="FPTReaderAPI">
+          <Key>
+            <PropertyRef Name="ApiKey" />
+            <PropertyRef Name="Email" />
+            <PropertyRef Name="Status" />
+          </Key>
+          <Property Name="ApiKey" Type="String" Nullable="false" MaxLength="150" FixedLength="false" Unicode="true" />
+          <Property Name="Email" Type="String" Nullable="false" MaxLength="150" FixedLength="false" Unicode="true" />
+          <Property Name="Status" Type="Boolean" Nullable="false" />
+        </EntityType>
         <Association Name="FK_dbo_AspNetUserClaims_dbo_AspNetUsers_UserId">
           <End Type="NhaTroAnCuModel.AspNetUser" Role="AspNetUser" Multiplicity="1">
             <OnDelete Action="Cascade" />
@@ -844,107 +790,6 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             </Dependent>
           </ReferentialConstraint>
         </Association>
-        <Association Name="AspNetUserRoles">
-          <End Type="NhaTroAnCuModel.AspNetRole" Role="AspNetRole" Multiplicity="*" />
-          <End Type="NhaTroAnCuModel.AspNetUser" Role="AspNetUser" Multiplicity="*" />
-        </Association>
-        <Association Name="FK_PaymentHistories_Contracts">
-          <End Type="NhaTroAnCuModel.Contract" Role="Contract" Multiplicity="1" />
-          <End Type="NhaTroAnCuModel.PaymentHistory" Role="PaymentHistory" Multiplicity="*" />
-          <ReferentialConstraint>
-            <Principal Role="Contract">
-              <PropertyRef Name="Id" />
-            </Principal>
-            <Dependent Role="PaymentHistory">
-              <PropertyRef Name="ContractId" />
-            </Dependent>
-          </ReferentialConstraint>
-        </Association>
-        <EntityType Name="WaterIndex">
-          <Key>
-            <PropertyRef Name="Id" />
-          </Key>
-          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
-          <Property Name="RoomId" Type="Int32" Nullable="false" />
-          <Property Name="Month" Type="Int32" Nullable="false" />
-          <Property Name="Year" Type="Int32" Nullable="false" />          
-          <Property Name="CreatedAt" Type="DateTime" Nullable="false" Precision="3" />
-          <Property Name="WaterReading" Type="Int32" Nullable="false" />
-        </EntityType>
-        <EntityType Name="FPTReaderAPI">
-          <Key>
-            <PropertyRef Name="ApiKey" />
-            <PropertyRef Name="Email" />
-            <PropertyRef Name="Status" />
-          </Key>
-          <Property Name="ApiKey" Type="String" Nullable="false" MaxLength="150" FixedLength="false" Unicode="true" />
-          <Property Name="Email" Type="String" Nullable="false" MaxLength="150" FixedLength="false" Unicode="true" />
-          <Property Name="Status" Type="Boolean" Nullable="false" />
-        </EntityType>
-        <EntityType Name="UtilityBill">
-          <Key>
-            <PropertyRef Name="Id" />
-          </Key>
-          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
-          <Property Name="RoomId" Type="Int32" Nullable="false" />
-          <Property Name="Month" Type="Int32" Nullable="false" />
-          <Property Name="Year" Type="Int32" Nullable="false" />
-          <Property Name="ContractId" Type="Int32" />
-          <Property Name="WaterIndexStart" Type="Int32" />
-          <Property Name="WaterIndexEnd" Type="Int32" />
-          <Property Name="WaterPrice" Type="Decimal" Precision="18" Scale="2" />
-          <Property Name="ElectricityAmount" Type="Decimal" Precision="18" Scale="2" />
-          <Property Name="Water" Type="Decimal" Precision="18" Scale="2" />
-          <Property Name="RentAmount" Type="Decimal" Precision="18" Scale="2" />
-          <Property Name="ExtraCharge" Type="Decimal" Precision="18" Scale="2" />
-          <Property Name="Discount" Type="Decimal" Precision="18" Scale="2" />
-          <Property Name="TotalAmount" Type="Decimal" Precision="18" Scale="2" />
-          <Property Name="BillNote" Type="String" MaxLength="250" FixedLength="false" Unicode="true" />
-          <Property Name="BillStatus" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
-          <Property Name="CreatedAt" Type="DateTime" Precision="3" />
-          <Property Name="UpdatedAt" Type="DateTime" Precision="3" />
-          <NavigationProperty Name="PaymentHistories" Relationship="NhaTroAnCuModel.FK__PaymentHi__Utili__1BC821DD" FromRole="UtilityBill" ToRole="PaymentHistory" />
-          <NavigationProperty Name="Room" Relationship="NhaTroAnCuModel.FK_UtilityBills_Rooms" FromRole="UtilityBill" ToRole="Room" />
-        </EntityType>
-        <Association Name="FK__PaymentHi__Utili__1BC821DD">
-          <End Type="NhaTroAnCuModel.UtilityBill" Role="UtilityBill" Multiplicity="0..1" />
-          <End Type="NhaTroAnCuModel.PaymentHistory" Role="PaymentHistory" Multiplicity="*" />
-          <ReferentialConstraint>
-            <Principal Role="UtilityBill">
-              <PropertyRef Name="Id" />
-            </Principal>
-            <Dependent Role="PaymentHistory">
-              <PropertyRef Name="UtilityBillId" />
-            </Dependent>
-          </ReferentialConstraint>
-        </Association>
-        <Association Name="FK_UtilityBills_Rooms">
-          <End Type="NhaTroAnCuModel.Room" Role="Room" Multiplicity="1">
-            <OnDelete Action="Cascade" />
-          </End>
-          <End Type="NhaTroAnCuModel.UtilityBill" Role="UtilityBill" Multiplicity="*" />
-          <ReferentialConstraint>
-            <Principal Role="Room">
-              <PropertyRef Name="Id" />
-            </Principal>
-            <Dependent Role="UtilityBill">
-              <PropertyRef Name="RoomId" />
-            </Dependent>
-          </ReferentialConstraint>
-        </Association>
-        <EntityType Name="ContractExtensionHistory">
-          <Key>
-            <PropertyRef Name="Id" />
-          </Key>
-          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
-          <Property Name="ContractId" Type="Int32" Nullable="false" />
-          <Property Name="ExtendedAt" Type="DateTime" Nullable="false" Precision="3" />
-          <Property Name="OldEndDate" Type="DateTime" Precision="3" />
-          <Property Name="NewEndDate" Type="DateTime" Precision="3" />
-          <Property Name="ExtendMonths" Type="Int32" />
-          <Property Name="Note" Type="String" MaxLength="255" FixedLength="false" Unicode="true" />
-          <NavigationProperty Name="Contract" Relationship="NhaTroAnCuModel.FK__ContractE__Contr__2180FB33" FromRole="ContractExtensionHistory" ToRole="Contract" />
-        </EntityType>
         <Association Name="FK__ContractE__Contr__2180FB33">
           <End Type="NhaTroAnCuModel.Contract" Role="Contract" Multiplicity="1" />
           <End Type="NhaTroAnCuModel.ContractExtensionHistory" Role="ContractExtensionHistory" Multiplicity="*" />
@@ -957,39 +802,44 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             </Dependent>
           </ReferentialConstraint>
         </Association>
-        <EntityType Name="IncomeExpenseCategory">
-          <Key>
-            <PropertyRef Name="Id" />
-          </Key>
-          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
-          <Property Name="Name" Type="String" Nullable="false" MaxLength="100" FixedLength="false" Unicode="true" />
-          <Property Name="Type" Type="String" Nullable="false" MaxLength="10" FixedLength="false" Unicode="true" />
-          <Property Name="IsSystem" Type="Boolean" Nullable="false" />
-          <Property Name="IsActive" Type="Boolean" Nullable="false" />
-          <Property Name="CreatedAt" Type="DateTime" Precision="3" Nullable="false" />
-          <Property Name="UpdatedAt" Type="DateTime" Precision="3" />
-          <NavigationProperty Name="IncomeExpenses" Relationship="NhaTroAnCuModel.FK__IncomeExp__Categ__32AB8735" FromRole="IncomeExpenseCategory" ToRole="IncomeExpens" />
-        </EntityType>
-        <EntityType Name="IncomeExpense">
-          <Key>
-            <PropertyRef Name="Id" />
-          </Key>
-          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
-          <Property Name="CategoryId" Type="Int32" Nullable="false" />
-          <Property Name="ContractId" Type="Int32" />
-          <Property Name="RoomId" Type="Int32" />
-          <Property Name="Amount" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
-          <Property Name="TransactionDate" Type="DateTime" Nullable="false" Precision="0" />
-          <Property Name="Description" Type="String" MaxLength="500" FixedLength="false" Unicode="true" />
-          <Property Name="ReferenceNumber" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
-          <Property Name="CreatedBy" Type="String" MaxLength="128" FixedLength="false" Unicode="true" />
-          <Property Name="CreatedAt" Type="DateTime" Precision="3" Nullable="false" />
-          <Property Name="UpdatedAt" Type="DateTime" Precision="3" />
-          <NavigationProperty Name="Contract" Relationship="NhaTroAnCuModel.FK__IncomeExp__Contr__339FAB6E" FromRole="IncomeExpens" ToRole="Contract" />
-          <NavigationProperty Name="IncomeExpenseCategory" Relationship="NhaTroAnCuModel.FK__IncomeExp__Categ__32AB8735" FromRole="IncomeExpens" ToRole="IncomeExpenseCategory" />
-          <NavigationProperty Name="Room" Relationship="NhaTroAnCuModel.FK__IncomeExp__RoomI__3493CFA7" FromRole="IncomeExpens" ToRole="Room" />
-          <NavigationProperty Name="Contracts" Relationship="NhaTroAnCuModel.FK__Contracts__Depos__4C6B5938" FromRole="IncomeExpens" ToRole="Contract" />
-        </EntityType>
+        <Association Name="FK_ContractRooms_Contracts">
+          <End Type="NhaTroAnCuModel.Contract" Role="Contract" Multiplicity="1" />
+          <End Type="NhaTroAnCuModel.ContractRoom" Role="ContractRoom" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Contract">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="ContractRoom">
+              <PropertyRef Name="ContractId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ContractRooms_Rooms">
+          <End Type="NhaTroAnCuModel.Room" Role="Room" Multiplicity="1" />
+          <End Type="NhaTroAnCuModel.ContractRoom" Role="ContractRoom" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Room">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="ContractRoom">
+              <PropertyRef Name="RoomId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__ContractT__Contr__6FB49575">
+          <End Type="NhaTroAnCuModel.Contract" Role="Contract" Multiplicity="1">
+            <OnDelete Action="Cascade" />
+          </End>
+          <End Type="NhaTroAnCuModel.ContractTenant" Role="ContractTenant" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Contract">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="ContractTenant">
+              <PropertyRef Name="ContractId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
         <Association Name="FK__IncomeExp__Contr__339FAB6E">
           <End Type="NhaTroAnCuModel.Contract" Role="Contract" Multiplicity="0..1" />
           <End Type="NhaTroAnCuModel.IncomeExpense" Role="IncomeExpens" Multiplicity="*" />
@@ -999,6 +849,42 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             </Principal>
             <Dependent Role="IncomeExpens">
               <PropertyRef Name="ContractId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_UtilityBills_Contracts">
+          <End Type="NhaTroAnCuModel.Contract" Role="Contract" Multiplicity="1" />
+          <End Type="NhaTroAnCuModel.UtilityBill" Role="UtilityBill" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Contract">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="UtilityBill">
+              <PropertyRef Name="ContractId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__ContractT__RoomI__719CDDE7">
+          <End Type="NhaTroAnCuModel.Room" Role="Room" Multiplicity="1" />
+          <End Type="NhaTroAnCuModel.ContractTenant" Role="ContractTenant" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Room">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="ContractTenant">
+              <PropertyRef Name="RoomId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__ContractT__Tenan__70A8B9AE">
+          <End Type="NhaTroAnCuModel.Tenant" Role="Tenant" Multiplicity="1" />
+          <End Type="NhaTroAnCuModel.ContractTenant" Role="ContractTenant" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Tenant">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="ContractTenant">
+              <PropertyRef Name="TenantId" />
             </Dependent>
           </ReferentialConstraint>
         </Association>
@@ -1014,127 +900,16 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             </Dependent>
           </ReferentialConstraint>
         </Association>
-        <Association Name="FK__IncomeExp__RoomI__3493CFA7">
-          <End Type="NhaTroAnCuModel.Room" Role="Room" Multiplicity="0..1" />
-          <End Type="NhaTroAnCuModel.IncomeExpense" Role="IncomeExpens" Multiplicity="*" />
-          <ReferentialConstraint>
-            <Principal Role="Room">
-              <PropertyRef Name="Id" />
-            </Principal>
-            <Dependent Role="IncomeExpens">
-              <PropertyRef Name="RoomId" />
-            </Dependent>
-          </ReferentialConstraint>
+        <Association Name="AspNetUserRoles">
+          <End Type="NhaTroAnCuModel.AspNetRole" Role="AspNetRole" Multiplicity="*" />
+          <End Type="NhaTroAnCuModel.AspNetUser" Role="AspNetUser" Multiplicity="*" />
         </Association>
-        <Association Name="FK__Contracts__Depos__4C6B5938">
-          <End Type="NhaTroAnCuModel.IncomeExpense" Role="IncomeExpens" Multiplicity="0..1" />
-          <End Type="NhaTroAnCuModel.Contract" Role="Contract" Multiplicity="*" />
-          <ReferentialConstraint>
-            <Principal Role="IncomeExpens">
-              <PropertyRef Name="Id" />
-            </Principal>
-            <Dependent Role="Contract">
-              <PropertyRef Name="DepositIncomeId" />
-            </Dependent>
-          </ReferentialConstraint>
-        </Association>
-      </Schema>
+        </Schema>
     </edmx:ConceptualModels>
     <!-- C-S mapping content -->
     <edmx:Mappings>
       <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
         <EntityContainerMapping StorageEntityContainer="NhaTroAnCuModelStoreContainer" CdmEntityContainer="NhaTroAnCuEntities">
-          <EntitySetMapping Name="Contracts">
-            <EntityTypeMapping TypeName="NhaTroAnCuModel.Contract">
-              <MappingFragment StoreEntitySet="Contracts">
-                <ScalarProperty Name="DepositIncomeId" ColumnName="DepositIncomeId" />
-                <ScalarProperty Name="DepositCollectedDate" ColumnName="DepositCollectedDate" />
-                <ScalarProperty Name="DepositCollected" ColumnName="DepositCollected" />
-                <ScalarProperty Name="ContractScanFilePath" ColumnName="ContractScanFilePath" />
-                <ScalarProperty Name="WaterPrice" ColumnName="WaterPrice" />
-                <ScalarProperty Name="ElectricityPrice" ColumnName="ElectricityPrice" />
-                <ScalarProperty Name="MoveInDate" ColumnName="MoveInDate" />
-                <ScalarProperty Name="Note" ColumnName="Note" />
-                <ScalarProperty Name="Id" ColumnName="Id" />
-                <ScalarProperty Name="RoomId" ColumnName="RoomId" />
-                <ScalarProperty Name="PriceAgreed" ColumnName="PriceAgreed" />
-                <ScalarProperty Name="DepositAmount" ColumnName="DepositAmount" />
-                <ScalarProperty Name="StartDate" ColumnName="StartDate" />
-                <ScalarProperty Name="EndDate" ColumnName="EndDate" />
-                <ScalarProperty Name="Status" ColumnName="Status" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
-          <EntitySetMapping Name="ContractTenants">
-            <EntityTypeMapping TypeName="NhaTroAnCuModel.ContractTenant">
-              <MappingFragment StoreEntitySet="ContractTenants">
-                <ScalarProperty Name="ContractId" ColumnName="ContractId" />
-                <ScalarProperty Name="TenantId" ColumnName="TenantId" />
-                <ScalarProperty Name="CreatedAt" ColumnName="CreatedAt" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
-          <EntitySetMapping Name="Notifications">
-            <EntityTypeMapping TypeName="NhaTroAnCuModel.Notification">
-              <MappingFragment StoreEntitySet="Notifications">
-                <ScalarProperty Name="Id" ColumnName="Id" />
-                <ScalarProperty Name="TenantId" ColumnName="TenantId" />
-                <ScalarProperty Name="Content" ColumnName="Content" />
-                <ScalarProperty Name="CreatedAt" ColumnName="CreatedAt" />
-                <ScalarProperty Name="IsRead" ColumnName="IsRead" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
-          <EntitySetMapping Name="PaymentHistories">
-            <EntityTypeMapping TypeName="NhaTroAnCuModel.PaymentHistory">
-              <MappingFragment StoreEntitySet="PaymentHistories">
-                <ScalarProperty Name="CreatedAt" ColumnName="CreatedAt" />
-                <ScalarProperty Name="UtilityBillId" ColumnName="UtilityBillId" />
-                <ScalarProperty Name="ContractId" ColumnName="ContractId" />
-                <ScalarProperty Name="Id" ColumnName="Id" />
-                <ScalarProperty Name="RoomId" ColumnName="RoomId" />
-                <ScalarProperty Name="Month" ColumnName="Month" />
-                <ScalarProperty Name="Year" ColumnName="Year" />
-                <ScalarProperty Name="TotalAmount" ColumnName="TotalAmount" />
-                <ScalarProperty Name="PaidDate" ColumnName="PaidDate" />
-                <ScalarProperty Name="Note" ColumnName="Note" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
-          <EntitySetMapping Name="Rooms">
-            <EntityTypeMapping TypeName="NhaTroAnCuModel.Room">
-              <MappingFragment StoreEntitySet="Rooms">
-                <ScalarProperty Name="HasWardrobe" ColumnName="HasWardrobe" />
-                <ScalarProperty Name="HasBed" ColumnName="HasBed" />
-                <ScalarProperty Name="HasWaterHeater" ColumnName="HasWaterHeater" />
-                <ScalarProperty Name="Id" ColumnName="Id" />
-                <ScalarProperty Name="Name" ColumnName="Name" />
-                <ScalarProperty Name="Area" ColumnName="Area" />
-                <ScalarProperty Name="Floor" ColumnName="Floor" />
-                <ScalarProperty Name="RoomNumber" ColumnName="RoomNumber" />
-                <ScalarProperty Name="DefaultPrice" ColumnName="DefaultPrice" />
-                <ScalarProperty Name="HasAirCondition" ColumnName="HasAirCondition" />
-                <ScalarProperty Name="HasFridge" ColumnName="HasFridge" />
-                <ScalarProperty Name="IsOccupied" ColumnName="IsOccupied" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
-          <EntitySetMapping Name="Tenants">
-            <EntityTypeMapping TypeName="NhaTroAnCuModel.Tenant">
-              <MappingFragment StoreEntitySet="Tenants">
-                <ScalarProperty Name="VehiclePlate" ColumnName="VehiclePlate" />
-                <ScalarProperty Name="Ethnicity" ColumnName="Ethnicity" />
-                <ScalarProperty Name="PermanentAddress" ColumnName="PermanentAddress" />
-                <ScalarProperty Name="Gender" ColumnName="Gender" />
-                <ScalarProperty Name="BirthDate" ColumnName="BirthDate" />
-                <ScalarProperty Name="Id" ColumnName="Id" />
-                <ScalarProperty Name="FullName" ColumnName="FullName" />
-                <ScalarProperty Name="IdentityCard" ColumnName="IdentityCard" />
-                <ScalarProperty Name="PhoneNumber" ColumnName="PhoneNumber" />
-                <ScalarProperty Name="Photo" ColumnName="Photo" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
           <EntitySetMapping Name="C__MigrationHistory">
             <EntityTypeMapping TypeName="NhaTroAnCuModel.C__MigrationHistory">
               <MappingFragment StoreEntitySet="__MigrationHistory">
@@ -1190,59 +965,6 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>
-          <AssociationSetMapping Name="AspNetUserRoles" TypeName="NhaTroAnCuModel.AspNetUserRoles" StoreEntitySet="AspNetUserRoles">
-            <EndProperty Name="AspNetUser">
-              <ScalarProperty Name="Id" ColumnName="UserId" />
-            </EndProperty>
-            <EndProperty Name="AspNetRole">
-              <ScalarProperty Name="Id" ColumnName="RoleId" />
-            </EndProperty>
-          </AssociationSetMapping>
-          <EntitySetMapping Name="WaterIndexes">
-            <EntityTypeMapping TypeName="NhaTroAnCuModel.WaterIndex">
-              <MappingFragment StoreEntitySet="WaterIndexes">
-                <ScalarProperty Name="WaterReading" ColumnName="WaterReading" />
-                <ScalarProperty Name="CreatedAt" ColumnName="CreatedAt" />
-                <ScalarProperty Name="Year" ColumnName="Year" />
-                <ScalarProperty Name="Month" ColumnName="Month" />
-                <ScalarProperty Name="RoomId" ColumnName="RoomId" />
-                <ScalarProperty Name="Id" ColumnName="Id" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
-          <EntitySetMapping Name="FPTReaderAPIs">
-            <EntityTypeMapping TypeName="NhaTroAnCuModel.FPTReaderAPI">
-              <MappingFragment StoreEntitySet="FPTReaderAPI">
-                <ScalarProperty Name="Status" ColumnName="Status" />
-                <ScalarProperty Name="Email" ColumnName="Email" />
-                <ScalarProperty Name="ApiKey" ColumnName="ApiKey" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
-          <EntitySetMapping Name="UtilityBills">
-            <EntityTypeMapping TypeName="NhaTroAnCuModel.UtilityBill">
-              <MappingFragment StoreEntitySet="UtilityBills">
-                <ScalarProperty Name="UpdatedAt" ColumnName="UpdatedAt" />
-                <ScalarProperty Name="CreatedAt" ColumnName="CreatedAt" />
-                <ScalarProperty Name="BillStatus" ColumnName="BillStatus" />
-                <ScalarProperty Name="BillNote" ColumnName="BillNote" />
-                <ScalarProperty Name="TotalAmount" ColumnName="TotalAmount" />
-                <ScalarProperty Name="Discount" ColumnName="Discount" />
-                <ScalarProperty Name="ExtraCharge" ColumnName="ExtraCharge" />
-                <ScalarProperty Name="RentAmount" ColumnName="RentAmount" />
-                <ScalarProperty Name="Water" ColumnName="Water" />
-                <ScalarProperty Name="ElectricityAmount" ColumnName="ElectricityAmount" />
-                <ScalarProperty Name="WaterPrice" ColumnName="WaterPrice" />
-                <ScalarProperty Name="WaterIndexEnd" ColumnName="WaterIndexEnd" />
-                <ScalarProperty Name="WaterIndexStart" ColumnName="WaterIndexStart" />
-                <ScalarProperty Name="ContractId" ColumnName="ContractId" />
-                <ScalarProperty Name="Year" ColumnName="Year" />
-                <ScalarProperty Name="Month" ColumnName="Month" />
-                <ScalarProperty Name="RoomId" ColumnName="RoomId" />
-                <ScalarProperty Name="Id" ColumnName="Id" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
           <EntitySetMapping Name="ContractExtensionHistories">
             <EntityTypeMapping TypeName="NhaTroAnCuModel.ContractExtensionHistory">
               <MappingFragment StoreEntitySet="ContractExtensionHistory">
@@ -1252,6 +974,44 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
                 <ScalarProperty Name="OldEndDate" ColumnName="OldEndDate" />
                 <ScalarProperty Name="ExtendedAt" ColumnName="ExtendedAt" />
                 <ScalarProperty Name="ContractId" ColumnName="ContractId" />
+                <ScalarProperty Name="Id" ColumnName="Id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ContractRooms">
+            <EntityTypeMapping TypeName="NhaTroAnCuModel.ContractRoom">
+              <MappingFragment StoreEntitySet="ContractRooms">
+                <ScalarProperty Name="Notes" ColumnName="Notes" />
+                <ScalarProperty Name="PriceAgreed" ColumnName="PriceAgreed" />
+                <ScalarProperty Name="RoomId" ColumnName="RoomId" />
+                <ScalarProperty Name="ContractId" ColumnName="ContractId" />
+                <ScalarProperty Name="Id" ColumnName="Id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Contracts">
+            <EntityTypeMapping TypeName="NhaTroAnCuModel.Contract">
+              <MappingFragment StoreEntitySet="Contracts">
+                <ScalarProperty Name="ContractScanFilePath" ColumnName="ContractScanFilePath" />
+                <ScalarProperty Name="WaterPrice" ColumnName="WaterPrice" />
+                <ScalarProperty Name="ElectricityPrice" ColumnName="ElectricityPrice" />
+                <ScalarProperty Name="MoveInDate" ColumnName="MoveInDate" />
+                <ScalarProperty Name="Note" ColumnName="Note" />
+                <ScalarProperty Name="Status" ColumnName="Status" />
+                <ScalarProperty Name="EndDate" ColumnName="EndDate" />
+                <ScalarProperty Name="StartDate" ColumnName="StartDate" />
+                <ScalarProperty Name="PriceAgreed" ColumnName="PriceAgreed" />
+                <ScalarProperty Name="Id" ColumnName="Id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ContractTenants">
+            <EntityTypeMapping TypeName="NhaTroAnCuModel.ContractTenant">
+              <MappingFragment StoreEntitySet="ContractTenants">
+                <ScalarProperty Name="CreatedAt" ColumnName="CreatedAt" />
+                <ScalarProperty Name="ContractId" ColumnName="ContractId" />
+                <ScalarProperty Name="TenantId" ColumnName="TenantId" />
+                <ScalarProperty Name="RoomId" ColumnName="RoomId" />
                 <ScalarProperty Name="Id" ColumnName="Id" />
               </MappingFragment>
             </EntityTypeMapping>
@@ -1279,13 +1039,101 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
                 <ScalarProperty Name="Description" ColumnName="Description" />
                 <ScalarProperty Name="TransactionDate" ColumnName="TransactionDate" />
                 <ScalarProperty Name="Amount" ColumnName="Amount" />
-                <ScalarProperty Name="RoomId" ColumnName="RoomId" />
                 <ScalarProperty Name="ContractId" ColumnName="ContractId" />
                 <ScalarProperty Name="CategoryId" ColumnName="CategoryId" />
                 <ScalarProperty Name="Id" ColumnName="Id" />
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>
+          <EntitySetMapping Name="PaymentHistories">
+            <EntityTypeMapping TypeName="NhaTroAnCuModel.PaymentHistory">
+              <MappingFragment StoreEntitySet="PaymentHistories">
+                <ScalarProperty Name="CreatedAt" ColumnName="CreatedAt" />
+                <ScalarProperty Name="Note" ColumnName="Note" />
+                <ScalarProperty Name="PaidDate" ColumnName="PaidDate" />
+                <ScalarProperty Name="TotalAmount" ColumnName="TotalAmount" />
+                <ScalarProperty Name="UtilityBillId" ColumnName="UtilityBillId" />
+                <ScalarProperty Name="ContractId" ColumnName="ContractId" />
+                <ScalarProperty Name="Year" ColumnName="Year" />
+                <ScalarProperty Name="Month" ColumnName="Month" />
+                <ScalarProperty Name="RoomId" ColumnName="RoomId" />
+                <ScalarProperty Name="Id" ColumnName="Id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Rooms">
+            <EntityTypeMapping TypeName="NhaTroAnCuModel.Room">
+              <MappingFragment StoreEntitySet="Rooms">
+                <ScalarProperty Name="HasWardrobe" ColumnName="HasWardrobe" />
+                <ScalarProperty Name="HasBed" ColumnName="HasBed" />
+                <ScalarProperty Name="HasWaterHeater" ColumnName="HasWaterHeater" />
+                <ScalarProperty Name="IsOccupied" ColumnName="IsOccupied" />
+                <ScalarProperty Name="HasFridge" ColumnName="HasFridge" />
+                <ScalarProperty Name="HasAirCondition" ColumnName="HasAirCondition" />
+                <ScalarProperty Name="DefaultPrice" ColumnName="DefaultPrice" />
+                <ScalarProperty Name="RoomNumber" ColumnName="RoomNumber" />
+                <ScalarProperty Name="Floor" ColumnName="Floor" />
+                <ScalarProperty Name="Area" ColumnName="Area" />
+                <ScalarProperty Name="Name" ColumnName="Name" />
+                <ScalarProperty Name="Id" ColumnName="Id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Tenants">
+            <EntityTypeMapping TypeName="NhaTroAnCuModel.Tenant">
+              <MappingFragment StoreEntitySet="Tenants">
+                <ScalarProperty Name="VehiclePlate" ColumnName="VehiclePlate" />
+                <ScalarProperty Name="Ethnicity" ColumnName="Ethnicity" />
+                <ScalarProperty Name="PermanentAddress" ColumnName="PermanentAddress" />
+                <ScalarProperty Name="Gender" ColumnName="Gender" />
+                <ScalarProperty Name="BirthDate" ColumnName="BirthDate" />
+                <ScalarProperty Name="Photo" ColumnName="Photo" />
+                <ScalarProperty Name="PhoneNumber" ColumnName="PhoneNumber" />
+                <ScalarProperty Name="IdentityCard" ColumnName="IdentityCard" />
+                <ScalarProperty Name="FullName" ColumnName="FullName" />
+                <ScalarProperty Name="Id" ColumnName="Id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="UtilityBills">
+            <EntityTypeMapping TypeName="NhaTroAnCuModel.UtilityBill">
+              <MappingFragment StoreEntitySet="UtilityBills">
+                <ScalarProperty Name="UpdatedAt" ColumnName="UpdatedAt" />
+                <ScalarProperty Name="CreatedAt" ColumnName="CreatedAt" />
+                <ScalarProperty Name="BillStatus" ColumnName="BillStatus" />
+                <ScalarProperty Name="BillNote" ColumnName="BillNote" />
+                <ScalarProperty Name="TotalAmount" ColumnName="TotalAmount" />
+                <ScalarProperty Name="Discount" ColumnName="Discount" />
+                <ScalarProperty Name="ExtraCharge" ColumnName="ExtraCharge" />
+                <ScalarProperty Name="RentAmount" ColumnName="RentAmount" />
+                <ScalarProperty Name="WaterAmount" ColumnName="WaterAmount" />
+                <ScalarProperty Name="ElectricityAmount" ColumnName="ElectricityAmount" />
+                <ScalarProperty Name="WaterIndexEnd" ColumnName="WaterIndexEnd" />
+                <ScalarProperty Name="WaterIndexStart" ColumnName="WaterIndexStart" />
+                <ScalarProperty Name="ContractId" ColumnName="ContractId" />
+                <ScalarProperty Name="Year" ColumnName="Year" />
+                <ScalarProperty Name="Month" ColumnName="Month" />
+                <ScalarProperty Name="Id" ColumnName="Id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="FPTReaderAPIs">
+            <EntityTypeMapping TypeName="NhaTroAnCuModel.FPTReaderAPI">
+              <MappingFragment StoreEntitySet="FPTReaderAPI">
+                <ScalarProperty Name="Status" ColumnName="Status" />
+                <ScalarProperty Name="Email" ColumnName="Email" />
+                <ScalarProperty Name="ApiKey" ColumnName="ApiKey" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <AssociationSetMapping Name="AspNetUserRoles" TypeName="NhaTroAnCuModel.AspNetUserRoles" StoreEntitySet="AspNetUserRoles">
+            <EndProperty Name="AspNetUser">
+              <ScalarProperty Name="Id" ColumnName="UserId" />
+            </EndProperty>
+            <EndProperty Name="AspNetRole">
+              <ScalarProperty Name="Id" ColumnName="RoleId" />
+            </EndProperty>
+          </AssociationSetMapping>
         </EntityContainerMapping>
       </Mapping>
     </edmx:Mappings>

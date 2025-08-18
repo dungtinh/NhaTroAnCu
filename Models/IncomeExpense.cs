@@ -14,16 +14,9 @@ namespace NhaTroAnCu.Models
     
     public partial class IncomeExpense
     {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
-        public IncomeExpense()
-        {
-            this.Contracts = new HashSet<Contract>();
-        }
-    
         public int Id { get; set; }
         public int CategoryId { get; set; }
         public Nullable<int> ContractId { get; set; }
-        public Nullable<int> RoomId { get; set; }
         public decimal Amount { get; set; }
         public System.DateTime TransactionDate { get; set; }
         public string Description { get; set; }
@@ -34,8 +27,5 @@ namespace NhaTroAnCu.Models
     
         public virtual Contract Contract { get; set; }
         public virtual IncomeExpenseCategory IncomeExpenseCategory { get; set; }
-        public virtual Room Room { get; set; }
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<Contract> Contracts { get; set; }
     }
 }

@@ -4,7 +4,6 @@ using System.Data.Entity;
 using System.Linq;
 using System.Web.Mvc;
 using Microsoft.AspNet.Identity;
-using System.Diagnostics.Contracts;
 
 namespace NhaTroAnCu.Controllers
 {
@@ -29,8 +28,7 @@ namespace NhaTroAnCu.Controllers
 
             var query = db.IncomeExpenses
                 .Include(i => i.IncomeExpenseCategory)
-                .Include(i => i.Room)
-                .Include(i => i.Contract)
+                .Include(i => i.Contract.ContractRooms.Select(cr => cr.Room))
                 .AsQueryable();
 
             if (from.HasValue)
@@ -63,9 +61,9 @@ namespace NhaTroAnCu.Controllers
                     TransactionDate = x.TransactionDate,
                     Description = x.Description,
                     ReferenceNumber = x.ReferenceNumber,
-                    RoomName = x.Room != null ? x.Room.Name : "",
                     ContractInfo = x.Contract != null ?
-                        "HĐ #" + x.Contract.Id + " - Phòng " + x.Contract.Room.Name : "",
+                        "HĐ #" + x.Contract.Id + " - Phòng: " +
+                        string.Join(", ", x.Contract.ContractRooms.Select(cr => cr.Room.Name)) : "",
                     CreatedAt = x.CreatedAt
                 }).ToList();
 
@@ -117,7 +115,6 @@ namespace NhaTroAnCu.Controllers
                 {
                     CategoryId = model.CategoryId,
                     ContractId = model.ContractId,
-                    RoomId = model.RoomId,
                     Amount = model.Amount,
                     TransactionDate = model.TransactionDate,
                     Description = model.Description,
@@ -148,7 +145,6 @@ namespace NhaTroAnCu.Controllers
             {
                 CategoryId = incomeExpense.CategoryId,
                 ContractId = incomeExpense.ContractId,
-                RoomId = incomeExpense.RoomId,
                 Amount = incomeExpense.Amount,
                 TransactionDate = incomeExpense.TransactionDate,
                 Description = incomeExpense.Description,
@@ -172,7 +168,6 @@ namespace NhaTroAnCu.Controllers
 
                 incomeExpense.CategoryId = model.CategoryId;
                 incomeExpense.ContractId = model.ContractId;
-                incomeExpense.RoomId = model.RoomId;
                 incomeExpense.Amount = model.Amount;
                 incomeExpense.TransactionDate = model.TransactionDate;
                 incomeExpense.Description = model.Description;
@@ -301,41 +296,34 @@ namespace NhaTroAnCu.Controllers
                 db.IncomeExpenseCategories.Where(c => c.IsActive && !c.IsSystem).OrderBy(c => c.Type).ThenBy(c => c.Name),
                 "Id", "Name");
 
-            ViewBag.Rooms = new SelectList(
-                db.Rooms.OrderBy(r => r.Name),
-                "Id", "Name");
-        }
-        // Auto record payment from PaymentHistory
-        public void RecordRoomPayment(int paymentHistoryId)
-        {
-            var payment = db.PaymentHistories
-                .Include(p => p.Contract)
-                .FirstOrDefault(p => p.Id == paymentHistoryId);
-
-            if (payment != null)
-            {
-                var incomeCategory = db.IncomeExpenseCategories
-                    .FirstOrDefault(c => c.Name == "Thu tiền phòng" && c.IsSystem);
-
-                if (incomeCategory != null)
+            // Load contracts với phòng
+            var contracts = db.Contracts
+                .Where(c => c.Status == "Active")
+                .Include(c => c.ContractRooms.Select(cr => cr.Room))
+                .Select(c => new
                 {
-                    var incomeExpense = new IncomeExpense
-                    {
-                        CategoryId = incomeCategory.Id,
-                        ContractId = payment.ContractId,
-                        RoomId = payment.RoomId,
-                        Amount = payment.TotalAmount,
-                        TransactionDate = payment.PaidDate.Date,
-                        Description = $"Thu tiền phòng tháng {payment.Month}/{payment.Year}",
-                        ReferenceNumber = $"PAYMENT-{payment.Id}",
-                        CreatedBy = "System",
-                        CreatedAt = DateTime.Now
-                    };
+                    c.Id,
+                    Display = "HĐ #" + c.Id + " - Phòng: " +
+                        string.Join(", ", c.ContractRooms.Select(cr => cr.Room.Name))
+                })
+                .ToList();
 
-                    db.IncomeExpenses.Add(incomeExpense);
-                    db.SaveChanges();
-                }
-            }
+            ViewBag.Contracts = new SelectList(contracts, "Id", "Display");
+        }
+
+        // GET: IncomeExpense/GetContractsForRoom
+        public ActionResult GetContractsForRoom(int roomId)
+        {
+            var contracts = db.Contracts
+                .Where(c => c.Status == "Active" && c.ContractRooms.Any(cr => cr.RoomId == roomId))
+                .Select(c => new
+                {
+                    c.Id,
+                    Display = "HĐ #" + c.Id + " - " + c.StartDate.Day + "/" + c.StartDate.Month + "/" + c.StartDate.Year
+                })
+                .ToList();
+
+            return Json(contracts, JsonRequestBehavior.AllowGet);
         }
 
         // Record deposit refund when ending contract
@@ -353,7 +341,6 @@ namespace NhaTroAnCu.Controllers
                     {
                         CategoryId = expenseCategory.Id,
                         ContractId = contractId,
-                        RoomId = contract.RoomId,
                         Amount = amount,
                         TransactionDate = DateTime.Now.Date,
                         Description = note ?? $"Trả tiền cọc khi kết thúc hợp đồng",
@@ -366,29 +353,6 @@ namespace NhaTroAnCu.Controllers
                     db.SaveChanges();
                 }
             }
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                db.Dispose();
-            }
-            base.Dispose(disposing);
-        }
-        // GET: IncomeExpense/GetContractsForRoom
-        public ActionResult GetContractsForRoom(int roomId)
-        {
-            var contracts = db.Contracts
-                .Where(c => c.RoomId == roomId && c.Status == "Active")
-                .Select(c => new
-                {
-                    c.Id,
-                    Display = "HĐ #" + c.Id + " - " + c.StartDate.Day + "/" + c.StartDate.Month + "/" + c.StartDate.Year
-                })
-                .ToList();
-
-            return Json(contracts, JsonRequestBehavior.AllowGet);
         }
 
         // GET: IncomeExpense/Report
@@ -416,7 +380,6 @@ namespace NhaTroAnCu.Controllers
             ViewBag.Balance = income - expense;
             ViewBag.Transactions = transactions;
 
-            // Controller: Trước khi trả về View
             var expenseChartData = db.IncomeExpenses
                 .Where(x => x.IncomeExpenseCategory.Type == "Expense" && x.TransactionDate.Month == currentMonth && x.TransactionDate.Year == currentYear)
                 .GroupBy(x => x.IncomeExpenseCategory.Name)
@@ -427,68 +390,14 @@ namespace NhaTroAnCu.Controllers
 
             return View();
         }
-        [HttpPost]
-        public ActionResult CreateDeposit(int contractId, decimal amount, string description = null)
+
+        protected override void Dispose(bool disposing)
         {
-            try
+            if (disposing)
             {
-                var contract = db.Contracts.Find(contractId);
-                if (contract == null)
-                    return Json(new { success = false, message = "Không tìm thấy hợp đồng" });
-
-                if (contract.DepositCollected)
-                    return Json(new { success = false, message = "Tiền cọc đã được thu trước đó" });
-
-                // Get deposit category
-                var depositCategory = db.IncomeExpenseCategories
-                    .FirstOrDefault(c => c.Name == "Thu tiền cọc" && c.IsSystem);
-
-                if (depositCategory == null)
-                {
-                    // Create if not exists
-                    depositCategory = new IncomeExpenseCategory
-                    {
-                        Name = "Thu tiền cọc",
-                        Type = "Income",
-                        IsSystem = true,
-                        CreatedAt = DateTime.Now
-                    };
-                    db.IncomeExpenseCategories.Add(depositCategory);
-                    db.SaveChanges();
-                }
-
-                // Create income record
-                var income = new IncomeExpense
-                {
-                    CategoryId = depositCategory.Id,
-                    Amount = amount,
-                    Description = description ?? $"Thu tiền cọc phòng {contract.Room.Name}",
-                    TransactionDate = DateTime.Now,
-                    RoomId = contract.RoomId,
-                    ContractId = contractId,
-                    CreatedBy = User.Identity.Name ?? "System",
-                    CreatedAt = DateTime.Now
-                };
-
-                db.IncomeExpenses.Add(income);
-                db.SaveChanges();
-
-                // Update contract
-                contract.DepositCollected = true;
-                contract.DepositCollectedDate = DateTime.Now;
-                contract.DepositIncomeId = income.Id;
-                db.SaveChanges();
-
-                return Json(new
-                {
-                    success = true,
-                    message = $"Đã thu tiền cọc {amount:N0}đ thành công!"
-                });
+                db.Dispose();
             }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = "Lỗi: " + ex.Message });
-            }
+            base.Dispose(disposing);
         }
     }
 }

@@ -39,7 +39,7 @@ namespace NhaTroAnCu.Controllers
             var query = from ct in db.ContractTenants
                         join t in db.Tenants on ct.TenantId equals t.Id
                         join c in db.Contracts on ct.ContractId equals c.Id
-                        join r in db.Rooms on c.RoomId equals r.Id
+                        join r in db.Rooms on c.Id equals r.Id
                         select new
                         {
                             t.FullName,

@@ -240,8 +240,6 @@
     <Compile Include="Controllers\ContractsController.cs" />
     <Compile Include="Controllers\IncomeExpenseController.cs" />
     <Compile Include="Controllers\ManageController.cs" />
-    <Compile Include="Controllers\PaymentsController.cs" />
-    <Compile Include="Controllers\ReportSummaryController.cs" />
     <Compile Include="Controllers\RoomsController.cs" />
     <Compile Include="Controllers\TenantContractsController.cs" />
     <Compile Include="Controllers\TenantsController.cs" />
@@ -276,6 +274,9 @@
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
     <Compile Include="Models\ContractHistoryViewModel.cs" />
+    <Compile Include="Models\ContractRoom.cs">
+      <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
+    </Compile>
     <Compile Include="Models\ContractTenant.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
@@ -309,9 +310,6 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>NhaTroAnCuModel.edmx</DependentUpon>
     </Compile>
-    <Compile Include="Models\Notification.cs">
-      <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
-    </Compile>
     <Compile Include="Models\PaymentHistory.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
@@ -324,14 +322,11 @@
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
     <Compile Include="Models\TenantContractListItemViewModel.cs" />
+    <Compile Include="Models\RoomViewModel.cs" />
     <Compile Include="Models\UtilityBill.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
-    <Compile Include="Models\RoomViewModel.cs" />
     <Compile Include="Models\UtilityBillCreateViewModel.cs" />
-    <Compile Include="Models\WaterIndex.cs">
-      <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
-    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Startup.cs" />
   </ItemGroup>
