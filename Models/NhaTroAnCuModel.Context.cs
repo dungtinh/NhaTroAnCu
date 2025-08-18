@@ -12,6 +12,8 @@ namespace NhaTroAnCu.Models
     using System;
     using System.Data.Entity;
     using System.Data.Entity.Infrastructure;
+    using System.Data.Entity.Core.Objects;
+    using System.Linq;
     
     public partial class NhaTroAnCuEntities : DbContext
     {
@@ -30,6 +32,7 @@ namespace NhaTroAnCu.Models
         public virtual DbSet<AspNetUserClaim> AspNetUserClaims { get; set; }
         public virtual DbSet<AspNetUserLogin> AspNetUserLogins { get; set; }
         public virtual DbSet<AspNetUser> AspNetUsers { get; set; }
+        public virtual DbSet<Company> Companies { get; set; }
         public virtual DbSet<ContractExtensionHistory> ContractExtensionHistories { get; set; }
         public virtual DbSet<ContractRoom> ContractRooms { get; set; }
         public virtual DbSet<Contract> Contracts { get; set; }
@@ -41,5 +44,104 @@ namespace NhaTroAnCu.Models
         public virtual DbSet<Tenant> Tenants { get; set; }
         public virtual DbSet<UtilityBill> UtilityBills { get; set; }
         public virtual DbSet<FPTReaderAPI> FPTReaderAPIs { get; set; }
+        public virtual DbSet<vw_CompanyRoomDetails> vw_CompanyRoomDetails { get; set; }
+        public virtual DbSet<vw_CompanyTenants> vw_CompanyTenants { get; set; }
+        public virtual DbSet<vw_ContractDetails> vw_ContractDetails { get; set; }
+        public virtual DbSet<vw_RoomStatus> vw_RoomStatus { get; set; }
+    
+        public virtual ObjectResult<Nullable<int>> sp_AddEmployeeToRoom(Nullable<int> contractId, Nullable<int> roomId, string fullName, string identityCard, string phoneNumber, Nullable<System.DateTime> birthDate, string gender, string permanentAddress)
+        {
+            var contractIdParameter = contractId.HasValue ?
+                new ObjectParameter("ContractId", contractId) :
+                new ObjectParameter("ContractId", typeof(int));
+    
+            var roomIdParameter = roomId.HasValue ?
+                new ObjectParameter("RoomId", roomId) :
+                new ObjectParameter("RoomId", typeof(int));
+    
+            var fullNameParameter = fullName != null ?
+                new ObjectParameter("FullName", fullName) :
+                new ObjectParameter("FullName", typeof(string));
+    
+            var identityCardParameter = identityCard != null ?
+                new ObjectParameter("IdentityCard", identityCard) :
+                new ObjectParameter("IdentityCard", typeof(string));
+    
+            var phoneNumberParameter = phoneNumber != null ?
+                new ObjectParameter("PhoneNumber", phoneNumber) :
+                new ObjectParameter("PhoneNumber", typeof(string));
+    
+            var birthDateParameter = birthDate.HasValue ?
+                new ObjectParameter("BirthDate", birthDate) :
+                new ObjectParameter("BirthDate", typeof(System.DateTime));
+    
+            var genderParameter = gender != null ?
+                new ObjectParameter("Gender", gender) :
+                new ObjectParameter("Gender", typeof(string));
+    
+            var permanentAddressParameter = permanentAddress != null ?
+                new ObjectParameter("PermanentAddress", permanentAddress) :
+                new ObjectParameter("PermanentAddress", typeof(string));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Nullable<int>>("sp_AddEmployeeToRoom", contractIdParameter, roomIdParameter, fullNameParameter, identityCardParameter, phoneNumberParameter, birthDateParameter, genderParameter, permanentAddressParameter);
+        }
+    
+        public virtual ObjectResult<Nullable<int>> sp_CreateCompanyContract(string companyName, string taxCode, string address, string representative, Nullable<System.DateTime> startDate, Nullable<System.DateTime> endDate, Nullable<decimal> electricityPrice, Nullable<decimal> waterPrice, string roomIds, string roomPrices)
+        {
+            var companyNameParameter = companyName != null ?
+                new ObjectParameter("CompanyName", companyName) :
+                new ObjectParameter("CompanyName", typeof(string));
+    
+            var taxCodeParameter = taxCode != null ?
+                new ObjectParameter("TaxCode", taxCode) :
+                new ObjectParameter("TaxCode", typeof(string));
+    
+            var addressParameter = address != null ?
+                new ObjectParameter("Address", address) :
+                new ObjectParameter("Address", typeof(string));
+    
+            var representativeParameter = representative != null ?
+                new ObjectParameter("Representative", representative) :
+                new ObjectParameter("Representative", typeof(string));
+    
+            var startDateParameter = startDate.HasValue ?
+                new ObjectParameter("StartDate", startDate) :
+                new ObjectParameter("StartDate", typeof(System.DateTime));
+    
+            var endDateParameter = endDate.HasValue ?
+                new ObjectParameter("EndDate", endDate) :
+                new ObjectParameter("EndDate", typeof(System.DateTime));
+    
+            var electricityPriceParameter = electricityPrice.HasValue ?
+                new ObjectParameter("ElectricityPrice", electricityPrice) :
+                new ObjectParameter("ElectricityPrice", typeof(decimal));
+    
+            var waterPriceParameter = waterPrice.HasValue ?
+                new ObjectParameter("WaterPrice", waterPrice) :
+                new ObjectParameter("WaterPrice", typeof(decimal));
+    
+            var roomIdsParameter = roomIds != null ?
+                new ObjectParameter("RoomIds", roomIds) :
+                new ObjectParameter("RoomIds", typeof(string));
+    
+            var roomPricesParameter = roomPrices != null ?
+                new ObjectParameter("RoomPrices", roomPrices) :
+                new ObjectParameter("RoomPrices", typeof(string));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<Nullable<int>>("sp_CreateCompanyContract", companyNameParameter, taxCodeParameter, addressParameter, representativeParameter, startDateParameter, endDateParameter, electricityPriceParameter, waterPriceParameter, roomIdsParameter, roomPricesParameter);
+        }
+    
+        public virtual ObjectResult<sp_GetCompanyTenants_Result> sp_GetCompanyTenants(Nullable<int> companyId, Nullable<bool> includeInactive)
+        {
+            var companyIdParameter = companyId.HasValue ?
+                new ObjectParameter("CompanyId", companyId) :
+                new ObjectParameter("CompanyId", typeof(int));
+    
+            var includeInactiveParameter = includeInactive.HasValue ?
+                new ObjectParameter("IncludeInactive", includeInactive) :
+                new ObjectParameter("IncludeInactive", typeof(bool));
+    
+            return ((IObjectContextAdapter)this).ObjectContext.ExecuteFunction<sp_GetCompanyTenants_Result>("sp_GetCompanyTenants", companyIdParameter, includeInactiveParameter);
+        }
     }
 }

@@ -5,7 +5,16 @@
     int selectedDay = ViewBag.SelectedDay;
     int selectedMonth = ViewBag.SelectedMonth;
     int selectedYear = ViewBag.SelectedYear;
+
+    // Lấy thống kê từ ViewBag
+    int totalRooms = ViewBag.TotalRooms ?? 0;
+    int rentedRooms = ViewBag.RentedRooms ?? 0;
+    int emptyRooms = ViewBag.EmptyRooms ?? 0;
+    int nearExpiredRooms = ViewBag.NearExpiredRooms ?? 0;
+    int expiredRooms = ViewBag.ExpiredRooms ?? 0;
+    decimal occupancyRate = ViewBag.OccupancyRate ?? 0m;
 }
+
 <link href="~/Content/roomsindex.css" rel="stylesheet" />
 
 <div class="dashboard-header">
@@ -32,7 +41,7 @@
             </div>
             <div class="col-md-8">
                 <label class="form-label font-weight-bold">Tháng:</label>
-                <div class="month-selector" style="margin: 0;">
+                <div class="month-selector">
                     @for (int m = 1; m <= 12; m++)
                     {
                         var css = m == selectedMonth ? "month-btn month-selected" : "month-btn";
@@ -52,39 +61,39 @@
 
 <!-- Summary Dashboard -->
 <div class="summary-dashboard">
-    <!-- Hoặc thêm class "light" cho theme sáng -->
     <div class="summary-grid">
         <div class="summary-card occupied">
             <i class="fas fa-home summary-icon"></i>
             <div class="summary-label">Đã thuê</div>
-            <div class="summary-value">@Model.RentedRooms</div>
+            <div class="summary-value">@rentedRooms/@totalRooms</div>
         </div>
 
-        <div class="summary-card collected">
+        <div class="summary-card available">
             <i class="fas fa-check-circle summary-icon"></i>
             <div class="summary-label">Còn trống</div>
-            <div class="summary-value">@Model.</div>
+            <div class="summary-value">@emptyRooms</div>
         </div>
 
-        <div class="summary-card revenue">
-            <i class="fas fa-dollar-sign summary-icon"></i>
+        <div class="summary-card warning">
+            <i class="fas fa-clock summary-icon"></i>
             <div class="summary-label">Sắp hết hạn</div>
-            <div class="summary-value">@Model.TotalAmount.ToString("N0") đ</div>
+            <div class="summary-value">@nearExpiredRooms</div>
         </div>
 
         <div class="summary-card efficiency">
             <i class="fas fa-chart-line summary-icon"></i>
             <div class="summary-label">Hiệu suất</div>
-            <div class="summary-value">@Model.Density.ToString("P2")</div>
+            <div class="summary-value">@occupancyRate.ToString("P0")</div>
         </div>
 
-        <div class="summary-card overdue">
+        <div class="summary-card expired">
             <i class="fas fa-exclamation-triangle summary-icon"></i>
             <div class="summary-label">Đã hết HĐ</div>
-            <div class="summary-value">@Model.</div>
+            <div class="summary-value">@expiredRooms</div>
         </div>
     </div>
 </div>
+
 <!-- Rooms Display -->
 @foreach (var areaGroup in grouped)
 {
@@ -111,14 +120,14 @@
                             var roomClass = vm.ColorClass == "gray" ? "room-available"
                                           : vm.ColorClass == "green" ? "room-paid"
                                           : vm.ColorClass == "yellow" ? "room-partial"
-                                          : vm.ColorClass == "expired" ? "room-expired"  // Thêm class mới cho phòng hết hạn
-                                          : "room-unpaid";
+                                          : vm.ColorClass == "expired" ? "room-expired"
+                                          : vm.ColorClass == "orange" ? "room-unpaid"
+                                          : vm.ColorClass == "blue" ? "room-occupied"
+                                          : "room-available";
 
                             <div class="room-card @roomClass">
-
                                 @if (vm.IsContractExpired && vm.ContractEndDate.HasValue)
                                 {
-                                    <!-- Hiển thị cảnh báo đã hết hạn hợp đồng -->
                                     <div class="contract-expired-warning">
                                         <i class="fas fa-exclamation-circle"></i>
                                         Đã hết hạn
@@ -138,7 +147,7 @@
                                     title = "Chỉnh sửa phòng"
                                 })
 
-                                @Html.ActionLink(" ", "history", "contracts", new { id = vm.Room.Id }, new
+                                @Html.ActionLink(" ", "History", "Contracts", new { roomId = vm.Room.Id }, new
                                 {
                                     @class = "history-icon fas fa-history",
                                     title = "Lịch sử thuê phòng"
@@ -150,19 +159,15 @@
                                 </div>
 
                                 <div class="room-tenant">
-                                    @if (vm.Room.IsOccupied)
+                                    @if (!string.IsNullOrEmpty(vm.TenantName))
                                     {
-                                        if (!string.IsNullOrEmpty(vm.TenantName))
-                                        {
-                                            <i class="fas fa-user"></i>
-                                            @vm.TenantName
-                                        }
-                                        else
-                                        {
-                                            <i class="fas fa-user-slash"></i>
-                                            <span>Chưa có thông tin</span>
-
-                                        }
+                                        <i class="fas fa-user"></i>
+                                        <span title="@vm.TenantName">@vm.TenantName</span>
+                                    }
+                                    else if (vm.Room.IsOccupied)
+                                    {
+                                        <i class="fas fa-user-slash"></i>
+                                        <span>Đang cập nhật</span>
                                     }
                                     else
                                     {
@@ -172,7 +177,7 @@
                                 </div>
 
                                 <div class="room-actions">
-                                    @if (vm.Room.IsOccupied)
+                                    @if (vm.Room.IsOccupied || !string.IsNullOrEmpty(vm.TenantName))
                                     {
                                         <a href="@Url.Action("Details", "Rooms", new { id = vm.Room.Id })"
                                            class="btn-room">
@@ -245,7 +250,7 @@
                 card.style.transition = 'all 0.6s ease';
                 card.style.opacity = '1';
                 card.style.transform = 'translateY(0)';
-            }, index * 100);
+            }, index * 50);
         });
     });
 </script>

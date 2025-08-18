@@ -10,16 +10,9 @@
 namespace NhaTroAnCu.Models
 {
     using System;
-    using System.Collections.Generic;
     
-    public partial class Tenant
+    public partial class sp_GetCompanyTenants_Result
     {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
-        public Tenant()
-        {
-            this.ContractTenants = new HashSet<ContractTenant>();
-        }
-    
         public int Id { get; set; }
         public string FullName { get; set; }
         public string IdentityCard { get; set; }
@@ -31,9 +24,9 @@ namespace NhaTroAnCu.Models
         public string Ethnicity { get; set; }
         public string VehiclePlate { get; set; }
         public Nullable<int> CompanyId { get; set; }
-    
-        public virtual Company Company { get; set; }
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<ContractTenant> ContractTenants { get; set; }
+        public string RoomName { get; set; }
+        public Nullable<System.DateTime> ContractStartDate { get; set; }
+        public Nullable<System.DateTime> ContractEndDate { get; set; }
+        public string ContractStatus { get; set; }
     }
 }

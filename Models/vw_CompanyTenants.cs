@@ -12,28 +12,26 @@ namespace NhaTroAnCu.Models
     using System;
     using System.Collections.Generic;
     
-    public partial class Tenant
+    public partial class vw_CompanyTenants
     {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
-        public Tenant()
-        {
-            this.ContractTenants = new HashSet<ContractTenant>();
-        }
-    
-        public int Id { get; set; }
+        public int TenantId { get; set; }
         public string FullName { get; set; }
         public string IdentityCard { get; set; }
         public string PhoneNumber { get; set; }
-        public string Photo { get; set; }
         public Nullable<System.DateTime> BirthDate { get; set; }
         public string Gender { get; set; }
         public string PermanentAddress { get; set; }
         public string Ethnicity { get; set; }
         public string VehiclePlate { get; set; }
+        public string Photo { get; set; }
         public Nullable<int> CompanyId { get; set; }
-    
-        public virtual Company Company { get; set; }
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<ContractTenant> ContractTenants { get; set; }
+        public string CompanyName { get; set; }
+        public string TaxCode { get; set; }
+        public string Representative { get; set; }
+        public Nullable<int> CurrentRoomId { get; set; }
+        public string CurrentRoomName { get; set; }
+        public Nullable<int> CurrentContractId { get; set; }
+        public string ContractStatus { get; set; }
+        public Nullable<System.DateTime> MoveInDate { get; set; }
     }
 }
