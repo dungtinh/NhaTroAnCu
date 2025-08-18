@@ -51,10 +51,40 @@
 </div>
 
 <!-- Summary Dashboard -->
-@{
-    Html.RenderAction("_MonthSummary", "ReportSummary", new { month = ViewBag.SelectedMonth, year = ViewBag.SelectedYear });
-}
+<div class="summary-dashboard">
+    <!-- Hoặc thêm class "light" cho theme sáng -->
+    <div class="summary-grid">
+        <div class="summary-card occupied">
+            <i class="fas fa-home summary-icon"></i>
+            <div class="summary-label">Đã thuê</div>
+            <div class="summary-value">@Model.RentedRooms</div>
+        </div>
 
+        <div class="summary-card collected">
+            <i class="fas fa-check-circle summary-icon"></i>
+            <div class="summary-label">Còn trống</div>
+            <div class="summary-value">@Model.</div>
+        </div>
+
+        <div class="summary-card revenue">
+            <i class="fas fa-dollar-sign summary-icon"></i>
+            <div class="summary-label">Sắp hết hạn</div>
+            <div class="summary-value">@Model.TotalAmount.ToString("N0") đ</div>
+        </div>
+
+        <div class="summary-card efficiency">
+            <i class="fas fa-chart-line summary-icon"></i>
+            <div class="summary-label">Hiệu suất</div>
+            <div class="summary-value">@Model.Density.ToString("P2")</div>
+        </div>
+
+        <div class="summary-card overdue">
+            <i class="fas fa-exclamation-triangle summary-icon"></i>
+            <div class="summary-label">Đã hết HĐ</div>
+            <div class="summary-value">@Model.</div>
+        </div>
+    </div>
+</div>
 <!-- Rooms Display -->
 @foreach (var areaGroup in grouped)
 {
