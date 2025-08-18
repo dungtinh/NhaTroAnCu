@@ -433,7 +433,51 @@
                 <label>Địa chỉ công ty</label>
                 @Html.TextBoxFor(m => m.Company.Address, new { @class = "form-control" })
             </div>
-
+            <div class="section-title" style="margin-top: 30px;">
+        <i class="fas fa-door-open"></i> Chọn Phòng Cho Công Ty
+    </div>
+    
+    <div class="room-selection-list">
+        @if (ViewBag.AvailableRooms != null)
+        {
+            foreach (var room in ViewBag.AvailableRooms)
+            {
+                <div class="room-selection-item">
+                    <div class="form-check">
+                        <input type="checkbox" 
+                               class="form-check-input company-room-checkbox" 
+                               name="SelectedRooms[@room.RoomId].IsSelected" 
+                               value="true" 
+                               data-room-id="@room.RoomId"
+                               data-price="@room.DefaultPrice" />
+                        <input type="hidden" 
+                               name="SelectedRooms[@room.RoomId].IsSelected" 
+                               value="false" />
+                        <input type="hidden" 
+                               name="SelectedRooms[@room.RoomId].RoomId" 
+                               value="@room.RoomId" />
+                        
+                        <label class="form-check-label">
+                            <strong>@room.RoomName</strong> - 
+                            Giá gốc: @room.DefaultPrice.ToString("N0")đ
+                        </label>
+                    </div>
+                    
+                    <div class="room-price-input" style="display: none;">
+                        <input type="number" 
+                               class="form-control" 
+                               name="SelectedRooms[@room.RoomId].AgreedPrice" 
+                               value="@room.DefaultPrice" 
+                               placeholder="Giá thỏa thuận" />
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="text-muted">Không có phòng trống</p>
+        }
+    </div>
             <!-- Tổng kết cho công ty -->
             <div class="summary-box">
                 <h5>Tổng kết</h5>
