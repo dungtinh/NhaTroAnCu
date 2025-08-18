@@ -101,7 +101,7 @@ namespace NhaTroAnCu.Controllers
             // Lấy các thông tin cần thiết
             var room = db.Rooms.Find(roomId);
             var now = DateTime.Now;
-            var contract = db.Contracts.FirstOrDefault(c => c.RoomId == roomId && c.Status == "Active");
+            var contract = db.Contracts.FirstOrDefault(c => c.Id == roomId && c.Status == "Active");
             int currentMonth = now.Month, currentYear = now.Year;
 
             var service = new UtilityBillService(db);

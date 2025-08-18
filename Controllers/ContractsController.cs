@@ -1,18 +1,13 @@
 ﻿using Microsoft.AspNet.Identity;
-using Microsoft.Owin.BuilderProperties;
 using NhaTroAnCu.Models;
 using System;
 using System.Collections.Generic;
+using System.Data.Entity;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Security.Policy;
 using System.Web;
 using System.Web.Mvc;
-using Xceed.Document.NET;
-using Xceed.Pdf;
-using Xceed.Words.NET;
 
 namespace NhaTroAnCu.Controllers
 {
@@ -24,12 +19,17 @@ namespace NhaTroAnCu.Controllers
         public ActionResult Create(int roomId)
         {
             var room = db.Rooms.Find(roomId);
-            ViewBag.RoomId = new SelectList(db.Rooms.Where(r => !r.IsOccupied), "Id", "Name");
+            if (room == null) return HttpNotFound();
+
+            ViewBag.RoomId = roomId;
+            ViewBag.RoomName = room.Name;
+            ViewBag.AvailableRooms = new SelectList(db.Rooms.Where(r => !r.IsOccupied), "Id", "Name");
+
             return View(new ContractCreateViewModel()
             {
+                RoomId = roomId,
                 MoveInDate = DateTime.Now,
                 PriceAgreed = room.DefaultPrice,
-                DepositAmount = room.DefaultPrice,
                 ElectricityPrice = 3500,
                 WaterPrice = 15000,
             });
@@ -38,31 +38,33 @@ namespace NhaTroAnCu.Controllers
         // GET: /Contracts/End/5
         public ActionResult End(int id)
         {
-            var contract = db.Contracts.Find(id);
+            var contract = db.Contracts
+                .Include(c => c.ContractRooms.Select(cr => cr.Room))
+                .FirstOrDefault(c => c.Id == id);
+
             if (contract == null) return HttpNotFound();
+
             ViewBag.Contract = contract;
-            ViewBag.DepositAmount = contract.DepositAmount;
             return View();
-            //contract.Status = "Ended";
-            //contract.EndDate = DateTime.Now;
-
-            //var room = db.Rooms.Find(contract.RoomId);
-            //if (room != null) room.IsOccupied = false;
-
-            //db.SaveChanges();
-            //return RedirectToAction("index", "Rooms", new { id = contract.RoomId });
         }
+
         [HttpPost]
         public ActionResult EndConfirm(int id, decimal? refundAmount, string refundNote)
         {
-            var contract = db.Contracts.Find(id);
+            var contract = db.Contracts
+                .Include(c => c.ContractRooms.Select(cr => cr.Room))
+                .FirstOrDefault(c => c.Id == id);
+
             if (contract == null) return HttpNotFound();
 
             contract.Status = "Ended";
             contract.EndDate = DateTime.Now;
 
-            var room = db.Rooms.Find(contract.RoomId);
-            if (room != null) room.IsOccupied = false;
+            // Cập nhật tất cả các phòng trong hợp đồng
+            foreach (var contractRoom in contract.ContractRooms)
+            {
+                contractRoom.Room.IsOccupied = false;
+            }
 
             // Ghi nhận trả cọc nếu có
             if (refundAmount.HasValue && refundAmount.Value > 0)
@@ -76,7 +78,6 @@ namespace NhaTroAnCu.Controllers
                     {
                         CategoryId = expenseCategory.Id,
                         ContractId = id,
-                        RoomId = contract.RoomId,
                         Amount = refundAmount.Value,
                         TransactionDate = DateTime.Now.Date,
                         Description = refundNote ?? $"Trả tiền cọc khi kết thúc hợp đồng",
@@ -90,339 +91,130 @@ namespace NhaTroAnCu.Controllers
             }
 
             db.SaveChanges();
-            return RedirectToAction("Index", "Rooms");
-        }
-        public ActionResult ExportContract(int id)
-        {
-            var contract = db.Contracts
-     .Include("Room")
-     .Include("ContractTenants.Tenant") // ✅ dùng string thay vì lambda
-     .FirstOrDefault(c => c.Id == id);
 
-            if (contract == null) return HttpNotFound();
-
-            string path = Server.MapPath("~/App_Data/Contracts");
-
-            Aspose.Words.Document doc = new Aspose.Words.Document();
-            doc.RemoveAllChildren();
-            var dict = new Dictionary<string, string>();
-            string pathTemp = Server.MapPath("~/App_Data/templates/CT01.docx");
-            var doctemp = new Aspose.Words.Document(pathTemp);
-            Aspose.Words.DocumentBuilder builder = new Aspose.Words.DocumentBuilder(doctemp);
-
-            // Hợp đồng
-            dict = new Dictionary<string, string>();
-            pathTemp = Server.MapPath("~/App_Data/templates/HOPDONG.docx");
-            doctemp = new Aspose.Words.Document(pathTemp);
-            dict.Add("ngay", contract.StartDate.ToString("dd"));
-            dict.Add("thang", contract.StartDate.ToString("MM"));
-            dict.Add("nam", contract.StartDate.ToString("yyyy"));
-
-            builder = new Aspose.Words.DocumentBuilder(doctemp);
-            builder.MoveToMergeField("benthue");
-            foreach (var khach in contract.ContractTenants)
-            {
-                string hoTen = khach.Tenant.FullName;
-                // Kiểm tra chưa đủ 18 tuổi
-                if (khach.Tenant.BirthDate != null)
-                {
-                    var age = (contract.StartDate - khach.Tenant.BirthDate.Value).TotalDays / 365.25;
-                    if (age < 18)
-                    {
-                        hoTen += " (chưa đủ 18 tuổi)";
-                    }
-                }
-                // kiểm tra nếu là dòng cuối thì builder.Write
-                if (khach != contract.ContractTenants.Last())
-                    builder.Writeln("Họ và tên: " + hoTen + "; CC/CCCD: " + khach.Tenant.IdentityCard + "; Đt: " + khach.Tenant.PhoneNumber + ";");
-                else
-                    builder.Write("Họ và tên: " + hoTen + "; CC/CCCD: " + khach.Tenant.IdentityCard + "; Đt: " + khach.Tenant.PhoneNumber + ".");
-            }
-            dict.Add("sophong", contract.Room.Name);
-            doctemp.MailMerge.Execute(dict.Keys.ToArray(), dict.Values.ToArray());
-
-            if (doctemp.PageCount % 2 != 0)
-            {
-                builder.MoveToDocumentEnd();
-                builder.InsertBreak(Aspose.Words.BreakType.PageBreak);
-            }
-            doc.AppendDocument(doctemp, Aspose.Words.ImportFormatMode.KeepSourceFormatting);
-
-            // I, TỜ KHAI CT01
-            foreach (var khach in contract.ContractTenants)
-            {
-                dict = new Dictionary<string, string>();
-                pathTemp = Server.MapPath("~/App_Data/templates/CT01.docx");
-                doctemp = new Aspose.Words.Document(pathTemp);
-                dict.Add("hoten", khach.Tenant.FullName);
-                dict.Add("sodienthoai", khach.Tenant.PhoneNumber);
-                dict.Add("ngaysinh", khach.Tenant.BirthDate?.ToString("dd/MM/yyyy"));
-
-                GenSoDinhDanh(khach.Tenant.IdentityCard, dict);
-                doctemp.MailMerge.Execute(dict.Keys.ToArray(), dict.Values.ToArray());
-                builder = new Aspose.Words.DocumentBuilder(doctemp);
-                if (doctemp.PageCount % 2 != 0)
-                {
-                    builder.MoveToDocumentEnd();
-                    builder.InsertBreak(Aspose.Words.BreakType.PageBreak);
-                }
-                doc.AppendDocument(doctemp, Aspose.Words.ImportFormatMode.KeepSourceFormatting);
-            }
-            // Tài sản            
-            pathTemp = Server.MapPath("~/App_Data/templates/TAISAN.docx");
-            doctemp = new Aspose.Words.Document(pathTemp);
-
-            builder = new Aspose.Words.DocumentBuilder(doctemp);
-            builder.MoveToMergeField("benthue");
-            foreach (var khach in contract.ContractTenants)
-            {
-                string hoTen = khach.Tenant.FullName;
-                // Kiểm tra chưa đủ 18 tuổi
-                if (khach.Tenant.BirthDate != null)
-                {
-                    var age = (contract.StartDate - khach.Tenant.BirthDate.Value).TotalDays / 365.25;
-                    if (age < 18)
-                    {
-                        hoTen += " (chưa đủ 18 tuổi)";
-                    }
-                }
-                // kiểm tra nếu là dòng cuối thì builder.Write
-                if (khach != contract.ContractTenants.Last())
-                    builder.Writeln("Họ và tên: " + hoTen + "; CC/CCCD: " + khach.Tenant.IdentityCard + "; Đt: " + khach.Tenant.PhoneNumber + ";");
-                else
-                    builder.Write("Họ và tên: " + hoTen + "; CC/CCCD: " + khach.Tenant.IdentityCard + "; Đt: " + khach.Tenant.PhoneNumber + ".");
-            }
-            doctemp.MailMerge.Execute(dict.Keys.ToArray(), dict.Values.ToArray());
-            if (doctemp.PageCount % 2 != 0)
-            {
-                builder.MoveToDocumentEnd();
-                builder.InsertBreak(Aspose.Words.BreakType.PageBreak);
-            }
-            doc.AppendDocument(doctemp, Aspose.Words.ImportFormatMode.KeepSourceFormatting);
-
-
-            string webpart = string.Empty;
-            builder = new Aspose.Words.DocumentBuilder(doc);
-            foreach (var khach in contract.ContractTenants)
-            {
-                webpart += khach.Tenant.FullName + "_";
-                // --- Chèn ảnh khách thuê vào docx ---
-                if (!string.IsNullOrEmpty(khach.Tenant.Photo))
-                {
-                    // Đường dẫn vật lý
-                    string photoPath = Server.MapPath(khach.Tenant.Photo);
-                    if (System.IO.File.Exists(photoPath))
-                    {
-                        // Chèn ảnh vào vị trí mong muốn, ví dụ dưới cùng trang
-                        builder.MoveToDocumentEnd();
-                        builder.Writeln(); // Xuống dòng
-                        builder.InsertImage(photoPath);
-                    }
-                }
-                // --- Kết thúc chèn ảnh ---
-                if (doc.PageCount % 2 != 0)
-                {
-                    builder.MoveToDocumentEnd();
-                    builder.InsertBreak(Aspose.Words.BreakType.PageBreak);
-                }
-            }
-            webpart += "_phong_" + contract.Room.Name + "_c" + id + ".docx";
-            foreach (Aspose.Words.Section section in doc.Sections)
-            {
-                section.ClearHeadersFooters();
-            }
-            path += webpart;
-            doc.Save(path);
-            return File(path, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", webpart);
+            // Redirect về phòng đầu tiên trong hợp đồng
+            var firstRoomId = contract.ContractRooms.FirstOrDefault()?.RoomId ?? 0;
+            return RedirectToAction("Details", "Rooms", new { id = firstRoomId });
         }
 
-        public ActionResult ExportHistoryToPdf(
-            int id,
-            string searchName = "",
-            string searchCard = "",
-            string searchAddress = "",
-            string sortField = "StartDate",
-            string sortDirection = "desc",
-            string fromDate = null,
-            string toDate = null
-        )
-        {
-            DateTime? from = null, to = null;
-            if (!string.IsNullOrEmpty(fromDate))
-                from = DateTime.ParseExact(fromDate, "dd/MM/yyyy", CultureInfo.InvariantCulture);
-            if (!string.IsNullOrEmpty(toDate))
-                to = DateTime.ParseExact(toDate, "dd/MM/yyyy", CultureInfo.InvariantCulture);
-
-            var query = db.Contracts
-                .Where(c => c.RoomId == id)
-                .Select(c => new
-                {
-                    RoomName = c.Room.Name,
-                    Tenants = c.ContractTenants.Select(ct => ct.Tenant.FullName),
-                    IdentityCards = c.ContractTenants.Select(ct => ct.Tenant.IdentityCard),
-                    Genders = c.ContractTenants.Select(ct => ct.Tenant.Gender),
-                    Addresses = c.ContractTenants.Select(ct => ct.Tenant.PermanentAddress),
-                    PhoneNumbers = c.ContractTenants.Select(ct => ct.Tenant.PhoneNumber),
-                    c.StartDate,
-                    c.EndDate,
-                    c.Note
-                });
-
-            if (!string.IsNullOrEmpty(searchName))
-                query = query.Where(x => x.Tenants.Any(n => n.Contains(searchName)));
-            if (!string.IsNullOrEmpty(searchCard))
-                query = query.Where(x => x.IdentityCards.Any(ic => ic.Contains(searchCard)));
-            if (!string.IsNullOrEmpty(searchAddress))
-                query = query.Where(x => x.Addresses.Any(addr => addr.Contains(searchAddress)));
-            if (from.HasValue)
-                query = query.Where(x => x.StartDate >= from.Value);
-            if (to.HasValue)
-                query = query.Where(x => x.StartDate <= to.Value);
-
-            switch (sortField)
-            {
-                case "RoomName":
-                    query = sortDirection == "asc" ? query.OrderBy(x => x.RoomName) : query.OrderByDescending(x => x.RoomName);
-                    break;
-                case "StartDate":
-                    query = sortDirection == "asc" ? query.OrderBy(x => x.StartDate) : query.OrderByDescending(x => x.StartDate);
-                    break;
-                case "EndDate":
-                    query = sortDirection == "asc" ? query.OrderBy(x => x.EndDate) : query.OrderByDescending(x => x.EndDate);
-                    break;
-                default:
-                    query = sortDirection == "asc" ? query.OrderBy(x => x.StartDate) : query.OrderByDescending(x => x.StartDate);
-                    break;
-            }
-
-            var items = query.ToList();
-
-            string fontPath = Server.MapPath("~/Fonts/times.ttf");
-            var baseFont = iTextSharp.text.pdf.BaseFont.CreateFont(fontPath, iTextSharp.text.pdf.BaseFont.IDENTITY_H, iTextSharp.text.pdf.BaseFont.EMBEDDED);
-
-            var titleFont = new iTextSharp.text.Font(baseFont, 16, iTextSharp.text.Font.BOLD);
-            var headerFont = new iTextSharp.text.Font(baseFont, 12, iTextSharp.text.Font.BOLD);
-            var rowFont = new iTextSharp.text.Font(baseFont, 11, iTextSharp.text.Font.NORMAL);
-
-            using (var stream = new MemoryStream())
-            {
-                var pdfDoc = new iTextSharp.text.Document(iTextSharp.text.PageSize.A4, 10, 10, 20, 20);
-                iTextSharp.text.pdf.PdfWriter.GetInstance(pdfDoc, stream);
-                pdfDoc.Open();
-
-                pdfDoc.Add(new iTextSharp.text.Paragraph("LỊCH SỬ THUÊ PHÒNG", titleFont));
-                pdfDoc.Add(new iTextSharp.text.Paragraph($"Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm:ss}", rowFont));
-                pdfDoc.Add(new iTextSharp.text.Paragraph(" "));
-
-                var table = new iTextSharp.text.pdf.PdfPTable(9);
-                table.WidthPercentage = 100;
-                table.SetWidths(new float[] { 2.2f, 2.8f, 2.2f, 1.2f, 3f, 2f, 2f, 2f, 3f });
-
-                string[] headers = { "Phòng", "Người thuê", "Số thẻ", "Giới tính", "Địa chỉ", "SĐT", "Ngày thuê", "Ngày kết thúc", "Ghi chú" };
-                foreach (var header in headers)
-                {
-                    var cell = new iTextSharp.text.pdf.PdfPCell(new iTextSharp.text.Phrase(header, headerFont));
-                    cell.BackgroundColor = new iTextSharp.text.BaseColor(220, 220, 220);
-                    cell.HorizontalAlignment = iTextSharp.text.pdf.PdfPCell.ALIGN_CENTER;
-                    table.AddCell(cell);
-                }
-
-                foreach (var item in items)
-                {
-                    table.AddCell(new iTextSharp.text.Phrase(item.RoomName, rowFont));
-                    table.AddCell(new iTextSharp.text.Phrase(string.Join(", ", item.Tenants), rowFont));
-                    table.AddCell(new iTextSharp.text.Phrase(string.Join(", ", item.IdentityCards), rowFont));
-                    table.AddCell(new iTextSharp.text.Phrase(string.Join(", ", item.Genders), rowFont));
-                    table.AddCell(new iTextSharp.text.Phrase(string.Join(", ", item.Addresses), rowFont));
-                    table.AddCell(new iTextSharp.text.Phrase(string.Join(", ", item.PhoneNumbers), rowFont));
-                    table.AddCell(new iTextSharp.text.Phrase(item.StartDate.ToString("dd/MM/yyyy"), rowFont));
-                    table.AddCell(new iTextSharp.text.Phrase(item.EndDate.ToString("dd/MM/yyyy") ?? "-", rowFont));
-                    table.AddCell(new iTextSharp.text.Phrase(item.Note, rowFont));
-                }
-
-                pdfDoc.Add(table);
-                pdfDoc.Add(new iTextSharp.text.Paragraph(" "));
-                pdfDoc.Add(new iTextSharp.text.Paragraph("NHÀ TRỌ AN CƯ", titleFont));
-                pdfDoc.Add(new iTextSharp.text.Paragraph("ĐỊA CHỈ: THÔN ĐÌNH NGỌ (ẤP), XÃ HỒNG PHONG, HUYỆN AN DƯƠNG, HẢI PHÒNG", rowFont));
-                pdfDoc.Add(new iTextSharp.text.Paragraph("CHỦ NHÀ TRỌ: TẠ NGỌC DUY - CCCD: 034082002422", rowFont));
-                pdfDoc.Add(new iTextSharp.text.Paragraph("ĐIỆN THOẠI: 0975092833", rowFont));
-                pdfDoc.Close();
-
-                byte[] pdfBytes = stream.ToArray();
-                return File(pdfBytes, "application/pdf", "LichSuThuePhong.pdf");
-            }
-        }
-        void GenSoDinhDanh(string sdd, Dictionary<string, string> dict)
-        {
-            char s1 = ' ', s2 = ' ', s3 = ' ', s4 = ' ', s5 = ' ',
-                s6 = ' ', s7 = ' ', s8 = ' ', s9 = ' ', s10 = ' ', s11 = ' ', s12 = ' ';
-            if (!string.IsNullOrEmpty(sdd))
-            {
-                var chars = sdd.ToCharArray();
-                if (chars.Length >= 12)
-                {
-                    s1 = chars[0];
-                    s2 = chars[1];
-                    s3 = chars[2];
-                    s4 = chars[3];
-                    s5 = chars[4];
-                    s6 = chars[5];
-                    s7 = chars[6];
-                    s8 = chars[7];
-                    s9 = chars[8];
-                    s10 = chars[9];
-                    s11 = chars[10];
-                    s12 = chars[11];
-                }
-            }
-            dict.Add("s1", s1.ToString());
-            dict.Add("s2", s2.ToString());
-            dict.Add("s3", s3.ToString());
-            dict.Add("s4", s4.ToString());
-            dict.Add("s5", s5.ToString());
-            dict.Add("s6", s6.ToString());
-            dict.Add("s7", s7.ToString());
-            dict.Add("s8", s8.ToString());
-            dict.Add("s9", s9.ToString());
-            dict.Add("s10", s10.ToString());
-            dict.Add("s11", s11.ToString());
-            dict.Add("s12", s12.ToString());
-        }
         [HttpPost]
-        public ActionResult UploadContractScan(int contractId, HttpPostedFileBase scanFile)
+        [ValidateAntiForgeryToken]
+        public ActionResult Create(ContractCreateViewModel vm, IEnumerable<HttpPostedFileBase> TenantPhotos)
         {
-            var contract = db.Contracts.Find(contractId);
-            if (contract == null) return HttpNotFound();
-
-            if (scanFile != null && scanFile.ContentLength > 0)
+            if (!ModelState.IsValid)
             {
-                string fileName = Path.GetFileNameWithoutExtension(scanFile.FileName);
-                string ext = Path.GetExtension(scanFile.FileName);
-                string uniqueName = $"contractscan_{contractId}_{DateTime.Now.Ticks}{ext}";
-                string folder = Server.MapPath("~/Uploads/ContractScans/");
-                if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
-                string filePath = Path.Combine(folder, uniqueName);
-                scanFile.SaveAs(filePath);
-                contract.ContractScanFilePath = "/Uploads/ContractScans/" + uniqueName;
-                db.SaveChanges();
+                ViewBag.RoomId = vm.RoomId;
+                ViewBag.AvailableRooms = new SelectList(db.Rooms.Where(r => !r.IsOccupied), "Id", "Name");
+                return View(vm);
             }
-            // Redirect về lại trang chi tiết phòng đang xem
-            return RedirectToAction("Details", "Rooms", new { id = contract.RoomId });
+
+            using (var transaction = db.Database.BeginTransaction())
+            {
+                try
+                {
+                    // Tạo hợp đồng
+                    var contract = new Contract
+                    {
+                        MoveInDate = vm.MoveInDate,
+                        StartDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day),
+                        EndDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day).AddMonths(vm.Months),
+                        PriceAgreed = vm.PriceAgreed,
+                        Note = vm.Note,
+                        Status = "Active",
+                        ElectricityPrice = vm.ElectricityPrice,
+                        WaterPrice = vm.WaterPrice
+                    };
+
+                    db.Contracts.Add(contract);
+                    db.SaveChanges();
+
+                    // Tạo ContractRoom cho phòng chính
+                    var contractRoom = new ContractRoom
+                    {
+                        ContractId = contract.Id,
+                        RoomId = vm.RoomId,
+                        PriceAgreed = vm.PriceAgreed,
+                        Notes = vm.Note
+                    };
+                    db.ContractRooms.Add(contractRoom);
+
+                    // Xử lý photos theo tenant
+                    var photosByTenant = GroupPhotosByTenant(TenantPhotos, vm.Tenants.Count);
+
+                    // Tạo tenants và ContractTenant
+                    for (int i = 0; i < vm.Tenants.Count; i++)
+                    {
+                        var tenantData = vm.Tenants[i];
+                        var tenant = new Tenant
+                        {
+                            FullName = tenantData.FullName,
+                            IdentityCard = tenantData.IdentityCard,
+                            PhoneNumber = tenantData.PhoneNumber,
+                            BirthDate = tenantData.BirthDate,
+                            Gender = tenantData.Gender,
+                            PermanentAddress = tenantData.PermanentAddress,
+                            Photo = photosByTenant.ContainsKey(i)
+                                ? ProcessAndSavePhotos(photosByTenant[i])
+                                : null,
+                            Ethnicity = tenantData.Ethnicity,
+                            VehiclePlate = tenantData.VehiclePlate
+                        };
+
+                        db.Tenants.Add(tenant);
+                        db.SaveChanges();
+
+                        // Tạo ContractTenant với RoomId
+                        var contractTenant = new ContractTenant
+                        {
+                            ContractId = contract.Id,
+                            TenantId = tenant.Id,
+                            RoomId = vm.RoomId,  // Gán RoomId cho tenant
+                            CreatedAt = DateTime.Now
+                        };
+                        db.ContractTenants.Add(contractTenant);
+                    }
+
+                    // Cập nhật trạng thái phòng
+                    var room = db.Rooms.Find(vm.RoomId);
+                    if (room != null)
+                        room.IsOccupied = true;
+
+                    db.SaveChanges();
+                    transaction.Commit();
+
+                    return RedirectToAction("Details", "Rooms", new { id = vm.RoomId });
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    ModelState.AddModelError("", "Có lỗi xảy ra: " + ex.Message);
+                    ViewBag.RoomId = vm.RoomId;
+                    ViewBag.AvailableRooms = new SelectList(db.Rooms.Where(r => !r.IsOccupied), "Id", "Name");
+                    return View(vm);
+                }
+            }
         }
 
         public ActionResult Edit(int id)
         {
-            var contract = db.Contracts.Include("ContractTenants.Tenant").FirstOrDefault(c => c.Id == id);
+            var contract = db.Contracts
+                .Include(c => c.ContractRooms.Select(cr => cr.Room))
+                .Include(c => c.ContractTenants.Select(ct => ct.Tenant))
+                .FirstOrDefault(c => c.Id == id);
+
             if (contract == null) return HttpNotFound();
+
+            // Lấy phòng đầu tiên làm phòng chính
+            var primaryRoom = contract.ContractRooms.FirstOrDefault();
+            if (primaryRoom == null) return HttpNotFound();
 
             var vm = new ContractEditViewModel
             {
                 Id = contract.Id,
-                RoomId = contract.RoomId,
+                RoomId = primaryRoom.RoomId,
                 MoveInDate = contract.MoveInDate,
                 Months = ((contract.EndDate.Year - contract.StartDate.Year) * 12 + contract.EndDate.Month - contract.StartDate.Month),
                 PriceAgreed = contract.PriceAgreed,
-                DepositAmount = contract.DepositAmount,
                 ElectricityPrice = contract.ElectricityPrice,
                 WaterPrice = contract.WaterPrice,
                 Tenants = contract.ContractTenants.Select(ct => new TenantEditModel
@@ -445,302 +237,14 @@ namespace NhaTroAnCu.Controllers
         }
 
         [HttpPost]
-        public ActionResult ExtendContract(int contractId, int extendMonths, string note)
-        {
-            var contract = db.Contracts.Find(contractId);
-            if (contract == null || contract.Status != "Active")
-                return HttpNotFound();
-
-            if (extendMonths <= 0)
-                return Json(new { success = false, message = "Số tháng gia hạn phải lớn hơn 0." });
-
-            DateTime? oldEndDate = contract.EndDate;
-            if (oldEndDate.HasValue)
-                contract.EndDate = oldEndDate.Value.AddMonths(extendMonths);
-            else
-                contract.EndDate = DateTime.Now.AddMonths(extendMonths);
-
-            // Lưu lịch sử gia hạn
-            var log = new ContractExtensionHistory
-            {
-                ContractId = contract.Id,
-                ExtendedAt = DateTime.Now,
-                OldEndDate = oldEndDate,
-                NewEndDate = contract.EndDate,
-                ExtendMonths = extendMonths,
-                Note = note
-            };
-            db.ContractExtensionHistories.Add(log);
-
-            db.SaveChanges();
-            return Json(new { success = true, newEndDate = contract.EndDate.ToString("dd/MM/yyyy") });
-        }
-
-        public ActionResult History(
-                int id, int page = 1, int pageSize = 20,
-                string searchName = "", string searchCard = "", string searchAddress = "",
-                string sortField = "StartDate", string sortDirection = "desc",
-                string fromDate = null, string toDate = null)
-        {
-            ViewBag.RoomId = id;
-            DateTime? from = null, to = null;
-            if (!string.IsNullOrEmpty(fromDate))
-                from = DateTime.ParseExact(fromDate, "dd/MM/yyyy", CultureInfo.InvariantCulture);
-            if (!string.IsNullOrEmpty(toDate))
-                to = DateTime.ParseExact(toDate, "dd/MM/yyyy", CultureInfo.InvariantCulture);
-
-            var query = db.Contracts
-                .Where(c => c.RoomId == id)
-                .Select(c => new
-                {
-                    RoomName = c.Room.Name,
-                    Tenants = c.ContractTenants.Select(ct => ct.Tenant.FullName),
-                    IdentityCards = c.ContractTenants.Select(ct => ct.Tenant.IdentityCard),
-                    Genders = c.ContractTenants.Select(ct => ct.Tenant.Gender),
-                    Addresses = c.ContractTenants.Select(ct => ct.Tenant.PermanentAddress),
-                    PhoneNumbers = c.ContractTenants.Select(ct => ct.Tenant.PhoneNumber),
-                    c.StartDate,
-                    c.EndDate,
-                    c.Note
-                });
-
-            if (!string.IsNullOrEmpty(searchName))
-                query = query.Where(x => x.Tenants.Any(n => n.Contains(searchName)));
-            if (!string.IsNullOrEmpty(searchCard))
-                query = query.Where(x => x.IdentityCards.Any(ic => ic.Contains(searchCard)));
-            if (!string.IsNullOrEmpty(searchAddress))
-                query = query.Where(x => x.Addresses.Any(addr => addr.Contains(searchAddress)));
-            if (from.HasValue)
-                query = query.Where(x => x.StartDate >= from.Value);
-            if (to.HasValue)
-                query = query.Where(x => x.StartDate <= to.Value);
-
-            switch (sortField)
-            {
-                case "RoomName":
-                    query = sortDirection == "asc" ? query.OrderBy(x => x.RoomName) : query.OrderByDescending(x => x.RoomName);
-                    break;
-                case "StartDate":
-                    query = sortDirection == "asc" ? query.OrderBy(x => x.StartDate) : query.OrderByDescending(x => x.StartDate);
-                    break;
-                case "EndDate":
-                    query = sortDirection == "asc" ? query.OrderBy(x => x.EndDate) : query.OrderByDescending(x => x.EndDate);
-                    break;
-                default:
-                    query = sortDirection == "asc" ? query.OrderBy(x => x.StartDate) : query.OrderByDescending(x => x.StartDate);
-                    break;
-            }
-
-            int totalItems = query.Count();
-
-            var items = query.Skip((page - 1) * pageSize).Take(pageSize).ToList()
-                .Select(x => new NhaTroAnCu.Models.ContractHistoryItemViewModel
-                {
-                    RoomName = x.RoomName,
-                    TenantNames = string.Join(", ", x.Tenants),
-                    IdentityCards = string.Join(", ", x.IdentityCards),
-                    Genders = string.Join(", ", x.Genders),
-                    Addresses = string.Join(", ", x.Addresses),
-                    PhoneNumbers = string.Join(", ", x.PhoneNumbers),
-                    StartDate = x.StartDate,
-                    EndDate = x.EndDate, // giữ nullable
-                    Note = x.Note
-                }).ToList();
-
-            var model = new NhaTroAnCu.Models.ContractHistoryViewModel
-            {
-                Items = items,
-                TotalItems = totalItems,
-                Page = page,
-                PageSize = pageSize,
-                SearchName = searchName,
-                SearchCard = searchCard,
-                SearchAddress = searchAddress,
-                SortField = sortField,
-                SortDirection = sortDirection,
-                FromDate = from,
-                ToDate = to,
-                RoomId = id
-            };
-
-            return View(model);
-        }
-
-        private string ProcessAndSavePhotos(IEnumerable<HttpPostedFileBase> photos)
-        {
-            if (photos == null || !photos.Any(p => p != null && p.ContentLength > 0))
-                return null;
-
-            var photoPaths = new List<string>();
-            string serverPath = Server.MapPath("~/Uploads/TenantPhotos/");
-
-            if (!Directory.Exists(serverPath))
-                Directory.CreateDirectory(serverPath);
-
-            foreach (var photo in photos.Where(p => p != null && p.ContentLength > 0))
-            {
-                string fileName = Path.GetFileNameWithoutExtension(photo.FileName);
-                string ext = Path.GetExtension(photo.FileName);
-                string uniqueName = $"{fileName}_{Guid.NewGuid():N}{ext}";
-                string savePath = Path.Combine(serverPath, uniqueName);
-
-                photo.SaveAs(savePath);
-                photoPaths.Add($"/Uploads/TenantPhotos/{uniqueName}");
-            }
-
-            return string.Join(";", photoPaths);
-        }
-
-        // Tối ưu Create method
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create(ContractCreateViewModel vm, IEnumerable<HttpPostedFileBase> TenantPhotos)
-        {
-            if (!ModelState.IsValid)
-            {
-                ViewBag.RoomId = new SelectList(db.Rooms.Where(r => !r.IsOccupied), "Id", "Name");
-                return View(vm);
-            }
-
-            using (var transaction = db.Database.BeginTransaction())
-            {
-                try
-                {
-                    // Tạo hợp đồng
-                    var contract = new Contract
-                    {
-                        RoomId = vm.RoomId,
-                        MoveInDate = vm.MoveInDate,
-                        StartDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day),
-                        EndDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day).AddMonths(vm.Months),
-                        PriceAgreed = vm.PriceAgreed,
-                        DepositAmount = vm.DepositAmount,
-                        Note = vm.Note,
-                        Status = "Active",
-                        ElectricityPrice = vm.ElectricityPrice,
-                        WaterPrice = vm.WaterPrice
-                    };
-
-                    db.Contracts.Add(contract);
-                    db.SaveChanges();
-
-                    // Xử lý photos theo tenant
-                    var photosByTenant = GroupPhotosByTenant(TenantPhotos, vm.Tenants.Count);
-
-                    // Tạo tenants
-                    for (int i = 0; i < vm.Tenants.Count; i++)
-                    {
-                        var tenantData = vm.Tenants[i];
-                        var tenant = new Tenant
-                        {
-                            FullName = tenantData.FullName,
-                            IdentityCard = tenantData.IdentityCard,
-                            PhoneNumber = tenantData.PhoneNumber,
-                            BirthDate = tenantData.BirthDate,
-                            Gender = tenantData.Gender,
-                            PermanentAddress = tenantData.PermanentAddress,
-                            Photo = photosByTenant.ContainsKey(i)
-                                ? ProcessAndSavePhotos(photosByTenant[i])
-                                : null,
-                            Ethnicity = tenantData.Ethnicity,
-                            VehiclePlate = tenantData.VehiclePlate
-                        };
-
-                        db.Tenants.Add(tenant);
-                        db.SaveChanges();
-
-                        db.ContractTenants.Add(new ContractTenant
-                        {
-                            ContractId = contract.Id,
-                            TenantId = tenant.Id,
-                            CreatedAt = DateTime.Now
-                        });
-                    }
-
-                    // Cập nhật trạng thái phòng
-                    var room = db.Rooms.Find(vm.RoomId);
-                    if (room != null)
-                        room.IsOccupied = true;
-
-                    db.SaveChanges();
-                    transaction.Commit();
-
-                    return RedirectToAction("Index", "Rooms");
-                }
-                catch (Exception ex)
-                {
-                    transaction.Rollback();
-                    ModelState.AddModelError("", "Có lỗi xảy ra: " + ex.Message);
-                    ViewBag.RoomId = new SelectList(db.Rooms.Where(r => !r.IsOccupied), "Id", "Name");
-                    return View(vm);
-                }
-            }
-        }
-
-        // Đơn giản hóa GroupPhotosByTenant
-        private Dictionary<int, List<HttpPostedFileBase>> GroupPhotosByTenant(IEnumerable<HttpPostedFileBase> photos, int tenantCount)
-        {
-            var result = new Dictionary<int, List<HttpPostedFileBase>>();
-
-            if (photos == null)
-                return result;
-
-            var photoList = photos.Where(p => p != null && p.ContentLength > 0).ToList();
-            if (!photoList.Any())
-                return result;
-
-            // Initialize lists
-            for (int i = 0; i < tenantCount; i++)
-                result[i] = new List<HttpPostedFileBase>();
-
-            // Distribute photos evenly
-            int photosPerTenant = Math.Max(1, photoList.Count / tenantCount);
-            int currentTenant = 0;
-
-            foreach (var photo in photoList)
-            {
-                result[currentTenant].Add(photo);
-                if (result[currentTenant].Count >= photosPerTenant && currentTenant < tenantCount - 1)
-                    currentTenant++;
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// Helper method to safely delete old photos
-        /// </summary>
-        /// <param name="photoPath">Semicolon-separated photo paths</param>
-        private void DeleteOldPhotos(string photoPath)
-        {
-            if (string.IsNullOrEmpty(photoPath))
-                return;
-
-            var oldPhotos = photoPath.Split(';');
-            foreach (var oldPhoto in oldPhotos.Where(p => !string.IsNullOrWhiteSpace(p)))
-            {
-                try
-                {
-                    var physicalPath = Server.MapPath(oldPhoto);
-                    if (System.IO.File.Exists(physicalPath))
-                    {
-                        System.IO.File.Delete(physicalPath);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // Log error but continue
-                    System.Diagnostics.Debug.WriteLine($"Error deleting photo {oldPhoto}: {ex.Message}");
-                }
-            }
-        }
-        // Cập nhật phương thức Edit trong ContractsController.cs
-
-        [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult Edit(ContractEditViewModel vm)
         {
-            var contract = db.Contracts.Include("ContractTenants.Tenant").FirstOrDefault(c => c.Id == vm.Id);
+            var contract = db.Contracts
+                .Include(c => c.ContractRooms)
+                .Include(c => c.ContractTenants.Select(ct => ct.Tenant))
+                .FirstOrDefault(c => c.Id == vm.Id);
+
             if (contract == null)
                 return HttpNotFound();
 
@@ -749,58 +253,47 @@ namespace NhaTroAnCu.Controllers
             contract.StartDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day);
             contract.EndDate = vm.MoveInDate.AddDays(10 - vm.MoveInDate.Day).AddMonths(vm.Months);
             contract.PriceAgreed = vm.PriceAgreed;
-            contract.DepositAmount = vm.DepositAmount;
             contract.ElectricityPrice = vm.ElectricityPrice;
             contract.WaterPrice = vm.WaterPrice;
 
-            // Handle tenant mapping
-            var oldTenantIds = contract.ContractTenants.Select(ct => ct.TenantId).ToList();
-            var newTenantIds = vm.Tenants.Where(t => t.Id > 0).Select(t => t.Id).ToList();
-
-            // Remove tenants that are no longer in the contract
-            foreach (var ct in contract.ContractTenants.Where(ct => !newTenantIds.Contains(ct.TenantId)).ToList())
+            // Update ContractRoom if room changed
+            var existingContractRoom = contract.ContractRooms.FirstOrDefault();
+            if (existingContractRoom != null && existingContractRoom.RoomId != vm.RoomId)
             {
-                var tenant = db.Tenants.Find(ct.TenantId);
-                if (tenant != null && !string.IsNullOrEmpty(tenant.Photo))
-                {
-                    DeleteOldPhotos(tenant.Photo);
-                }
-                db.ContractTenants.Remove(ct);
-                if (tenant != null)
-                {
-                    db.Tenants.Remove(tenant);
-                }
+                // Update old room status
+                var oldRoom = db.Rooms.Find(existingContractRoom.RoomId);
+                if (oldRoom != null)
+                    oldRoom.IsOccupied = false;
+
+                // Update ContractRoom
+                existingContractRoom.RoomId = vm.RoomId;
+                existingContractRoom.PriceAgreed = vm.PriceAgreed;
+
+                // Update new room status
+                var newRoom = db.Rooms.Find(vm.RoomId);
+                if (newRoom != null)
+                    newRoom.IsOccupied = true;
             }
 
-            // Process file uploads - Cải tiến logic xử lý
+            // Process file uploads
             var allFiles = new List<HttpPostedFileBase>();
             var filesByTenant = new Dictionary<int, List<HttpPostedFileBase>>();
 
-            // Thu thập tất cả files và phân loại theo tenant index
             for (int i = 0; i < Request.Files.Count; i++)
             {
                 var file = Request.Files[i];
                 if (file != null && file.ContentLength > 0)
                 {
-                    // Kiểm tra key name để xác định tenant index
-                    var key = Request.Files.AllKeys[i];
-                    if (key == "TenantPhotos")
-                    {
-                        // Sử dụng một cách khác để xác định tenant index
-                        // Dựa vào thứ tự upload hoặc metadata khác
-                        allFiles.Add(file);
-                    }
+                    allFiles.Add(file);
                 }
             }
 
-            // Phương pháp mới: Phân bổ files dựa trên file name pattern
+            // Distribute files among tenants
             foreach (var file in allFiles)
             {
                 int tenantIndex = ExtractTenantIndexFromFileName(file.FileName);
                 if (tenantIndex == -1)
                 {
-                    // Nếu không tìm thấy index trong filename, 
-                    // phân bổ dựa trên vị trí trong danh sách
                     tenantIndex = DetermineTargetTenant(file, allFiles, vm.Tenants.Count);
                 }
 
@@ -817,7 +310,7 @@ namespace NhaTroAnCu.Controllers
                 var t = vm.Tenants[i];
                 var tenantPhotos = new List<string>();
 
-                // Xử lý photos cho tenant này
+                // Process photos for this tenant
                 if (filesByTenant.ContainsKey(i))
                 {
                     foreach (var file in filesByTenant[i])
@@ -852,17 +345,21 @@ namespace NhaTroAnCu.Controllers
                         tenant.Ethnicity = t.Ethnicity;
                         tenant.VehiclePlate = t.VehiclePlate;
 
-                        // Only update photos if new ones are uploaded
                         if (tenantPhotos.Any())
                         {
-                            // Delete old photos
                             if (!string.IsNullOrEmpty(tenant.Photo))
                             {
                                 DeleteOldPhotos(tenant.Photo);
                             }
                             tenant.Photo = string.Join(";", tenantPhotos);
                         }
-                        // Keep existing photos if no new ones uploaded
+
+                        // Update ContractTenant RoomId if needed
+                        var contractTenant = contract.ContractTenants.FirstOrDefault(ct => ct.TenantId == tenant.Id);
+                        if (contractTenant != null && contractTenant.RoomId != vm.RoomId)
+                        {
+                            contractTenant.RoomId = vm.RoomId;
+                        }
                     }
                 }
                 else
@@ -883,31 +380,164 @@ namespace NhaTroAnCu.Controllers
                     db.Tenants.Add(tenant);
                     db.SaveChanges();
 
-                    db.ContractTenants.Add(new ContractTenant
+                    // Add ContractTenant with RoomId
+                    var contractTenant = new ContractTenant
                     {
                         ContractId = contract.Id,
                         TenantId = tenant.Id,
+                        RoomId = vm.RoomId,
                         CreatedAt = DateTime.Now
-                    });
+                    };
+                    db.ContractTenants.Add(contractTenant);
                 }
             }
 
             db.SaveChanges();
-            return RedirectToAction("Details", "Rooms", new { id = contract.RoomId });
+            return RedirectToAction("Details", "Rooms", new { id = vm.RoomId });
         }
 
-        // Helper methods mới
+        [HttpPost]
+        public ActionResult ExtendContract(int contractId, int extendMonths, string note)
+        {
+            var contract = db.Contracts.Find(contractId);
+            if (contract == null || contract.Status != "Active")
+                return HttpNotFound();
 
-        /// <summary>
-        /// Trích xuất tenant index từ tên file
-        /// Ví dụ: "tenant_0_cccd.jpg" -> 0
-        /// </summary>
+            if (extendMonths <= 0)
+                return Json(new { success = false, message = "Số tháng gia hạn phải lớn hơn 0." });
+
+            DateTime? oldEndDate = contract.EndDate;
+            if (oldEndDate.HasValue)
+                contract.EndDate = oldEndDate.Value.AddMonths(extendMonths);
+            else
+                contract.EndDate = DateTime.Now.AddMonths(extendMonths);
+
+            // Save extension history
+            var log = new ContractExtensionHistory
+            {
+                ContractId = contract.Id,
+                ExtendedAt = DateTime.Now,
+                OldEndDate = oldEndDate,
+                NewEndDate = contract.EndDate,
+                ExtendMonths = extendMonths,
+                Note = note
+            };
+            db.ContractExtensionHistories.Add(log);
+
+            db.SaveChanges();
+            return Json(new { success = true, newEndDate = contract.EndDate.ToString("dd/MM/yyyy") });
+        }
+
+        [HttpPost]
+        public ActionResult UploadContractScan(int contractId, HttpPostedFileBase scanFile)
+        {
+            var contract = db.Contracts
+                .Include(c => c.ContractRooms)
+                .FirstOrDefault(c => c.Id == contractId);
+
+            if (contract == null) return HttpNotFound();
+
+            if (scanFile != null && scanFile.ContentLength > 0)
+            {
+                string fileName = Path.GetFileNameWithoutExtension(scanFile.FileName);
+                string ext = Path.GetExtension(scanFile.FileName);
+                string uniqueName = $"contractscan_{contractId}_{DateTime.Now.Ticks}{ext}";
+                string folder = Server.MapPath("~/Uploads/ContractScans/");
+                if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+                string filePath = Path.Combine(folder, uniqueName);
+                scanFile.SaveAs(filePath);
+                contract.ContractScanFilePath = "/Uploads/ContractScans/" + uniqueName;
+                db.SaveChanges();
+            }
+
+            // Redirect to first room in contract
+            var firstRoomId = contract.ContractRooms.FirstOrDefault()?.RoomId ?? 0;
+            return RedirectToAction("Details", "Rooms", new { id = firstRoomId });
+        }
+
+        // Helper methods
+        private string ProcessAndSavePhotos(IEnumerable<HttpPostedFileBase> photos)
+        {
+            if (photos == null || !photos.Any(p => p != null && p.ContentLength > 0))
+                return null;
+
+            var photoPaths = new List<string>();
+            string serverPath = Server.MapPath("~/Uploads/TenantPhotos/");
+
+            if (!Directory.Exists(serverPath))
+                Directory.CreateDirectory(serverPath);
+
+            foreach (var photo in photos.Where(p => p != null && p.ContentLength > 0))
+            {
+                string fileName = Path.GetFileNameWithoutExtension(photo.FileName);
+                string ext = Path.GetExtension(photo.FileName);
+                string uniqueName = $"{fileName}_{Guid.NewGuid():N}{ext}";
+                string savePath = Path.Combine(serverPath, uniqueName);
+
+                photo.SaveAs(savePath);
+                photoPaths.Add($"/Uploads/TenantPhotos/{uniqueName}");
+            }
+
+            return string.Join(";", photoPaths);
+        }
+
+        private Dictionary<int, List<HttpPostedFileBase>> GroupPhotosByTenant(IEnumerable<HttpPostedFileBase> photos, int tenantCount)
+        {
+            var result = new Dictionary<int, List<HttpPostedFileBase>>();
+
+            if (photos == null)
+                return result;
+
+            var photoList = photos.Where(p => p != null && p.ContentLength > 0).ToList();
+            if (!photoList.Any())
+                return result;
+
+            // Initialize lists
+            for (int i = 0; i < tenantCount; i++)
+                result[i] = new List<HttpPostedFileBase>();
+
+            // Distribute photos evenly
+            int photosPerTenant = Math.Max(1, photoList.Count / tenantCount);
+            int currentTenant = 0;
+
+            foreach (var photo in photoList)
+            {
+                result[currentTenant].Add(photo);
+                if (result[currentTenant].Count >= photosPerTenant && currentTenant < tenantCount - 1)
+                    currentTenant++;
+            }
+
+            return result;
+        }
+
+        private void DeleteOldPhotos(string photoPath)
+        {
+            if (string.IsNullOrEmpty(photoPath))
+                return;
+
+            var oldPhotos = photoPath.Split(';');
+            foreach (var oldPhoto in oldPhotos.Where(p => !string.IsNullOrWhiteSpace(p)))
+            {
+                try
+                {
+                    var physicalPath = Server.MapPath(oldPhoto);
+                    if (System.IO.File.Exists(physicalPath))
+                    {
+                        System.IO.File.Delete(physicalPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error deleting photo {oldPhoto}: {ex.Message}");
+                }
+            }
+        }
+
         private int ExtractTenantIndexFromFileName(string fileName)
         {
             if (string.IsNullOrEmpty(fileName))
                 return -1;
 
-            // Pattern: tenant_X_ hoặc tenantX_
             var patterns = new[] { @"tenant_(\d+)_", @"tenant(\d+)_" };
 
             foreach (var pattern in patterns)
@@ -922,26 +552,17 @@ namespace NhaTroAnCu.Controllers
             return -1;
         }
 
-        /// <summary>
-        /// Xác định tenant target dựa trên vị trí và context
-        /// </summary>
         private int DetermineTargetTenant(HttpPostedFileBase file, List<HttpPostedFileBase> allFiles, int tenantCount)
         {
-            // Tìm vị trí của file trong danh sách
             int fileIndex = allFiles.IndexOf(file);
             if (fileIndex == -1) return 0;
 
-            // Phân bổ đều các files cho các tenants
             int filesPerTenant = Math.Max(1, allFiles.Count / tenantCount);
             int targetTenant = fileIndex / filesPerTenant;
 
-            // Đảm bảo không vượt quá số lượng tenant
             return Math.Min(targetTenant, tenantCount - 1);
         }
 
-        /// <summary>
-        /// Lưu ảnh tenant với error handling tốt hơn
-        /// </summary>
         private string SaveTenantPhoto(HttpPostedFileBase file)
         {
             if (file == null || file.ContentLength == 0)
@@ -951,8 +572,6 @@ namespace NhaTroAnCu.Controllers
             {
                 string fileName = Path.GetFileNameWithoutExtension(file.FileName);
                 string ext = Path.GetExtension(file.FileName);
-
-                // Tạo tên file unique
                 string uniqueName = $"{fileName}_{DateTime.Now.Ticks}_{Guid.NewGuid():N}{ext}";
 
                 string serverPath = Server.MapPath("~/Uploads/TenantPhotos/");
@@ -973,48 +592,13 @@ namespace NhaTroAnCu.Controllers
             }
         }
 
-        /// <summary>
-        /// Phương thức cải tiến để nhóm photos theo tenant
-        /// </summary>
-        private Dictionary<int, List<HttpPostedFileBase>> GroupPhotosByTenantImproved(int tenantCount)
+        protected override void Dispose(bool disposing)
         {
-            var result = new Dictionary<int, List<HttpPostedFileBase>>();
-
-            // Initialize
-            for (int i = 0; i < tenantCount; i++)
+            if (disposing)
             {
-                result[i] = new List<HttpPostedFileBase>();
+                db?.Dispose();
             }
-
-            // Đọc thông tin từ form data để xác định chính xác file nào thuộc tenant nào
-            var tenantPhotoMappings = new Dictionary<string, int>();
-
-            for (int i = 0; i < Request.Files.Count; i++)
-            {
-                var file = Request.Files[i];
-                var key = Request.Files.AllKeys[i];
-
-                if (file != null && file.ContentLength > 0 && key == "TenantPhotos")
-                {
-                    // Kiểm tra xem có thông tin tenant index trong form không
-                    var tenantIndexKey = $"TenantPhotos_Index_{i}";
-                    if (Request.Form[tenantIndexKey] != null &&
-                        int.TryParse(Request.Form[tenantIndexKey], out int tenantIndex))
-                    {
-                        if (tenantIndex >= 0 && tenantIndex < tenantCount)
-                        {
-                            result[tenantIndex].Add(file);
-                            continue;
-                        }
-                    }
-
-                    // Fallback: phân bổ tuần tự
-                    int targetIndex = i % tenantCount;
-                    result[targetIndex].Add(file);
-                }
-            }
-
-            return result;
+            base.Dispose(disposing);
         }
     }
 }

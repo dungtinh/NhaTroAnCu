@@ -17,10 +17,8 @@ namespace NhaTroAnCu.Models
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public Room()
         {
-            this.Contracts = new HashSet<Contract>();
-            this.PaymentHistories = new HashSet<PaymentHistory>();
-            this.UtilityBills = new HashSet<UtilityBill>();
-            this.IncomeExpenses = new HashSet<IncomeExpense>();
+            this.ContractRooms = new HashSet<ContractRoom>();
+            this.ContractTenants = new HashSet<ContractTenant>();
         }
     
         public int Id { get; set; }
@@ -37,12 +35,8 @@ namespace NhaTroAnCu.Models
         public bool HasWardrobe { get; set; }
     
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<Contract> Contracts { get; set; }
+        public virtual ICollection<ContractRoom> ContractRooms { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<PaymentHistory> PaymentHistories { get; set; }
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<UtilityBill> UtilityBills { get; set; }
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<IncomeExpense> IncomeExpenses { get; set; }
+        public virtual ICollection<ContractTenant> ContractTenants { get; set; }
     }
 }

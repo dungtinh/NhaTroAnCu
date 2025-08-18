@@ -12,13 +12,15 @@ namespace NhaTroAnCu.Models
     using System;
     using System.Collections.Generic;
     
-    public partial class WaterIndex
+    public partial class ContractRoom
     {
         public int Id { get; set; }
+        public int ContractId { get; set; }
         public int RoomId { get; set; }
-        public int Month { get; set; }
-        public int Year { get; set; }
-        public System.DateTime CreatedAt { get; set; }
-        public int WaterReading { get; set; }
+        public decimal PriceAgreed { get; set; }
+        public string Notes { get; set; }
+    
+        public virtual Contract Contract { get; set; }
+        public virtual Room Room { get; set; }
     }
 }

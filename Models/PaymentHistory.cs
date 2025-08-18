@@ -18,15 +18,11 @@ namespace NhaTroAnCu.Models
         public int RoomId { get; set; }
         public int Month { get; set; }
         public int Year { get; set; }
+        public int ContractId { get; set; }
+        public Nullable<int> UtilityBillId { get; set; }
         public decimal TotalAmount { get; set; }
         public System.DateTime PaidDate { get; set; }
         public string Note { get; set; }
-        public int ContractId { get; set; }
-        public Nullable<int> UtilityBillId { get; set; }
         public Nullable<System.DateTime> CreatedAt { get; set; }
-    
-        public virtual Room Room { get; set; }
-        public virtual Contract Contract { get; set; }
-        public virtual UtilityBill UtilityBill { get; set; }
     }
 }

@@ -14,11 +14,14 @@ namespace NhaTroAnCu.Models
     
     public partial class ContractTenant
     {
-        public int ContractId { get; set; }
+        public int Id { get; set; }
+        public int RoomId { get; set; }
         public int TenantId { get; set; }
+        public int ContractId { get; set; }
         public System.DateTime CreatedAt { get; set; }
     
         public virtual Contract Contract { get; set; }
+        public virtual Room Room { get; set; }
         public virtual Tenant Tenant { get; set; }
     }
 }

@@ -2,7 +2,6 @@
 using System.Data.Entity;
 using System.Linq;
 using System.Web.Mvc;
-using DocumentFormat.OpenXml.Office2010.Excel;
 using NhaTroAnCu.Models;
 
 public class RoomsController : Controller
@@ -23,9 +22,8 @@ public class RoomsController : Controller
         var filterDate = new DateTime(selectedYear, selectedMonth, selectedDay);
 
         var rooms = db.Rooms
-            .Include(r => r.Contracts.Select(c => c.ContractTenants.Select(ct => ct.Tenant)))
-            .Include(r => r.UtilityBills)
-            .Include(r => r.PaymentHistories)
+            .Include(r => r.ContractRooms.Select(cr => cr.Contract))
+            .Include(r => r.ContractTenants.Select(ct => ct.Tenant))
             .ToList();
 
         var roomViewModels = rooms.Select(room => GetRoomViewModel(room, filterDate, selectedMonth, selectedYear, now))
@@ -37,41 +35,51 @@ public class RoomsController : Controller
     private RoomViewModel GetRoomViewModel(Room room, DateTime filterDate, int selectedMonth, int selectedYear, DateTime now)
     {
         string colorClass = "gray";
-        bool isContractExpired = false; // Thêm biến kiểm tra hợp đồng đã hết hạn
+        bool isContractExpired = false;
 
-        // Tìm hợp đồng đang active (bao gồm cả đã hết hạn)
-        var activeContract = room.Contracts
-            .Where(c => c.Status == "Active")
-            .OrderByDescending(c => c.StartDate)
+        // Tìm hợp đồng active cho phòng này thông qua ContractRooms
+        var activeContract = room.ContractRooms
+            .Where(cr => cr.Contract.Status == "Active")
+            .OrderByDescending(cr => cr.Contract.StartDate)
+            .Select(cr => cr.Contract)
             .FirstOrDefault();
 
         // Tìm hợp đồng còn hiệu lực tại thời điểm filter
-        var validContract = room.Contracts
-            .Where(c => c.Status == "Active"
-                        && c.StartDate <= filterDate
-                        && (c.EndDate == null || c.EndDate >= filterDate))
+        var validContract = room.ContractRooms
+            .Where(cr => cr.Contract.Status == "Active"
+                        && cr.Contract.StartDate <= filterDate
+                        && (cr.Contract.EndDate == null || cr.Contract.EndDate >= filterDate))
+            .Select(cr => cr.Contract)
             .FirstOrDefault();
 
         // Kiểm tra nếu có hợp đồng active nhưng đã hết hạn
         if (activeContract != null && activeContract.EndDate < filterDate)
         {
             isContractExpired = true;
-            // Dùng activeContract thay vì validContract cho phòng hết hạn
             validContract = activeContract;
         }
 
-        var bill = room.UtilityBills.FirstOrDefault(b => b.Month == selectedMonth && b.Year == selectedYear);
+        // Lấy bill cho phòng này
+        var bill = db.UtilityBills
+            .FirstOrDefault(b => b.Month == selectedMonth
+                && b.Year == selectedYear
+                && validContract != null
+                && b.ContractId == validContract.Id);
 
-        decimal mustPay = bill != null ? (bill.TotalAmount ?? 0) : 0;
-        decimal paid = room.PaymentHistories
-            .Where(p => p.Month == selectedMonth && p.Year == selectedYear && (validContract == null || p.ContractId == validContract.Id))
-            .Sum(p => p.TotalAmount);
+        decimal mustPay = bill != null ? bill.TotalAmount : 0;
+
+        // Lấy payment history cho phòng này
+        decimal paid = db.PaymentHistories
+            .Where(p => p.RoomId == room.Id
+                && p.Month == selectedMonth
+                && p.Year == selectedYear
+                && (validContract == null || p.ContractId == validContract.Id))
+            .Sum(p => (decimal?)p.TotalAmount) ?? 0;
 
         // Xác định màu sắc cho phòng
         if (isContractExpired)
         {
-            // Phòng đã hết hạn hợp đồng - luôn hiển thị màu đỏ cảnh báo
-            colorClass = "expired"; // Sử dụng class mới cho phòng hết hạn
+            colorClass = "expired";
         }
         else if (validContract != null)
         {
@@ -88,30 +96,44 @@ public class RoomsController : Controller
         // Tính toán cảnh báo hợp đồng sắp hết hạn
         bool isContractNearingEnd = false;
         DateTime? contractEndDate = validContract?.EndDate;
-        if (validContract != null && !isContractExpired) // Không cảnh báo sắp hết hạn nếu đã hết hạn
+        if (validContract != null && !isContractExpired)
         {
             var daysLeft = (validContract.EndDate - now).TotalDays;
             isContractNearingEnd = daysLeft > 0 && daysLeft <= 31;
         }
 
-        return new NhaTroAnCu.Models.RoomViewModel
+        // Lấy tên người thuê từ ContractTenants của phòng này
+        var tenantName = "";
+        if (validContract != null)
+        {
+            var contractTenant = room.ContractTenants
+                .FirstOrDefault(ct => ct.ContractId == validContract.Id && ct.RoomId == room.Id);
+            tenantName = contractTenant?.Tenant?.FullName ?? "";
+        }
+
+        return new RoomViewModel
         {
             Room = room,
             ColorClass = colorClass,
-            TenantName = validContract?.ContractTenants?.FirstOrDefault()?.Tenant?.FullName ?? "",
+            TenantName = tenantName,
             IsContractNearingEnd = isContractNearingEnd,
-            IsContractExpired = isContractExpired, // Thêm property mới
+            IsContractExpired = isContractExpired,
             ContractEndDate = contractEndDate
         };
     }
+
     public ActionResult Details(int id)
     {
         var room = db.Rooms.Find(id);
         if (room == null) return HttpNotFound();
 
+        // Tìm hợp đồng active cho phòng này
         var activeContract = db.Contracts
-            .Include("ContractTenants.Tenant")
-            .FirstOrDefault(c => c.RoomId == id && c.Status == "Active");
+            .Include(c => c.ContractRooms)
+            .Include(c => c.ContractTenants.Select(ct => ct.Tenant))
+            .Include(c => c.ContractExtensionHistories)
+            .Where(c => c.Status == "Active" && c.ContractRooms.Any(cr => cr.RoomId == id))
+            .FirstOrDefault();
 
         var now = DateTime.Now;
         var currentMonth = now.Month;
@@ -128,10 +150,10 @@ public class RoomsController : Controller
         ViewBag.CurrentMonth = currentMonth;
         ViewBag.CurrentYear = currentYear;
 
+        var prevIndex = 0;
         if (activeContract != null)
         {
             var bill = db.UtilityBills.FirstOrDefault(b =>
-                b.RoomId == room.Id &&
                 b.Month == currentMonth &&
                 b.Year == currentYear &&
                 b.ContractId == activeContract.Id);
@@ -142,8 +164,9 @@ public class RoomsController : Controller
                     && p.Year == currentYear
                     && p.ContractId == activeContract.Id);
 
-            ViewBag.Bill = bill; // Thêm bill vào ViewBag
+            ViewBag.Bill = bill;
             ViewBag.Payment = payment;
+            prevIndex = bill?.WaterIndexEnd ?? 0;
 
             // Tính extra/discount cho tháng đầu
             decimal extraCharge = 0, discount = 0;
@@ -160,23 +183,24 @@ public class RoomsController : Controller
 
             ViewBag.ExtraCharge = extraCharge;
             ViewBag.Discount = discount;
+
+            // Lấy tenants cho phòng này
+            var roomTenants = activeContract.ContractTenants
+                .Where(ct => ct.RoomId == room.Id)
+                .ToList();
+            ViewBag.RoomTenants = roomTenants;
         }
         else
         {
             ViewBag.Payment = null;
             ViewBag.ExtraCharge = 0;
             ViewBag.Discount = 0;
+            ViewBag.RoomTenants = null;
         }
 
         // Lấy chỉ số nước tháng trước
         var prevMonth = currentMonth == 1 ? 12 : currentMonth - 1;
         var prevYear = currentMonth == 1 ? currentYear - 1 : currentYear;
-
-        var prevIndex = db.WaterIndexes
-            .Where(x => x.RoomId == room.Id && x.Month == prevMonth && x.Year == prevYear)
-            .OrderByDescending(x => x.CreatedAt)
-            .Select(x => x.WaterReading)
-            .FirstOrDefault();
 
         ViewBag.WaterPrev = prevIndex;
     }
