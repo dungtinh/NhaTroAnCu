@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNet.Identity;
+using NhaTroAnCu.Helpers;
 using NhaTroAnCu.Models;
 using System;
 using System.Collections.Generic;
@@ -243,52 +244,93 @@ namespace NhaTroAnCu.Controllers
             db.ContractRooms.Add(contractRoom);
 
             // 5. Tạo Tenant nếu có thông tin
-            if (model.IndividualTenant != null && !string.IsNullOrEmpty(model.IndividualTenant.FullName))
+            // Xử lý danh sách người thuê
+            if (model.Tenants != null && model.Tenants.Any())
             {
-                // Kiểm tra CCCD đã tồn tại chưa
-                var existingTenant = db.Tenants
-                    .FirstOrDefault(t => t.IdentityCard == model.IndividualTenant.IdentityCard);
-
-                Tenant tenant;
-                if (existingTenant != null)
+                foreach (var tenantModel in model.Tenants)
                 {
-                    tenant = existingTenant;
-                    // Cập nhật thông tin
-                    tenant.FullName = model.IndividualTenant.FullName;
-                    tenant.PhoneNumber = model.IndividualTenant.PhoneNumber;
-                    tenant.BirthDate = model.IndividualTenant.BirthDate;
-                    tenant.Gender = model.IndividualTenant.Gender;
-                    tenant.PermanentAddress = model.IndividualTenant.PermanentAddress;
-                    tenant.Ethnicity = model.IndividualTenant.Ethnicity;
-                    tenant.VehiclePlate = model.IndividualTenant.VehiclePlate;
-                }
-                else
-                {
-                    tenant = new Tenant
+                    if (string.IsNullOrEmpty(tenantModel.FullName) || string.IsNullOrEmpty(tenantModel.IdentityCard))
                     {
-                        FullName = model.IndividualTenant.FullName,
-                        IdentityCard = model.IndividualTenant.IdentityCard,
-                        PhoneNumber = model.IndividualTenant.PhoneNumber,
-                        BirthDate = model.IndividualTenant.BirthDate,
-                        Gender = model.IndividualTenant.Gender,
-                        PermanentAddress = model.IndividualTenant.PermanentAddress,
-                        Ethnicity = model.IndividualTenant.Ethnicity,
-                        VehiclePlate = model.IndividualTenant.VehiclePlate,
-                        CompanyId = null // Không thuộc công ty
-                    };
-                    db.Tenants.Add(tenant);
-                }
-                db.SaveChanges();
+                        continue;
+                    }
 
-                // 6. Tạo ContractTenant
-                var contractTenant = new ContractTenant
-                {
-                    ContractId = contract.Id,
-                    TenantId = tenant.Id,
-                    RoomId = room.Id,
-                    CreatedAt = DateTime.Now
-                };
-                db.ContractTenants.Add(contractTenant);
+                    var existingTenant = db.Tenants
+                        .FirstOrDefault(t => t.IdentityCard == tenantModel.IdentityCard);
+
+                    Tenant tenant;
+                    if (existingTenant != null)
+                    {
+                        tenant = existingTenant;
+                        tenant.FullName = tenantModel.FullName;
+                        tenant.PhoneNumber = tenantModel.PhoneNumber;
+                        tenant.BirthDate = tenantModel.BirthDate;
+                        tenant.Gender = tenantModel.Gender;
+                        tenant.PermanentAddress = tenantModel.PermanentAddress;
+                        tenant.Ethnicity = tenantModel.Ethnicity;
+                        tenant.VehiclePlate = tenantModel.VehiclePlate;
+                    }
+                    else
+                    {
+                        tenant = new Tenant
+                        {
+                            FullName = tenantModel.FullName,
+                            IdentityCard = tenantModel.IdentityCard,
+                            PhoneNumber = tenantModel.PhoneNumber,
+                            BirthDate = tenantModel.BirthDate,
+                            Gender = tenantModel.Gender,
+                            PermanentAddress = tenantModel.PermanentAddress,
+                            Ethnicity = tenantModel.Ethnicity,
+                            VehiclePlate = tenantModel.VehiclePlate,
+                            CompanyId = null
+                        };
+
+                        // Sử dụng TenantPhotoHelper để xử lý upload ảnh
+                        var tenantIndex = model.Tenants.IndexOf(tenantModel);
+                        var photoKey = $"TenantPhotos[{tenantIndex}]";
+
+                        if (Request.Files[photoKey] != null)
+                        {
+                            var photoFile = Request.Files[photoKey];
+                            try
+                            {
+                                tenant.Photo = TenantPhotoHelper.SaveTenantPhoto(photoFile, tenant.IdentityCard);
+                            }
+                            catch (Exception ex)
+                            {
+                                // Log error hoặc thêm vào ModelState
+                                ModelState.AddModelError("", $"Lỗi upload ảnh cho {tenant.FullName}: {ex.Message}");
+                            }
+                        }
+
+                        db.Tenants.Add(tenant);
+                    }
+
+                    db.SaveChanges();
+
+                    var contractTenant = new ContractTenant
+                    {
+                        ContractId = contract.Id,
+                        TenantId = tenant.Id,
+                        RoomId = room.Id,
+                        CreatedAt = DateTime.Now
+                    };
+                    db.ContractTenants.Add(contractTenant);
+                }
+            }
+
+            // Cập nhật trạng thái phòng
+            room.IsOccupied = true;
+            db.SaveChanges();
+
+            // Ghi nhận tiền cọc nếu có
+            if (model.DepositAmount > 0)
+            {
+                var firstTenant = db.ContractTenants
+                    .Include(ct => ct.Tenant)
+                    .FirstOrDefault(ct => ct.ContractId == contract.Id);
+
+                var depositorName = firstTenant?.Tenant?.FullName ?? "Khách thuê";
+                RecordDeposit(contract.Id, model.DepositAmount, depositorName);
             }
 
             // 7. Cập nhật trạng thái phòng
@@ -297,7 +339,7 @@ namespace NhaTroAnCu.Controllers
             // 8. Ghi nhận tiền cọc nếu có
             if (model.DepositAmount > 0)
             {
-                var tenantName = model.IndividualTenant?.FullName ?? "Khách hàng";
+                var tenantName = model.Tenants.FirstOrDefault()?.FullName ?? "Khách hàng";
                 RecordDeposit(contract.Id, model.DepositAmount, tenantName);
             }
 

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using DocumentFormat.OpenXml.Wordprocessing;
+using NhaTroAnCu.Helpers;
 using NhaTroAnCu.Models;
 
 namespace NhaTroAnCu.Controllers
@@ -405,11 +406,9 @@ namespace NhaTroAnCu.Controllers
                 return RedirectToAction("ManageTenants", new { id = roomId });
             }
 
-            // Kiểm tra contract
             var contractRoom = db.ContractRooms
                 .Include(cr => cr.Contract)
-                .FirstOrDefault(cr => cr.RoomId == roomId
-                    && cr.Contract.Status == "Active");
+                .FirstOrDefault(cr => cr.RoomId == roomId && cr.Contract.Status == "Active");
 
             if (contractRoom == null)
             {
@@ -417,29 +416,18 @@ namespace NhaTroAnCu.Controllers
                 return RedirectToAction("Details", new { id = roomId });
             }
 
-            // Kiểm tra giới hạn số người trong phòng
-            var currentTenantCount = db.ContractTenants
-                .Count(ct => ct.ContractId == contractRoom.ContractId && ct.RoomId == roomId);
-
-            if (currentTenantCount >= 4) // Giới hạn 4 người/phòng
-            {
-                TempData["Error"] = "Phòng đã đạt giới hạn số người (tối đa 4 người)";
-                return RedirectToAction("ManageTenants", new { id = roomId });
-            }
-
             using (var transaction = db.Database.BeginTransaction())
             {
                 try
                 {
-                    // Kiểm tra xem CCCD đã tồn tại chưa
                     var existingTenant = db.Tenants
                         .FirstOrDefault(t => t.IdentityCard == model.IdentityCard);
 
                     Tenant tenant;
                     if (existingTenant != null)
                     {
-                        // Cập nhật thông tin tenant existing
                         tenant = existingTenant;
+                        // Cập nhật thông tin
                         tenant.FullName = model.FullName;
                         tenant.PhoneNumber = model.PhoneNumber;
                         tenant.BirthDate = model.BirthDate;
@@ -448,30 +436,13 @@ namespace NhaTroAnCu.Controllers
                         tenant.Ethnicity = model.Ethnicity;
                         tenant.VehiclePlate = model.VehiclePlate;
 
-                        // Set CompanyId nếu là hợp đồng công ty
                         if (contractRoom.Contract.CompanyId.HasValue)
                         {
                             tenant.CompanyId = contractRoom.Contract.CompanyId;
                         }
-
-                        // Kiểm tra xem tenant này đã ở phòng khác chưa
-                        var otherRoom = db.ContractTenants
-                            .Include(ct => ct.Room)
-                            .Include(ct => ct.Contract)
-                            .FirstOrDefault(ct => ct.TenantId == tenant.Id
-                                && ct.Contract.Status == "Active"
-                                && ct.RoomId != roomId);
-
-                        if (otherRoom != null)
-                        {
-                            TempData["Warning"] = $"Người thuê này đang ở phòng {otherRoom.Room.Name}. Đã chuyển sang phòng mới.";
-                            // Remove from old room
-                            db.ContractTenants.Remove(otherRoom);
-                        }
                     }
                     else
                     {
-                        // Tạo tenant mới
                         tenant = new Tenant
                         {
                             FullName = model.FullName,
@@ -482,14 +453,21 @@ namespace NhaTroAnCu.Controllers
                             PermanentAddress = model.PermanentAddress,
                             Ethnicity = model.Ethnicity,
                             VehiclePlate = model.VehiclePlate,
-                            // Set CompanyId nếu là hợp đồng công ty
                             CompanyId = contractRoom.Contract.CompanyId
                         };
 
-                        // Xử lý upload ảnh CCCD
+                        // Sử dụng TenantPhotoHelper để xử lý upload ảnh CCCD
                         if (photoFile != null && photoFile.ContentLength > 0)
                         {
-                            tenant.Photo = SaveTenantPhoto(photoFile);
+                            try
+                            {
+                                tenant.Photo = TenantPhotoHelper.SaveTenantPhoto(photoFile, tenant.IdentityCard);
+                            }
+                            catch (InvalidOperationException ex)
+                            {
+                                TempData["Error"] = ex.Message;
+                                return RedirectToAction("ManageTenants", new { id = roomId });
+                            }
                         }
 
                         db.Tenants.Add(tenant);
@@ -497,28 +475,19 @@ namespace NhaTroAnCu.Controllers
 
                     db.SaveChanges();
 
-                    // Kiểm tra xem tenant đã trong contract này chưa
-                    var existingContractTenant = db.ContractTenants
-                        .FirstOrDefault(ct => ct.ContractId == contractRoom.ContractId
-                            && ct.TenantId == tenant.Id
-                            && ct.RoomId == roomId);
-
-                    if (existingContractTenant == null)
+                    // Thêm vào ContractTenants
+                    var contractTenant = new ContractTenant
                     {
-                        // Thêm vào ContractTenants
-                        var contractTenant = new ContractTenant
-                        {
-                            ContractId = contractRoom.ContractId,
-                            TenantId = tenant.Id,
-                            RoomId = roomId,
-                            CreatedAt = DateTime.Now
-                        };
-                        db.ContractTenants.Add(contractTenant);
-                        db.SaveChanges();
-                    }
+                        ContractId = contractRoom.ContractId,
+                        TenantId = tenant.Id,
+                        RoomId = roomId,
+                        CreatedAt = DateTime.Now
+                    };
+                    db.ContractTenants.Add(contractTenant);
+                    db.SaveChanges();
 
                     transaction.Commit();
-                    TempData["Success"] = $"Đã thêm {tenant.FullName} vào phòng {contractRoom.Room.Name}";
+                    TempData["Success"] = $"Đã thêm {tenant.FullName} vào phòng";
                 }
                 catch (Exception ex)
                 {
@@ -601,25 +570,6 @@ namespace NhaTroAnCu.Controllers
 
             return View(tenants);
         }
-
-        // Helper method to save tenant photo
-        private string SaveTenantPhoto(HttpPostedFileBase photo)
-        {
-            if (photo == null || photo.ContentLength == 0)
-                return null;
-
-            string fileName = Path.GetFileNameWithoutExtension(photo.FileName);
-            string ext = Path.GetExtension(photo.FileName);
-            string uniqueName = $"tenant_{DateTime.Now.Ticks}_{Guid.NewGuid():N}{ext}";
-            string serverPath = Server.MapPath("~/Uploads/TenantPhotos/");
-
-            if (!Directory.Exists(serverPath))
-                Directory.CreateDirectory(serverPath);
-
-            string savePath = Path.Combine(serverPath, uniqueName);
-            photo.SaveAs(savePath);
-
-            return $"/Uploads/TenantPhotos/{uniqueName}";
-        }
+        
     }
 }
