@@ -66,6 +66,25 @@
           <Property Name="AccessFailedCount" Type="int" Nullable="false" />
           <Property Name="UserName" Type="nvarchar" MaxLength="256" Nullable="false" />
         </EntityType>
+        <EntityType Name="Companies">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="CompanyName" Type="nvarchar" MaxLength="200" Nullable="false" />
+          <Property Name="TaxCode" Type="nvarchar" MaxLength="50" />
+          <Property Name="Address" Type="nvarchar" MaxLength="500" />
+          <Property Name="Phone" Type="nvarchar" MaxLength="20" />
+          <Property Name="Email" Type="nvarchar" MaxLength="100" />
+          <Property Name="Representative" Type="nvarchar" MaxLength="100" />
+          <Property Name="RepresentativePhone" Type="nvarchar" MaxLength="20" />
+          <Property Name="RepresentativeEmail" Type="nvarchar" MaxLength="100" />
+          <Property Name="BankAccount" Type="nvarchar" MaxLength="50" />
+          <Property Name="BankName" Type="nvarchar" MaxLength="200" />
+          <Property Name="CreatedAt" Type="datetime" />
+          <Property Name="UpdatedAt" Type="datetime" />
+          <Property Name="IsActive" Type="bit" />
+        </EntityType>
         <EntityType Name="ContractExtensionHistory">
           <Key>
             <PropertyRef Name="Id" />
@@ -102,6 +121,8 @@
           <Property Name="ElectricityPrice" Type="decimal" Precision="18" Scale="2" Nullable="false" />
           <Property Name="WaterPrice" Type="decimal" Precision="18" Scale="2" Nullable="false" />
           <Property Name="ContractScanFilePath" Type="nvarchar" MaxLength="250" />
+          <Property Name="ContractType" Type="nvarchar" MaxLength="20" />
+          <Property Name="CompanyId" Type="int" />
         </EntityType>
         <EntityType Name="ContractTenants">
           <Key>
@@ -198,6 +219,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="PermanentAddress" Type="nvarchar" MaxLength="255" />
           <Property Name="Ethnicity" Type="nvarchar" MaxLength="50" />
           <Property Name="VehiclePlate" Type="nvarchar" MaxLength="20" />
+          <Property Name="CompanyId" Type="int" />
         </EntityType>
         <EntityType Name="UtilityBills">
           <Key>
@@ -219,6 +241,107 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="BillStatus" Type="nvarchar" MaxLength="50" />
           <Property Name="CreatedAt" Type="datetime" Nullable="false" />
           <Property Name="UpdatedAt" Type="datetime" />
+        </EntityType>
+        <!--Errors Found During Generation:
+warning 6002: The table/view 'NhaTroAnCu.dbo.vw_CompanyRoomDetails' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
+        <EntityType Name="vw_CompanyRoomDetails">
+          <Key>
+            <PropertyRef Name="CompanyId" />
+            <PropertyRef Name="CompanyName" />
+            <PropertyRef Name="RoomId" />
+            <PropertyRef Name="RoomName" />
+            <PropertyRef Name="PriceAgreed" />
+          </Key>
+          <Property Name="CompanyId" Type="int" Nullable="false" />
+          <Property Name="CompanyName" Type="nvarchar" MaxLength="200" Nullable="false" />
+          <Property Name="TaxCode" Type="nvarchar" MaxLength="50" />
+          <Property Name="RoomId" Type="int" Nullable="false" />
+          <Property Name="RoomName" Type="nvarchar" MaxLength="10" Nullable="false" />
+          <Property Name="PriceAgreed" Type="decimal" Precision="18" Scale="2" Nullable="false" />
+          <Property Name="EmployeeList" Type="nvarchar" MaxLength="4000" />
+          <Property Name="EmployeeCount" Type="int" />
+        </EntityType>
+        <!--Errors Found During Generation:
+warning 6002: The table/view 'NhaTroAnCu.dbo.vw_CompanyTenants' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
+        <EntityType Name="vw_CompanyTenants">
+          <Key>
+            <PropertyRef Name="TenantId" />
+            <PropertyRef Name="FullName" />
+            <PropertyRef Name="IdentityCard" />
+          </Key>
+          <Property Name="TenantId" Type="int" Nullable="false" />
+          <Property Name="FullName" Type="nvarchar" MaxLength="100" Nullable="false" />
+          <Property Name="IdentityCard" Type="nvarchar" MaxLength="20" Nullable="false" />
+          <Property Name="PhoneNumber" Type="nvarchar" MaxLength="20" />
+          <Property Name="BirthDate" Type="date" />
+          <Property Name="Gender" Type="nvarchar" MaxLength="10" />
+          <Property Name="PermanentAddress" Type="nvarchar" MaxLength="255" />
+          <Property Name="Ethnicity" Type="nvarchar" MaxLength="50" />
+          <Property Name="VehiclePlate" Type="nvarchar" MaxLength="20" />
+          <Property Name="Photo" Type="nvarchar(max)" />
+          <Property Name="CompanyId" Type="int" />
+          <Property Name="CompanyName" Type="nvarchar" MaxLength="200" />
+          <Property Name="TaxCode" Type="nvarchar" MaxLength="50" />
+          <Property Name="Representative" Type="nvarchar" MaxLength="100" />
+          <Property Name="CurrentRoomId" Type="int" />
+          <Property Name="CurrentRoomName" Type="nvarchar" MaxLength="10" />
+          <Property Name="CurrentContractId" Type="int" />
+          <Property Name="ContractStatus" Type="nvarchar" MaxLength="20" />
+          <Property Name="MoveInDate" Type="datetime" />
+        </EntityType>
+        <!--Errors Found During Generation:
+warning 6002: The table/view 'NhaTroAnCu.dbo.vw_ContractDetails' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
+        <EntityType Name="vw_ContractDetails">
+          <Key>
+            <PropertyRef Name="ContractId" />
+            <PropertyRef Name="Status" />
+            <PropertyRef Name="StartDate" />
+            <PropertyRef Name="EndDate" />
+            <PropertyRef Name="ElectricityPrice" />
+            <PropertyRef Name="WaterPrice" />
+          </Key>
+          <Property Name="ContractId" Type="int" Nullable="false" />
+          <Property Name="ContractType" Type="nvarchar" MaxLength="20" />
+          <Property Name="Status" Type="nvarchar" MaxLength="20" Nullable="false" />
+          <Property Name="StartDate" Type="date" Nullable="false" />
+          <Property Name="EndDate" Type="date" Nullable="false" />
+          <Property Name="ElectricityPrice" Type="decimal" Precision="18" Scale="2" Nullable="false" />
+          <Property Name="WaterPrice" Type="decimal" Precision="18" Scale="2" Nullable="false" />
+          <Property Name="Note" Type="nvarchar" MaxLength="500" />
+          <Property Name="CompanyName" Type="nvarchar" MaxLength="200" />
+          <Property Name="TaxCode" Type="nvarchar" MaxLength="50" />
+          <Property Name="Representative" Type="nvarchar" MaxLength="100" />
+          <Property Name="TotalRooms" Type="int" />
+          <Property Name="TotalMonthlyRent" Type="decimal" Precision="38" Scale="2" />
+          <Property Name="TotalTenants" Type="int" />
+        </EntityType>
+        <!--Errors Found During Generation:
+warning 6002: The table/view 'NhaTroAnCu.dbo.vw_RoomStatus' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
+        <EntityType Name="vw_RoomStatus">
+          <Key>
+            <PropertyRef Name="RoomId" />
+            <PropertyRef Name="RoomName" />
+            <PropertyRef Name="Area" />
+            <PropertyRef Name="Floor" />
+            <PropertyRef Name="DefaultPrice" />
+            <PropertyRef Name="IsOccupied" />
+            <PropertyRef Name="RoomStatus" />
+          </Key>
+          <Property Name="RoomId" Type="int" Nullable="false" />
+          <Property Name="RoomName" Type="nvarchar" MaxLength="10" Nullable="false" />
+          <Property Name="Area" Type="char" MaxLength="1" Nullable="false" />
+          <Property Name="Floor" Type="int" Nullable="false" />
+          <Property Name="DefaultPrice" Type="decimal" Precision="18" Scale="2" Nullable="false" />
+          <Property Name="IsOccupied" Type="bit" Nullable="false" />
+          <Property Name="ContractId" Type="int" />
+          <Property Name="ContractType" Type="nvarchar" MaxLength="20" />
+          <Property Name="ContractStatus" Type="nvarchar" MaxLength="20" />
+          <Property Name="EndDate" Type="date" />
+          <Property Name="RoomStatus" Type="varchar" MaxLength="10" Nullable="false" />
+          <Property Name="CustomerName" Type="nvarchar" MaxLength="200" />
+          <Property Name="Tenants" Type="nvarchar" MaxLength="4000" />
+          <Property Name="TenantCount" Type="int" />
+          <Property Name="RentPrice" Type="decimal" Precision="18" Scale="2" />
         </EntityType>
         <Association Name="FK__ContractE__Contr__2180FB33">
           <End Role="Contracts" Type="Self.Contracts" Multiplicity="1" />
@@ -318,6 +441,18 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             </Dependent>
           </ReferentialConstraint>
         </Association>
+        <Association Name="FK_Contracts_Companies">
+          <End Role="Companies" Type="Self.Companies" Multiplicity="0..1" />
+          <End Role="Contracts" Type="Self.Contracts" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Companies">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="Contracts">
+              <PropertyRef Name="CompanyId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
         <Association Name="FK_dbo_AspNetUserClaims_dbo_AspNetUsers_UserId">
           <End Role="AspNetUsers" Type="Self.AspNetUsers" Multiplicity="1">
             <OnDelete Action="Cascade" />
@@ -374,6 +509,18 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             </Dependent>
           </ReferentialConstraint>
         </Association>
+        <Association Name="FK_Tenants_Companies">
+          <End Role="Companies" Type="Self.Companies" Multiplicity="0..1" />
+          <End Role="Tenants" Type="Self.Tenants" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Companies">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="Tenants">
+              <PropertyRef Name="CompanyId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
         <Association Name="FK_UtilityBills_Contracts">
           <End Role="Contracts" Type="Self.Contracts" Multiplicity="1" />
           <End Role="UtilityBills" Type="Self.UtilityBills" Multiplicity="*" />
@@ -386,6 +533,32 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             </Dependent>
           </ReferentialConstraint>
         </Association>
+        <Function Name="sp_AddEmployeeToRoom" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="ContractId" Type="int" Mode="In" />
+          <Parameter Name="RoomId" Type="int" Mode="In" />
+          <Parameter Name="FullName" Type="nvarchar" Mode="In" />
+          <Parameter Name="IdentityCard" Type="nvarchar" Mode="In" />
+          <Parameter Name="PhoneNumber" Type="nvarchar" Mode="In" />
+          <Parameter Name="BirthDate" Type="date" Mode="In" />
+          <Parameter Name="Gender" Type="nvarchar" Mode="In" />
+          <Parameter Name="PermanentAddress" Type="nvarchar" Mode="In" />
+        </Function>
+        <Function Name="sp_CreateCompanyContract" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="CompanyName" Type="nvarchar" Mode="In" />
+          <Parameter Name="TaxCode" Type="nvarchar" Mode="In" />
+          <Parameter Name="Address" Type="nvarchar" Mode="In" />
+          <Parameter Name="Representative" Type="nvarchar" Mode="In" />
+          <Parameter Name="StartDate" Type="datetime" Mode="In" />
+          <Parameter Name="EndDate" Type="datetime" Mode="In" />
+          <Parameter Name="ElectricityPrice" Type="decimal" Mode="In" />
+          <Parameter Name="WaterPrice" Type="decimal" Mode="In" />
+          <Parameter Name="RoomIds" Type="nvarchar(max)" Mode="In" />
+          <Parameter Name="RoomPrices" Type="nvarchar(max)" Mode="In" />
+        </Function>
+        <Function Name="sp_GetCompanyTenants" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="CompanyId" Type="int" Mode="In" />
+          <Parameter Name="IncludeInactive" Type="bit" Mode="In" />
+        </Function>
         <EntityContainer Name="NhaTroAnCuModelStoreContainer">
           <EntitySet Name="__MigrationHistory" EntityType="Self.__MigrationHistory" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="AspNetRoles" EntityType="Self.AspNetRoles" Schema="dbo" store:Type="Tables" />
@@ -393,6 +566,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <EntitySet Name="AspNetUserLogins" EntityType="Self.AspNetUserLogins" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="AspNetUserRoles" EntityType="Self.AspNetUserRoles" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="AspNetUsers" EntityType="Self.AspNetUsers" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="Companies" EntityType="Self.Companies" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="ContractExtensionHistory" EntityType="Self.ContractExtensionHistory" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="ContractRooms" EntityType="Self.ContractRooms" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Contracts" EntityType="Self.Contracts" Schema="dbo" store:Type="Tables" />
@@ -409,6 +583,78 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
     [FPTReaderAPI].[Email] AS [Email], 
     [FPTReaderAPI].[Status] AS [Status]
     FROM [dbo].[FPTReaderAPI] AS [FPTReaderAPI]</DefiningQuery>
+          </EntitySet>
+          <EntitySet Name="vw_CompanyRoomDetails" EntityType="Self.vw_CompanyRoomDetails" store:Type="Views" store:Schema="dbo">
+            <DefiningQuery>SELECT 
+    [vw_CompanyRoomDetails].[CompanyId] AS [CompanyId], 
+    [vw_CompanyRoomDetails].[CompanyName] AS [CompanyName], 
+    [vw_CompanyRoomDetails].[TaxCode] AS [TaxCode], 
+    [vw_CompanyRoomDetails].[RoomId] AS [RoomId], 
+    [vw_CompanyRoomDetails].[RoomName] AS [RoomName], 
+    [vw_CompanyRoomDetails].[PriceAgreed] AS [PriceAgreed], 
+    [vw_CompanyRoomDetails].[EmployeeList] AS [EmployeeList], 
+    [vw_CompanyRoomDetails].[EmployeeCount] AS [EmployeeCount]
+    FROM [dbo].[vw_CompanyRoomDetails] AS [vw_CompanyRoomDetails]</DefiningQuery>
+          </EntitySet>
+          <EntitySet Name="vw_CompanyTenants" EntityType="Self.vw_CompanyTenants" store:Type="Views" store:Schema="dbo">
+            <DefiningQuery>SELECT 
+    [vw_CompanyTenants].[TenantId] AS [TenantId], 
+    [vw_CompanyTenants].[FullName] AS [FullName], 
+    [vw_CompanyTenants].[IdentityCard] AS [IdentityCard], 
+    [vw_CompanyTenants].[PhoneNumber] AS [PhoneNumber], 
+    [vw_CompanyTenants].[BirthDate] AS [BirthDate], 
+    [vw_CompanyTenants].[Gender] AS [Gender], 
+    [vw_CompanyTenants].[PermanentAddress] AS [PermanentAddress], 
+    [vw_CompanyTenants].[Ethnicity] AS [Ethnicity], 
+    [vw_CompanyTenants].[VehiclePlate] AS [VehiclePlate], 
+    [vw_CompanyTenants].[Photo] AS [Photo], 
+    [vw_CompanyTenants].[CompanyId] AS [CompanyId], 
+    [vw_CompanyTenants].[CompanyName] AS [CompanyName], 
+    [vw_CompanyTenants].[TaxCode] AS [TaxCode], 
+    [vw_CompanyTenants].[Representative] AS [Representative], 
+    [vw_CompanyTenants].[CurrentRoomId] AS [CurrentRoomId], 
+    [vw_CompanyTenants].[CurrentRoomName] AS [CurrentRoomName], 
+    [vw_CompanyTenants].[CurrentContractId] AS [CurrentContractId], 
+    [vw_CompanyTenants].[ContractStatus] AS [ContractStatus], 
+    [vw_CompanyTenants].[MoveInDate] AS [MoveInDate]
+    FROM [dbo].[vw_CompanyTenants] AS [vw_CompanyTenants]</DefiningQuery>
+          </EntitySet>
+          <EntitySet Name="vw_ContractDetails" EntityType="Self.vw_ContractDetails" store:Type="Views" store:Schema="dbo">
+            <DefiningQuery>SELECT 
+    [vw_ContractDetails].[ContractId] AS [ContractId], 
+    [vw_ContractDetails].[ContractType] AS [ContractType], 
+    [vw_ContractDetails].[Status] AS [Status], 
+    [vw_ContractDetails].[StartDate] AS [StartDate], 
+    [vw_ContractDetails].[EndDate] AS [EndDate], 
+    [vw_ContractDetails].[ElectricityPrice] AS [ElectricityPrice], 
+    [vw_ContractDetails].[WaterPrice] AS [WaterPrice], 
+    [vw_ContractDetails].[Note] AS [Note], 
+    [vw_ContractDetails].[CompanyName] AS [CompanyName], 
+    [vw_ContractDetails].[TaxCode] AS [TaxCode], 
+    [vw_ContractDetails].[Representative] AS [Representative], 
+    [vw_ContractDetails].[TotalRooms] AS [TotalRooms], 
+    [vw_ContractDetails].[TotalMonthlyRent] AS [TotalMonthlyRent], 
+    [vw_ContractDetails].[TotalTenants] AS [TotalTenants]
+    FROM [dbo].[vw_ContractDetails] AS [vw_ContractDetails]</DefiningQuery>
+          </EntitySet>
+          <EntitySet Name="vw_RoomStatus" EntityType="Self.vw_RoomStatus" store:Type="Views" store:Schema="dbo">
+            <DefiningQuery>SELECT 
+    [vw_RoomStatus].[RoomId] AS [RoomId], 
+    [vw_RoomStatus].[RoomName] AS [RoomName], 
+    [vw_RoomStatus].[Area] AS [Area], 
+    [vw_RoomStatus].[Floor] AS [Floor], 
+    [vw_RoomStatus].[DefaultPrice] AS [DefaultPrice], 
+    [vw_RoomStatus].[IsOccupied] AS [IsOccupied], 
+    [vw_RoomStatus].[ContractId] AS [ContractId], 
+    [vw_RoomStatus].[ContractType] AS [ContractType], 
+    [vw_RoomStatus].[ContractStatus] AS [ContractStatus], 
+    [vw_RoomStatus].[EndDate] AS [EndDate], 
+    [vw_RoomStatus].[RoomStatus] AS [RoomStatus], 
+    [vw_RoomStatus].[CustomerName] AS [CustomerName], 
+    [vw_RoomStatus].[Tenants] AS [Tenants], 
+    [vw_RoomStatus].[TenantCount] AS [TenantCount], 
+    [vw_RoomStatus].[RentPrice] AS [RentPrice]
+    FROM [dbo].[vw_RoomStatus] AS [vw_RoomStatus]</DefiningQuery>
           </EntitySet>
           <AssociationSet Name="FK__ContractE__Contr__2180FB33" Association="Self.FK__ContractE__Contr__2180FB33">
             <End Role="Contracts" EntitySet="Contracts" />
@@ -442,6 +688,10 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             <End Role="Rooms" EntitySet="Rooms" />
             <End Role="ContractRooms" EntitySet="ContractRooms" />
           </AssociationSet>
+          <AssociationSet Name="FK_Contracts_Companies" Association="Self.FK_Contracts_Companies">
+            <End Role="Companies" EntitySet="Companies" />
+            <End Role="Contracts" EntitySet="Contracts" />
+          </AssociationSet>
           <AssociationSet Name="FK_dbo_AspNetUserClaims_dbo_AspNetUsers_UserId" Association="Self.FK_dbo_AspNetUserClaims_dbo_AspNetUsers_UserId">
             <End Role="AspNetUsers" EntitySet="AspNetUsers" />
             <End Role="AspNetUserClaims" EntitySet="AspNetUserClaims" />
@@ -458,6 +708,10 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             <End Role="AspNetUsers" EntitySet="AspNetUsers" />
             <End Role="AspNetUserRoles" EntitySet="AspNetUserRoles" />
           </AssociationSet>
+          <AssociationSet Name="FK_Tenants_Companies" Association="Self.FK_Tenants_Companies">
+            <End Role="Companies" EntitySet="Companies" />
+            <End Role="Tenants" EntitySet="Tenants" />
+          </AssociationSet>
           <AssociationSet Name="FK_UtilityBills_Contracts" Association="Self.FK_UtilityBills_Contracts">
             <End Role="Contracts" EntitySet="Contracts" />
             <End Role="UtilityBills" EntitySet="UtilityBills" />
@@ -468,11 +722,34 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
     <edmx:ConceptualModels>
       <Schema Namespace="NhaTroAnCuModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
         <EntityContainer Name="NhaTroAnCuEntities" annotation:LazyLoadingEnabled="true">
+          <FunctionImport Name="sp_AddEmployeeToRoom" ReturnType="Collection(Int32)">
+            <Parameter Name="ContractId" Mode="In" Type="Int32" />
+            <Parameter Name="RoomId" Mode="In" Type="Int32" />
+            <Parameter Name="FullName" Mode="In" Type="String" />
+            <Parameter Name="IdentityCard" Mode="In" Type="String" />
+            <Parameter Name="PhoneNumber" Mode="In" Type="String" />
+            <Parameter Name="BirthDate" Mode="In" Type="DateTime" />
+            <Parameter Name="Gender" Mode="In" Type="String" />
+            <Parameter Name="PermanentAddress" Mode="In" Type="String" />
+          </FunctionImport>
+          <FunctionImport Name="sp_CreateCompanyContract" ReturnType="Collection(Int32)">
+            <Parameter Name="CompanyName" Mode="In" Type="String" />
+            <Parameter Name="TaxCode" Mode="In" Type="String" />
+            <Parameter Name="Address" Mode="In" Type="String" />
+            <Parameter Name="Representative" Mode="In" Type="String" />
+            <Parameter Name="StartDate" Mode="In" Type="DateTime" />
+            <Parameter Name="EndDate" Mode="In" Type="DateTime" />
+            <Parameter Name="ElectricityPrice" Mode="In" Type="Decimal" />
+            <Parameter Name="WaterPrice" Mode="In" Type="Decimal" />
+            <Parameter Name="RoomIds" Mode="In" Type="String" />
+            <Parameter Name="RoomPrices" Mode="In" Type="String" />
+          </FunctionImport>
           <EntitySet Name="C__MigrationHistory" EntityType="NhaTroAnCuModel.C__MigrationHistory" />
           <EntitySet Name="AspNetRoles" EntityType="NhaTroAnCuModel.AspNetRole" />
           <EntitySet Name="AspNetUserClaims" EntityType="NhaTroAnCuModel.AspNetUserClaim" />
           <EntitySet Name="AspNetUserLogins" EntityType="NhaTroAnCuModel.AspNetUserLogin" />
           <EntitySet Name="AspNetUsers" EntityType="NhaTroAnCuModel.AspNetUser" />
+          <EntitySet Name="Companies" EntityType="NhaTroAnCuModel.Company" />
           <EntitySet Name="ContractExtensionHistories" EntityType="NhaTroAnCuModel.ContractExtensionHistory" />
           <EntitySet Name="ContractRooms" EntityType="NhaTroAnCuModel.ContractRoom" />
           <EntitySet Name="Contracts" EntityType="NhaTroAnCuModel.Contract" />
@@ -484,6 +761,10 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <EntitySet Name="Tenants" EntityType="NhaTroAnCuModel.Tenant" />
           <EntitySet Name="UtilityBills" EntityType="NhaTroAnCuModel.UtilityBill" />
           <EntitySet Name="FPTReaderAPIs" EntityType="NhaTroAnCuModel.FPTReaderAPI" />
+          <EntitySet Name="vw_CompanyRoomDetails" EntityType="NhaTroAnCuModel.vw_CompanyRoomDetails" />
+          <EntitySet Name="vw_CompanyTenants" EntityType="NhaTroAnCuModel.vw_CompanyTenants" />
+          <EntitySet Name="vw_ContractDetails" EntityType="NhaTroAnCuModel.vw_ContractDetails" />
+          <EntitySet Name="vw_RoomStatus" EntityType="NhaTroAnCuModel.vw_RoomStatus" />
           <AssociationSet Name="FK_dbo_AspNetUserClaims_dbo_AspNetUsers_UserId" Association="NhaTroAnCuModel.FK_dbo_AspNetUserClaims_dbo_AspNetUsers_UserId">
             <End Role="AspNetUser" EntitySet="AspNetUsers" />
             <End Role="AspNetUserClaim" EntitySet="AspNetUserClaims" />
@@ -491,6 +772,14 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <AssociationSet Name="FK_dbo_AspNetUserLogins_dbo_AspNetUsers_UserId" Association="NhaTroAnCuModel.FK_dbo_AspNetUserLogins_dbo_AspNetUsers_UserId">
             <End Role="AspNetUser" EntitySet="AspNetUsers" />
             <End Role="AspNetUserLogin" EntitySet="AspNetUserLogins" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Contracts_Companies" Association="NhaTroAnCuModel.FK_Contracts_Companies">
+            <End Role="Company" EntitySet="Companies" />
+            <End Role="Contract" EntitySet="Contracts" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Tenants_Companies" Association="NhaTroAnCuModel.FK_Tenants_Companies">
+            <End Role="Company" EntitySet="Companies" />
+            <End Role="Tenant" EntitySet="Tenants" />
           </AssociationSet>
           <AssociationSet Name="FK__ContractE__Contr__2180FB33" Association="NhaTroAnCuModel.FK__ContractE__Contr__2180FB33">
             <End Role="Contract" EntitySet="Contracts" />
@@ -532,6 +821,10 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             <End Role="AspNetRole" EntitySet="AspNetRoles" />
             <End Role="AspNetUser" EntitySet="AspNetUsers" />
           </AssociationSet>
+          <FunctionImport Name="sp_GetCompanyTenants" ReturnType="Collection(NhaTroAnCuModel.sp_GetCompanyTenants_Result)">
+            <Parameter Name="CompanyId" Mode="In" Type="Int32" />
+            <Parameter Name="IncludeInactive" Mode="In" Type="Boolean" />
+          </FunctionImport>
         </EntityContainer>
         <EntityType Name="C__MigrationHistory">
           <Key>
@@ -592,6 +885,27 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <NavigationProperty Name="AspNetUserLogins" Relationship="NhaTroAnCuModel.FK_dbo_AspNetUserLogins_dbo_AspNetUsers_UserId" FromRole="AspNetUser" ToRole="AspNetUserLogin" />
           <NavigationProperty Name="AspNetRoles" Relationship="NhaTroAnCuModel.AspNetUserRoles" FromRole="AspNetUser" ToRole="AspNetRole" />
         </EntityType>
+        <EntityType Name="Company">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="CompanyName" Type="String" Nullable="false" MaxLength="200" FixedLength="false" Unicode="true" />
+          <Property Name="TaxCode" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="Address" Type="String" MaxLength="500" FixedLength="false" Unicode="true" />
+          <Property Name="Phone" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
+          <Property Name="Email" Type="String" MaxLength="100" FixedLength="false" Unicode="true" />
+          <Property Name="Representative" Type="String" MaxLength="100" FixedLength="false" Unicode="true" />
+          <Property Name="RepresentativePhone" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
+          <Property Name="RepresentativeEmail" Type="String" MaxLength="100" FixedLength="false" Unicode="true" />
+          <Property Name="BankAccount" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="BankName" Type="String" MaxLength="200" FixedLength="false" Unicode="true" />
+          <Property Name="CreatedAt" Type="DateTime" Precision="3" />
+          <Property Name="UpdatedAt" Type="DateTime" Precision="3" />
+          <Property Name="IsActive" Type="Boolean" />
+          <NavigationProperty Name="Contracts" Relationship="NhaTroAnCuModel.FK_Contracts_Companies" FromRole="Company" ToRole="Contract" />
+          <NavigationProperty Name="Tenants" Relationship="NhaTroAnCuModel.FK_Tenants_Companies" FromRole="Company" ToRole="Tenant" />
+        </EntityType>
         <EntityType Name="ContractExtensionHistory">
           <Key>
             <PropertyRef Name="Id" />
@@ -631,6 +945,9 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="ElectricityPrice" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
           <Property Name="WaterPrice" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
           <Property Name="ContractScanFilePath" Type="String" MaxLength="250" FixedLength="false" Unicode="true" />
+          <Property Name="ContractType" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
+          <Property Name="CompanyId" Type="Int32" />
+          <NavigationProperty Name="Company" Relationship="NhaTroAnCuModel.FK_Contracts_Companies" FromRole="Contract" ToRole="Company" />
           <NavigationProperty Name="ContractExtensionHistories" Relationship="NhaTroAnCuModel.FK__ContractE__Contr__2180FB33" FromRole="Contract" ToRole="ContractExtensionHistory" />
           <NavigationProperty Name="ContractRooms" Relationship="NhaTroAnCuModel.FK_ContractRooms_Contracts" FromRole="Contract" ToRole="ContractRoom" />
           <NavigationProperty Name="ContractTenants" Relationship="NhaTroAnCuModel.FK__ContractT__Contr__6FB49575" FromRole="Contract" ToRole="ContractTenant" />
@@ -728,6 +1045,8 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="PermanentAddress" Type="String" MaxLength="255" FixedLength="false" Unicode="true" />
           <Property Name="Ethnicity" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
           <Property Name="VehiclePlate" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
+          <Property Name="CompanyId" Type="Int32" />
+          <NavigationProperty Name="Company" Relationship="NhaTroAnCuModel.FK_Tenants_Companies" FromRole="Tenant" ToRole="Company" />
           <NavigationProperty Name="ContractTenants" Relationship="NhaTroAnCuModel.FK__ContractT__Tenan__70A8B9AE" FromRole="Tenant" ToRole="ContractTenant" />
         </EntityType>
         <EntityType Name="UtilityBill">
@@ -762,6 +1081,99 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="Email" Type="String" Nullable="false" MaxLength="150" FixedLength="false" Unicode="true" />
           <Property Name="Status" Type="Boolean" Nullable="false" />
         </EntityType>
+        <EntityType Name="vw_CompanyRoomDetails">
+          <Key>
+            <PropertyRef Name="CompanyId" />
+            <PropertyRef Name="CompanyName" />
+            <PropertyRef Name="RoomId" />
+            <PropertyRef Name="RoomName" />
+            <PropertyRef Name="PriceAgreed" />
+          </Key>
+          <Property Name="CompanyId" Type="Int32" Nullable="false" />
+          <Property Name="CompanyName" Type="String" Nullable="false" MaxLength="200" FixedLength="false" Unicode="true" />
+          <Property Name="TaxCode" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="RoomId" Type="Int32" Nullable="false" />
+          <Property Name="RoomName" Type="String" Nullable="false" MaxLength="10" FixedLength="false" Unicode="true" />
+          <Property Name="PriceAgreed" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="EmployeeList" Type="String" MaxLength="4000" FixedLength="false" Unicode="true" />
+          <Property Name="EmployeeCount" Type="Int32" />
+        </EntityType>
+        <EntityType Name="vw_CompanyTenants">
+          <Key>
+            <PropertyRef Name="TenantId" />
+            <PropertyRef Name="FullName" />
+            <PropertyRef Name="IdentityCard" />
+          </Key>
+          <Property Name="TenantId" Type="Int32" Nullable="false" />
+          <Property Name="FullName" Type="String" Nullable="false" MaxLength="100" FixedLength="false" Unicode="true" />
+          <Property Name="IdentityCard" Type="String" Nullable="false" MaxLength="20" FixedLength="false" Unicode="true" />
+          <Property Name="PhoneNumber" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
+          <Property Name="BirthDate" Type="DateTime" Precision="0" />
+          <Property Name="Gender" Type="String" MaxLength="10" FixedLength="false" Unicode="true" />
+          <Property Name="PermanentAddress" Type="String" MaxLength="255" FixedLength="false" Unicode="true" />
+          <Property Name="Ethnicity" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="VehiclePlate" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
+          <Property Name="Photo" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="CompanyId" Type="Int32" />
+          <Property Name="CompanyName" Type="String" MaxLength="200" FixedLength="false" Unicode="true" />
+          <Property Name="TaxCode" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="Representative" Type="String" MaxLength="100" FixedLength="false" Unicode="true" />
+          <Property Name="CurrentRoomId" Type="Int32" />
+          <Property Name="CurrentRoomName" Type="String" MaxLength="10" FixedLength="false" Unicode="true" />
+          <Property Name="CurrentContractId" Type="Int32" />
+          <Property Name="ContractStatus" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
+          <Property Name="MoveInDate" Type="DateTime" Precision="3" />
+        </EntityType>
+        <EntityType Name="vw_ContractDetails">
+          <Key>
+            <PropertyRef Name="ContractId" />
+            <PropertyRef Name="Status" />
+            <PropertyRef Name="StartDate" />
+            <PropertyRef Name="EndDate" />
+            <PropertyRef Name="ElectricityPrice" />
+            <PropertyRef Name="WaterPrice" />
+          </Key>
+          <Property Name="ContractId" Type="Int32" Nullable="false" />
+          <Property Name="ContractType" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
+          <Property Name="Status" Type="String" Nullable="false" MaxLength="20" FixedLength="false" Unicode="true" />
+          <Property Name="StartDate" Type="DateTime" Nullable="false" Precision="0" />
+          <Property Name="EndDate" Type="DateTime" Nullable="false" Precision="0" />
+          <Property Name="ElectricityPrice" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="WaterPrice" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="Note" Type="String" MaxLength="500" FixedLength="false" Unicode="true" />
+          <Property Name="CompanyName" Type="String" MaxLength="200" FixedLength="false" Unicode="true" />
+          <Property Name="TaxCode" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="Representative" Type="String" MaxLength="100" FixedLength="false" Unicode="true" />
+          <Property Name="TotalRooms" Type="Int32" />
+          <Property Name="TotalMonthlyRent" Type="Decimal" Precision="38" Scale="2" />
+          <Property Name="TotalTenants" Type="Int32" />
+        </EntityType>
+        <EntityType Name="vw_RoomStatus">
+          <Key>
+            <PropertyRef Name="RoomId" />
+            <PropertyRef Name="RoomName" />
+            <PropertyRef Name="Area" />
+            <PropertyRef Name="Floor" />
+            <PropertyRef Name="DefaultPrice" />
+            <PropertyRef Name="IsOccupied" />
+            <PropertyRef Name="RoomStatus" />
+          </Key>
+          <Property Name="RoomId" Type="Int32" Nullable="false" />
+          <Property Name="RoomName" Type="String" Nullable="false" MaxLength="10" FixedLength="false" Unicode="true" />
+          <Property Name="Area" Type="String" Nullable="false" MaxLength="1" FixedLength="true" Unicode="false" />
+          <Property Name="Floor" Type="Int32" Nullable="false" />
+          <Property Name="DefaultPrice" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="IsOccupied" Type="Boolean" Nullable="false" />
+          <Property Name="ContractId" Type="Int32" />
+          <Property Name="ContractType" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
+          <Property Name="ContractStatus" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
+          <Property Name="EndDate" Type="DateTime" Precision="0" />
+          <Property Name="RoomStatus" Type="String" Nullable="false" MaxLength="10" FixedLength="false" Unicode="false" />
+          <Property Name="CustomerName" Type="String" MaxLength="200" FixedLength="false" Unicode="true" />
+          <Property Name="Tenants" Type="String" MaxLength="4000" FixedLength="false" Unicode="true" />
+          <Property Name="TenantCount" Type="Int32" />
+          <Property Name="RentPrice" Type="Decimal" Precision="18" Scale="2" />
+        </EntityType>
         <Association Name="FK_dbo_AspNetUserClaims_dbo_AspNetUsers_UserId">
           <End Type="NhaTroAnCuModel.AspNetUser" Role="AspNetUser" Multiplicity="1">
             <OnDelete Action="Cascade" />
@@ -787,6 +1199,30 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
             </Principal>
             <Dependent Role="AspNetUserLogin">
               <PropertyRef Name="UserId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Contracts_Companies">
+          <End Type="NhaTroAnCuModel.Company" Role="Company" Multiplicity="0..1" />
+          <End Type="NhaTroAnCuModel.Contract" Role="Contract" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Company">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="Contract">
+              <PropertyRef Name="CompanyId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Tenants_Companies">
+          <End Type="NhaTroAnCuModel.Company" Role="Company" Multiplicity="0..1" />
+          <End Type="NhaTroAnCuModel.Tenant" Role="Tenant" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Company">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="Tenant">
+              <PropertyRef Name="CompanyId" />
             </Dependent>
           </ReferentialConstraint>
         </Association>
@@ -904,12 +1340,31 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <End Type="NhaTroAnCuModel.AspNetRole" Role="AspNetRole" Multiplicity="*" />
           <End Type="NhaTroAnCuModel.AspNetUser" Role="AspNetUser" Multiplicity="*" />
         </Association>
+        <ComplexType Name="sp_GetCompanyTenants_Result">
+          <Property Type="Int32" Name="Id" Nullable="false" />
+          <Property Type="String" Name="FullName" Nullable="false" MaxLength="100" />
+          <Property Type="String" Name="IdentityCard" Nullable="false" MaxLength="20" />
+          <Property Type="String" Name="PhoneNumber" Nullable="true" MaxLength="20" />
+          <Property Type="String" Name="Photo" Nullable="true" />
+          <Property Type="DateTime" Name="BirthDate" Nullable="true" />
+          <Property Type="String" Name="Gender" Nullable="true" MaxLength="10" />
+          <Property Type="String" Name="PermanentAddress" Nullable="true" MaxLength="255" />
+          <Property Type="String" Name="Ethnicity" Nullable="true" MaxLength="50" />
+          <Property Type="String" Name="VehiclePlate" Nullable="true" MaxLength="20" />
+          <Property Type="Int32" Name="CompanyId" Nullable="true" />
+          <Property Type="String" Name="RoomName" Nullable="true" MaxLength="10" />
+          <Property Type="DateTime" Name="ContractStartDate" Nullable="true" />
+          <Property Type="DateTime" Name="ContractEndDate" Nullable="true" />
+          <Property Type="String" Name="ContractStatus" Nullable="true" MaxLength="20" />
+        </ComplexType>
         </Schema>
     </edmx:ConceptualModels>
     <!-- C-S mapping content -->
     <edmx:Mappings>
       <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
         <EntityContainerMapping StorageEntityContainer="NhaTroAnCuModelStoreContainer" CdmEntityContainer="NhaTroAnCuEntities">
+          <FunctionImportMapping FunctionImportName="sp_AddEmployeeToRoom" FunctionName="NhaTroAnCuModel.Store.sp_AddEmployeeToRoom" />
+          <FunctionImportMapping FunctionImportName="sp_CreateCompanyContract" FunctionName="NhaTroAnCuModel.Store.sp_CreateCompanyContract" />
           <EntitySetMapping Name="C__MigrationHistory">
             <EntityTypeMapping TypeName="NhaTroAnCuModel.C__MigrationHistory">
               <MappingFragment StoreEntitySet="__MigrationHistory">
@@ -965,6 +1420,26 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>
+          <EntitySetMapping Name="Companies">
+            <EntityTypeMapping TypeName="NhaTroAnCuModel.Company">
+              <MappingFragment StoreEntitySet="Companies">
+                <ScalarProperty Name="IsActive" ColumnName="IsActive" />
+                <ScalarProperty Name="UpdatedAt" ColumnName="UpdatedAt" />
+                <ScalarProperty Name="CreatedAt" ColumnName="CreatedAt" />
+                <ScalarProperty Name="BankName" ColumnName="BankName" />
+                <ScalarProperty Name="BankAccount" ColumnName="BankAccount" />
+                <ScalarProperty Name="RepresentativeEmail" ColumnName="RepresentativeEmail" />
+                <ScalarProperty Name="RepresentativePhone" ColumnName="RepresentativePhone" />
+                <ScalarProperty Name="Representative" ColumnName="Representative" />
+                <ScalarProperty Name="Email" ColumnName="Email" />
+                <ScalarProperty Name="Phone" ColumnName="Phone" />
+                <ScalarProperty Name="Address" ColumnName="Address" />
+                <ScalarProperty Name="TaxCode" ColumnName="TaxCode" />
+                <ScalarProperty Name="CompanyName" ColumnName="CompanyName" />
+                <ScalarProperty Name="Id" ColumnName="Id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
           <EntitySetMapping Name="ContractExtensionHistories">
             <EntityTypeMapping TypeName="NhaTroAnCuModel.ContractExtensionHistory">
               <MappingFragment StoreEntitySet="ContractExtensionHistory">
@@ -992,6 +1467,8 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <EntitySetMapping Name="Contracts">
             <EntityTypeMapping TypeName="NhaTroAnCuModel.Contract">
               <MappingFragment StoreEntitySet="Contracts">
+                <ScalarProperty Name="CompanyId" ColumnName="CompanyId" />
+                <ScalarProperty Name="ContractType" ColumnName="ContractType" />
                 <ScalarProperty Name="ContractScanFilePath" ColumnName="ContractScanFilePath" />
                 <ScalarProperty Name="WaterPrice" ColumnName="WaterPrice" />
                 <ScalarProperty Name="ElectricityPrice" ColumnName="ElectricityPrice" />
@@ -1082,6 +1559,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <EntitySetMapping Name="Tenants">
             <EntityTypeMapping TypeName="NhaTroAnCuModel.Tenant">
               <MappingFragment StoreEntitySet="Tenants">
+                <ScalarProperty Name="CompanyId" ColumnName="CompanyId" />
                 <ScalarProperty Name="VehiclePlate" ColumnName="VehiclePlate" />
                 <ScalarProperty Name="Ethnicity" ColumnName="Ethnicity" />
                 <ScalarProperty Name="PermanentAddress" ColumnName="PermanentAddress" />
@@ -1126,6 +1604,86 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>
+          <EntitySetMapping Name="vw_CompanyRoomDetails">
+            <EntityTypeMapping TypeName="NhaTroAnCuModel.vw_CompanyRoomDetails">
+              <MappingFragment StoreEntitySet="vw_CompanyRoomDetails">
+                <ScalarProperty Name="EmployeeCount" ColumnName="EmployeeCount" />
+                <ScalarProperty Name="EmployeeList" ColumnName="EmployeeList" />
+                <ScalarProperty Name="PriceAgreed" ColumnName="PriceAgreed" />
+                <ScalarProperty Name="RoomName" ColumnName="RoomName" />
+                <ScalarProperty Name="RoomId" ColumnName="RoomId" />
+                <ScalarProperty Name="TaxCode" ColumnName="TaxCode" />
+                <ScalarProperty Name="CompanyName" ColumnName="CompanyName" />
+                <ScalarProperty Name="CompanyId" ColumnName="CompanyId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="vw_CompanyTenants">
+            <EntityTypeMapping TypeName="NhaTroAnCuModel.vw_CompanyTenants">
+              <MappingFragment StoreEntitySet="vw_CompanyTenants">
+                <ScalarProperty Name="MoveInDate" ColumnName="MoveInDate" />
+                <ScalarProperty Name="ContractStatus" ColumnName="ContractStatus" />
+                <ScalarProperty Name="CurrentContractId" ColumnName="CurrentContractId" />
+                <ScalarProperty Name="CurrentRoomName" ColumnName="CurrentRoomName" />
+                <ScalarProperty Name="CurrentRoomId" ColumnName="CurrentRoomId" />
+                <ScalarProperty Name="Representative" ColumnName="Representative" />
+                <ScalarProperty Name="TaxCode" ColumnName="TaxCode" />
+                <ScalarProperty Name="CompanyName" ColumnName="CompanyName" />
+                <ScalarProperty Name="CompanyId" ColumnName="CompanyId" />
+                <ScalarProperty Name="Photo" ColumnName="Photo" />
+                <ScalarProperty Name="VehiclePlate" ColumnName="VehiclePlate" />
+                <ScalarProperty Name="Ethnicity" ColumnName="Ethnicity" />
+                <ScalarProperty Name="PermanentAddress" ColumnName="PermanentAddress" />
+                <ScalarProperty Name="Gender" ColumnName="Gender" />
+                <ScalarProperty Name="BirthDate" ColumnName="BirthDate" />
+                <ScalarProperty Name="PhoneNumber" ColumnName="PhoneNumber" />
+                <ScalarProperty Name="IdentityCard" ColumnName="IdentityCard" />
+                <ScalarProperty Name="FullName" ColumnName="FullName" />
+                <ScalarProperty Name="TenantId" ColumnName="TenantId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="vw_ContractDetails">
+            <EntityTypeMapping TypeName="NhaTroAnCuModel.vw_ContractDetails">
+              <MappingFragment StoreEntitySet="vw_ContractDetails">
+                <ScalarProperty Name="TotalTenants" ColumnName="TotalTenants" />
+                <ScalarProperty Name="TotalMonthlyRent" ColumnName="TotalMonthlyRent" />
+                <ScalarProperty Name="TotalRooms" ColumnName="TotalRooms" />
+                <ScalarProperty Name="Representative" ColumnName="Representative" />
+                <ScalarProperty Name="TaxCode" ColumnName="TaxCode" />
+                <ScalarProperty Name="CompanyName" ColumnName="CompanyName" />
+                <ScalarProperty Name="Note" ColumnName="Note" />
+                <ScalarProperty Name="WaterPrice" ColumnName="WaterPrice" />
+                <ScalarProperty Name="ElectricityPrice" ColumnName="ElectricityPrice" />
+                <ScalarProperty Name="EndDate" ColumnName="EndDate" />
+                <ScalarProperty Name="StartDate" ColumnName="StartDate" />
+                <ScalarProperty Name="Status" ColumnName="Status" />
+                <ScalarProperty Name="ContractType" ColumnName="ContractType" />
+                <ScalarProperty Name="ContractId" ColumnName="ContractId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="vw_RoomStatus">
+            <EntityTypeMapping TypeName="NhaTroAnCuModel.vw_RoomStatus">
+              <MappingFragment StoreEntitySet="vw_RoomStatus">
+                <ScalarProperty Name="RentPrice" ColumnName="RentPrice" />
+                <ScalarProperty Name="TenantCount" ColumnName="TenantCount" />
+                <ScalarProperty Name="Tenants" ColumnName="Tenants" />
+                <ScalarProperty Name="CustomerName" ColumnName="CustomerName" />
+                <ScalarProperty Name="RoomStatus" ColumnName="RoomStatus" />
+                <ScalarProperty Name="EndDate" ColumnName="EndDate" />
+                <ScalarProperty Name="ContractStatus" ColumnName="ContractStatus" />
+                <ScalarProperty Name="ContractType" ColumnName="ContractType" />
+                <ScalarProperty Name="ContractId" ColumnName="ContractId" />
+                <ScalarProperty Name="IsOccupied" ColumnName="IsOccupied" />
+                <ScalarProperty Name="DefaultPrice" ColumnName="DefaultPrice" />
+                <ScalarProperty Name="Floor" ColumnName="Floor" />
+                <ScalarProperty Name="Area" ColumnName="Area" />
+                <ScalarProperty Name="RoomName" ColumnName="RoomName" />
+                <ScalarProperty Name="RoomId" ColumnName="RoomId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
           <AssociationSetMapping Name="AspNetUserRoles" TypeName="NhaTroAnCuModel.AspNetUserRoles" StoreEntitySet="AspNetUserRoles">
             <EndProperty Name="AspNetUser">
               <ScalarProperty Name="Id" ColumnName="UserId" />
@@ -1134,6 +1692,27 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
               <ScalarProperty Name="Id" ColumnName="RoleId" />
             </EndProperty>
           </AssociationSetMapping>
+          <FunctionImportMapping FunctionImportName="sp_GetCompanyTenants" FunctionName="NhaTroAnCuModel.Store.sp_GetCompanyTenants">
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="NhaTroAnCuModel.sp_GetCompanyTenants_Result">
+                <ScalarProperty Name="Id" ColumnName="Id" />
+                <ScalarProperty Name="FullName" ColumnName="FullName" />
+                <ScalarProperty Name="IdentityCard" ColumnName="IdentityCard" />
+                <ScalarProperty Name="PhoneNumber" ColumnName="PhoneNumber" />
+                <ScalarProperty Name="Photo" ColumnName="Photo" />
+                <ScalarProperty Name="BirthDate" ColumnName="BirthDate" />
+                <ScalarProperty Name="Gender" ColumnName="Gender" />
+                <ScalarProperty Name="PermanentAddress" ColumnName="PermanentAddress" />
+                <ScalarProperty Name="Ethnicity" ColumnName="Ethnicity" />
+                <ScalarProperty Name="VehiclePlate" ColumnName="VehiclePlate" />
+                <ScalarProperty Name="CompanyId" ColumnName="CompanyId" />
+                <ScalarProperty Name="RoomName" ColumnName="RoomName" />
+                <ScalarProperty Name="ContractStartDate" ColumnName="ContractStartDate" />
+                <ScalarProperty Name="ContractEndDate" ColumnName="ContractEndDate" />
+                <ScalarProperty Name="ContractStatus" ColumnName="ContractStatus" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
         </EntityContainerMapping>
       </Mapping>
     </edmx:Mappings>

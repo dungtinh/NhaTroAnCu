@@ -43,18 +43,12 @@ namespace NhaTroAnCu.Controllers
 
                 var viewModel = new TenantViewModel
                 {
-                    Tenant = tenant,
-                    HasActiveContract = activeContract != null,
-                    CurrentRoom = activeContract?.Room.Name,
-                    CurrentContractId = activeContract?.ContractId,
-                    MoveInDate = activeContract?.Contract.MoveInDate,
-                    ContractEndDate = activeContract?.Contract.EndDate
+                  
                 };
 
                 // Apply filter
-                if (filterStatus == "All" ||
-                    (filterStatus == "Active" && viewModel.HasActiveContract) ||
-                    (filterStatus == "Inactive" && !viewModel.HasActiveContract))
+                if (filterStatus == "All"
+                    )
                 {
                     tenantViewModels.Add(viewModel);
                 }
@@ -298,16 +292,5 @@ namespace NhaTroAnCu.Controllers
             }
             base.Dispose(disposing);
         }
-    }
-
-    // ViewModels
-    public class TenantViewModel
-    {
-        public Tenant Tenant { get; set; }
-        public bool HasActiveContract { get; set; }
-        public string CurrentRoom { get; set; }
-        public int? CurrentContractId { get; set; }
-        public DateTime? MoveInDate { get; set; }
-        public DateTime? ContractEndDate { get; set; }
     }
 }

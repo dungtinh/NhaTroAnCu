@@ -265,14 +265,15 @@
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
     <Compile Include="Models\CardData.cs" />
+    <Compile Include="Models\Company.cs">
+      <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
+    </Compile>
     <Compile Include="Models\Contract.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
-    <Compile Include="Models\ContractViewModel.cs" />
     <Compile Include="Models\ContractExtensionHistory.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
-    <Compile Include="Models\ContractHistoryViewModel.cs" />
     <Compile Include="Models\ContractRoom.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
@@ -292,7 +293,6 @@
     <Compile Include="Models\IncomeExpenseCategory.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
-    <Compile Include="Models\IncomeExpenseViewModels.cs" />
     <Compile Include="Models\ManageViewModels.cs" />
     <Compile Include="Models\NhaTroAnCuModel.Context.cs">
       <AutoGen>True</AutoGen>
@@ -317,6 +317,9 @@
     <Compile Include="Models\Room.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
+    <Compile Include="Models\sp_GetCompanyTenants_Result.cs">
+      <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
+    </Compile>
     <Compile Include="Models\Tenant.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
@@ -326,6 +329,19 @@
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
     <Compile Include="Models\UtilityBillCreateViewModel.cs" />
+    <Compile Include="Models\ViewModel.cs" />
+    <Compile Include="Models\vw_CompanyRoomDetails.cs">
+      <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\vw_CompanyTenants.cs">
+      <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\vw_ContractDetails.cs">
+      <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\vw_RoomStatus.cs">
+      <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Startup.cs" />
   </ItemGroup>
@@ -580,6 +596,7 @@
     <Content Include="Views\Contracts\End.cshtml" />
     <Content Include="Views\IncomeExpense\Edit.cshtml" />
     <Content Include="Views\IncomeExpense\Report.cshtml" />
+    <Content Include="Views\Rooms\_EmployeeManagement.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Uploads\ContractScans\" />
