@@ -55,18 +55,6 @@ namespace NhaTroAnCu.Models
             Tenants = new List<Tenant>();
         }
     }    
-    public class ContractEditViewModel
-    {
-        public int Id { get; set; }
-        public int RoomId { get; set; }
-        public int Months { get; set; }
-        public DateTime MoveInDate { get; set; }
-        public decimal PriceAgreed { get; set; }
-        public decimal ElectricityPrice { get; set; }
-        public decimal WaterPrice { get; set; }
-        public string Note { get; set; }
-        public List<TenantEditModel> Tenants { get; set; } = new List<TenantEditModel>();
-    }
 
     public class TenantEditModel : TenantInputModel
     {
@@ -218,7 +206,7 @@ namespace NhaTroAnCu.Models
     // ViewModel hiển thị thông tin người thuê (nhân viên công ty)
     public class TenantViewModel
     {
-        public int Id { get; set; } // ContractTenant.Id
+        public int? Id { get; set; } // ContractTenant.Id
         public int TenantId { get; set; }
         public string FullName { get; set; }
         public string IdentityCard { get; set; }
