@@ -176,7 +176,7 @@ namespace NhaTroAnCu.Controllers
                     // CHƯA CÓ PHIẾU BÁO -> Tạo mới
                     var service = new UtilityBillService(db);
                     int waterPrev = service.GetHighestWaterIndexEnd(contract.Id);
-                    var contractRoom = contract.ContractRooms.FirstOrDefault(cr => cr.RoomId == roomId);
+                    var contractRoom = contract.ContractRooms.FirstOrDefault(cr => cr.RoomId == roomId && cr.ContractId == contract.Id);
 
                     vm = new UtilityBillCreateViewModel
                     {

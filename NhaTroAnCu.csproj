@@ -248,9 +248,11 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Helpers\CustomPdfPageEventHelper.cs" />
+    <Compile Include="Helpers\IncomeExpenseService.cs" />
     <Compile Include="Helpers\TenantPhotoHelper.cs" />
     <Compile Include="Helpers\DateTimeHelper.cs" />
     <Compile Include="Helpers\UtilityBillService.cs" />
+    <Compile Include="Models\IncomeExpenseViewModels.cs" />
     <Compile Include="Models\AccountViewModels.cs" />
     <Compile Include="Models\AddressEntities.cs" />
     <Compile Include="Models\ApiResponse.cs" />
@@ -604,6 +606,8 @@
     <Content Include="Views\IncomeExpense\Report.cshtml" />
     <Content Include="Views\Rooms\_EmployeeManagement.cshtml" />
     <Content Include="Views\Contracts\Details.cshtml" />
+    <Content Include="Views\Shared\_PaymentRecordingPartial.cshtml" />
+    <Content Include="Views\Shared\_PaymentHistoryPartial.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Uploads\ContractScans\" />

@@ -1,0 +1,55 @@
+﻿@{
+    var activeContract = ViewBag.ActiveContract as NhaTroAnCu.Models.Contract;
+    var amountDue = ViewBag.AmountDue ?? 0M;
+    var roomId = ViewBag.RoomId ?? 0;
+}
+
+<!-- Box 5: GHI NHẬN THANH TOÁN -->
+<div class="detail-card">
+    <div class="card-header bg-gradient-purple">
+        <i class="fas fa-money-check-alt"></i>
+        <span>Ghi nhận thanh toán</span>
+    </div>
+    <div class="card-body">
+        @if (activeContract != null)
+        {
+            <form id="paymentForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ContractId" value="@activeContract.Id" />
+                <input type="hidden" name="RoomId" value="@roomId" />
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Số tiền thu:</label>
+                            <input name="Amount" class="form-control money"
+                                   @(amountDue > 0 ? "value=" + amountDue : "") required />
+                            @if (amountDue > 0)
+                            {
+                                <small class="text-success">Gợi ý: @amountDue.ToString("N0")đ</small>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Cột phải: Ngày thu -->
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Ngày thu:</label>
+                            <input name="PaymentDate" class="form-control datetime"
+                                   value="@DateTime.Now.ToString("dd/MM/yyyy")" required />
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Ghi chú:</label>
+                    <input type="text" name="Note" class="form-control" />
+                </div>
+                <br />
+                <button type="submit" class="btn btn-success">Ghi nhận</button>
+            </form>
+        }
+        else
+        {
+            <p class="text-muted">Không có hợp đồng</p>
+        }
+    </div>
+</div>

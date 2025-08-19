@@ -458,30 +458,8 @@
             </div>
 
             <!-- 5. GHI NHẬN THANH TOÁN -->
-            <div class="detail-card">
-                <div class="card-header bg-gradient-purple">
-                    <i class="fas fa-money-check-alt"></i>
-                    <span>Ghi nhận thanh toán</span>
-                </div>
-                <div class="card-body">
-                    <div class="text-center py-4">
-                        <button type="button" class="btn btn-success">
-                            <i class="fas fa-plus-circle"></i> Ghi nhận thanh toán
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 6. LỊCH SỬ PHIẾU BÁO & THANH TOÁN -->
-            <div class="detail-card">
-                <div class="card-header bg-gradient-dark">
-                    <i class="fas fa-history"></i>
-                    <span>Lịch sử phiếu báo & thanh toán</span>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted text-center py-4">Chưa có lịch sử</p>
-                </div>
-            </div>
+            @Html.Partial("_PaymentRecordingPartial")
+            @Html.Partial("_PaymentHistoryPartial")
         </div>
     </div>
 </div>
@@ -779,5 +757,53 @@ function updateTotalMoney() {
                 }
             });
         }
+        $('#paymentForm').submit(function(e) {
+            e.preventDefault();
+
+            var btn = $(this).find('button[type="submit"]');
+            var originalText = btn.html();
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Đang xử lý...');
+
+            $.post('@Url.Action("RecordRoomPayment", "Rooms")', $(this).serialize(), function(res) {
+                if(res.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Thành công!',
+                        text: 'Đã ghi nhận thanh toán',
+                        showCancelButton: true,
+                        confirmButtonText: 'Tải hóa đơn PDF',
+                        cancelButtonText: 'Đóng'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Mở PDF trong tab mới
+                            window.open(res.receiptUrl, '_blank');
+                        }
+                        location.reload();
+                    });
+                } else {
+                    btn.prop('disabled', false).html(originalText);
+                    Swal.fire('Lỗi', res.message || 'Không thể ghi nhận thanh toán', 'error');
+                }
+            });
+        });
+    </script>
+    <script>
+        $(document).ready(function () {
+            $('.toggle-detail').click(function () {
+                var month = $(this).data('month');
+                var year = $(this).data('year');
+                var parentKey = month + '-' + year;
+
+                $('.bill-detail-row[data-parent="' + parentKey + '"]').toggle();
+                $('.payment-detail-row[data-parent="' + parentKey + '"]').toggle();
+
+                var icon = $(this).find('i');
+                if (icon.hasClass('fa-chevron-down')) {
+                    icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+                } else {
+                    icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                }
+            });
+        });
     </script>
 }
