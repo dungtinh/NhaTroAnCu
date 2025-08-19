@@ -265,30 +265,8 @@ namespace NhaTroAnCu.Controllers
                 ViewBag.Payment = payment;
 
                 // Lấy chỉ số nước tháng trước
-                var prevBill = db.UtilityBills
-                    .Where(b => b.ContractId == activeContract.Id)
-                    .OrderByDescending(b => b.Year)
-                    .ThenByDescending(b => b.Month)
-                    .FirstOrDefault();
-
-                ViewBag.WaterPrev = prevBill?.WaterIndexEnd ?? 0;
-
-                // Tính extra/discount cho tháng đầu
-                decimal extraCharge = 0, discount = 0;
-                if (now.Month == activeContract.MoveInDate.Month && now.Year == activeContract.MoveInDate.Year)
-                {
-                    var contractRoom = activeContract.ContractRooms.FirstOrDefault(cr => cr.RoomId == room.Id);
-                    var moveInDay = activeContract.MoveInDate.Day;
-                    var pricePerDay = (contractRoom?.PriceAgreed ?? room.DefaultPrice) / 30;
-
-                    if (moveInDay < 10)
-                        extraCharge = pricePerDay * (10 - moveInDay);
-                    else if (moveInDay > 10)
-                        discount = pricePerDay * (moveInDay - 10);
-                }
-
-                ViewBag.ExtraCharge = extraCharge;
-                ViewBag.Discount = discount;
+                var prevBill = new UtilityBillService(db).GetHighestWaterIndexEnd(room.Id);
+                ViewBag.WaterPrev = prevBill;
 
                 // Lấy tenants cho phòng này
                 var roomTenants = db.ContractTenants

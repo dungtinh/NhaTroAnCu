@@ -433,7 +433,12 @@
                 var checkedRooms = $('.company-room-checkbox:checked').length;
                 if (checkedRooms === 0) {
                     e.preventDefault();
-                    alert('Vui lòng chọn ít nhất một phòng cho công ty!');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Chưa chọn phòng',
+                        text: 'Vui lòng chọn ít nhất một phòng cho hợp đồng công ty!',
+                        confirmButtonColor: '#ffc107'
+                    });
                     return false;
                 }
 
@@ -453,7 +458,12 @@
     // Hàm thêm người thuê mới
     function addNewTenant() {
         if (tenantCount >= maxTenants) {
-            alert('Đã đạt giới hạn số người thuê (tối đa ' + maxTenants + ' người/phòng)');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Đạt giới hạn',
+                text: `Đã đạt giới hạn số người thuê (tối đa ${maxTenants} người/phòng)`,
+                confirmButtonColor: '#ffc107'
+            });
             return;
         }
 
@@ -555,7 +565,12 @@
     // Hàm xóa người thuê
     function removeTenant(index) {
         if (tenantCount <= 1) {
-            alert('Phải có ít nhất 1 người thuê');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Không thể xóa',
+                text: 'Phải có ít nhất 1 người thuê',
+                confirmButtonColor: '#ffc107'
+            });
             return;
         }
 
@@ -620,7 +635,12 @@
         var fileInput = $(`.cccd-file[data-tenant-index="${tenantIndex}"]`)[0];
 
         if (!fileInput.files || !fileInput.files[0]) {
-            alert('Vui lòng chọn file ảnh CCCD!');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Chưa chọn file',
+                text: 'Vui lòng chọn file ảnh CCCD!',
+                confirmButtonColor: '#ffc107'
+            });
             return;
         }
 
