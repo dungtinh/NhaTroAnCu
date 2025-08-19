@@ -388,6 +388,7 @@
     <Content Include="favicon.ico" />
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
+    <Content Include="js\site.js" />
     <Content Include="js\popper-fix.js" />
     <Content Include="Models\NhaTroAnCuModel.Context.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
