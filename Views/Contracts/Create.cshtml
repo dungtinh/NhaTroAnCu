@@ -5,7 +5,7 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<link href="~/Content/CSS/contract-action.css" rel="stylesheet" />
+<link href="~/CSS/contract-action.css" rel="stylesheet" />
 
 <div class="contract-form-container">
     <div class="form-header">
@@ -728,11 +728,8 @@
         }
     `;
         document.head.appendChild(style);
-        // Set default dates
-        var today = new Date();
-        $('#StartDate').datepicker('setDate', today);
-        $('#MoveInDate').datepicker('setDate', today);
-
+        
+        
         // Auto-calculate end date when months change
         $('#Months').on('change', function () {
             var startDateStr = $('#StartDate').val();

@@ -372,19 +372,16 @@
     <Content Include="Content\bootstrap.min.css" />
     <Content Include="Content\bootstrap.rtl.css" />
     <Content Include="Content\bootstrap.rtl.min.css" />
-    <Content Include="Content\CSS\contract-details.css" />
-    <Content Include="Content\CSS\contract-action.css" />
-    <Content Include="Content\CSS\font-awesome.css" />
-    <Content Include="Content\CSS\font-awesome.min.css" />
-    <Content Include="Content\datepicker-custom.css" />
+    <Content Include="CSS\contract-details.css" />
+    <Content Include="CSS\contract-action.css" />
+    <Content Include="CSS\datepicker.css" />
     <Content Include="Content\Fonts\fontawesome-webfont.svg" />
-    <Content Include="Content\income-expence-action.css" />
-    <Content Include="Content\income-expense.css" />
-    <Content Include="Content\income-report.css" />
-    <Content Include="Content\navigation.css" />
-    <Content Include="Content\room-details.css" />
-    <Content Include="Content\roomsindex.css" />
-    <Content Include="Content\layout.css" />
+    <Content Include="CSS\income-expence-action.css" />
+    <Content Include="CSS\income-expense.css" />
+    <Content Include="CSS\income-report.css" />
+    <Content Include="CSS\room-details.css" />
+    <Content Include="CSS\roomsindex.css" />
+    <Content Include="CSS\layout.css" />
     <Content Include="favicon.ico" />
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
@@ -469,7 +466,7 @@
     <Content Include="Scripts\jquery.validate.min.js" />
     <Content Include="Scripts\jquery.validate.unobtrusive.js" />
     <Content Include="Scripts\jquery.validate.unobtrusive.min.js" />
-    <Content Include="Scripts\js\datepicker.js" />
+    <Content Include="js\datepicker.js" />
     <Content Include="Scripts\locales\bootstrap-datepicker-en-CA.min.js" />
     <Content Include="Scripts\locales\bootstrap-datepicker.ar-tn.min.js" />
     <Content Include="Scripts\locales\bootstrap-datepicker.ar.min.js" />
@@ -559,7 +556,7 @@
     <Content Include="Scripts\maths\Parser.js" />
     <Content Include="Scripts\maths\Token.js" />
     <Content Include="Scripts\modernizr-2.8.3.js" />
-    <Content Include="Scripts\Scripts_TaoPhieuBaoTien.js" />
+    <Content Include="js\Scripts_TaoPhieuBaoTien.js" />
     <Content Include="Web.config" />
     <Content Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
