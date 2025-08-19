@@ -19,6 +19,7 @@ namespace NhaTroAnCu.Models
         {
             this.ContractRooms = new HashSet<ContractRoom>();
             this.ContractTenants = new HashSet<ContractTenant>();
+            this.UtilityBills = new HashSet<UtilityBill>();
         }
     
         public int Id { get; set; }
@@ -38,5 +39,7 @@ namespace NhaTroAnCu.Models
         public virtual ICollection<ContractRoom> ContractRooms { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<ContractTenant> ContractTenants { get; set; }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public virtual ICollection<UtilityBill> UtilityBills { get; set; }
     }
 }

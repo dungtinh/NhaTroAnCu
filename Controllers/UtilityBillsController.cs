@@ -56,7 +56,7 @@ namespace NhaTroAnCu.Controllers
             {
                 // Lấy chỉ số nước của tháng trước
                 var service = new UtilityBillService(db);
-                int waterPrev = service.GetHighestWaterIndexEndForContract(contract?.Id ?? 0);
+                int waterPrev = service.GetHighestWaterIndexEnd(contract?.Id ?? 0);
 
                 // Trường hợp chưa có bill, khởi tạo mặc định
                 vm = new UtilityBillCreateViewModel
@@ -131,7 +131,7 @@ namespace NhaTroAnCu.Controllers
             int currentMonth = now.Month, currentYear = now.Year;
 
             var service = new UtilityBillService(db);
-            int waterPrev = service.GetHighestWaterIndexEndForContract(contract?.Id ?? 0);
+            int waterPrev = service.GetHighestWaterIndexEnd(contract?.Id ?? 0);
 
             var contractRoom = contract?.ContractRooms.FirstOrDefault(cr => cr.RoomId == roomId);
 
@@ -169,6 +169,7 @@ namespace NhaTroAnCu.Controllers
 
                 bill.Month = vm.Month;
                 bill.Year = vm.Year;
+                bill.RoomId = vm.RoomId;
                 bill.ContractId = vm.ContractId;
                 bill.WaterIndexStart = vm.WaterIndexStart;
                 bill.WaterIndexEnd = vm.WaterIndexEnd;

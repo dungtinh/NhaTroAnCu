@@ -279,6 +279,9 @@
     <Compile Include="Models\ContractRoom.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
+    <Compile Include="Models\ContractRooms_Backup_20250819_103317.cs">
+      <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
+    </Compile>
     <Compile Include="Models\ContractTenant.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
