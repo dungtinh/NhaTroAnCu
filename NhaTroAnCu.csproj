@@ -380,11 +380,12 @@
     <Content Include="CSS\income-expense.css" />
     <Content Include="CSS\income-report.css" />
     <Content Include="CSS\room-details.css" />
-    <Content Include="CSS\roomsindex.css" />
+    <Content Include="CSS\room-index.css" />
     <Content Include="CSS\layout.css" />
     <Content Include="favicon.ico" />
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
+    <Content Include="js\popper-fix.js" />
     <Content Include="Models\NhaTroAnCuModel.Context.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <DependentUpon>NhaTroAnCuModel.edmx</DependentUpon>

@@ -77,103 +77,134 @@ namespace NhaTroAnCu.Controllers
 
         private RoomViewModel GetRoomViewModel(Room room, DateTime filterDate, int selectedMonth, int selectedYear, DateTime now)
         {
-            string colorClass = "gray";
+            string colorClass = "gray"; // Mặc định phòng trống
             bool isContractExpired = false;
             bool isContractNearingEnd = false;
             string tenantName = "";
             DateTime? contractEndDate = null;
 
-            // Tìm hợp đồng active cho phòng này thông qua ContractRooms
-            var activeContract = room.ContractRooms
-                .Where(cr => cr.Contract.Status == "Active")
-                .OrderByDescending(cr => cr.Contract.StartDate)
-                .Select(cr => cr.Contract)
-                .FirstOrDefault();
-
-            // Tìm hợp đồng còn hiệu lực tại thời điểm filter
-            var validContract = room.ContractRooms
-                .Where(cr => cr.Contract.Status == "Active"
-                            && cr.Contract.StartDate <= filterDate
-                            && cr.Contract.EndDate >= filterDate)
-                .Select(cr => cr.Contract)
-                .FirstOrDefault();
-
-            // Kiểm tra nếu có hợp đồng active nhưng đã hết hạn
-            if (activeContract != null && activeContract.EndDate < filterDate)
+            try
             {
-                isContractExpired = true;
-                validContract = activeContract;
-                colorClass = "expired"; // Màu cho phòng hết hạn
-            }
+                // Tìm hợp đồng active của phòng qua ContractRooms
+                var activeContract = room.ContractRooms
+                    .Where(cr => cr.Contract != null && cr.Contract.Status == "Active")
+                    .Select(cr => cr.Contract)
+                    .OrderByDescending(c => c.StartDate)
+                    .FirstOrDefault();
 
-            if (validContract != null)
-            {
-                contractEndDate = validContract.EndDate;
-
-                // Kiểm tra sắp hết hạn (trong vòng 31 ngày)
-                var daysUntilEnd = (validContract.EndDate - filterDate).TotalDays;
-                if (daysUntilEnd > 0 && daysUntilEnd <= 31)
+                if (activeContract != null)
                 {
-                    isContractNearingEnd = true;
-                }
+                    contractEndDate = activeContract.EndDate;
 
-                // Lấy tên khách thuê từ ContractTenants
-                var contractTenant = db.ContractTenants
-                    .Include(ct => ct.Tenant)
-                    .FirstOrDefault(ct => ct.ContractId == validContract.Id && ct.RoomId == room.Id);
-
-                if (contractTenant != null)
-                {
-                    tenantName = contractTenant.Tenant.FullName;
-                }
-
-                // Nếu không phải hết hạn, xác định màu sắc dựa trên thanh toán
-                if (!isContractExpired)
-                {
-                    // Lấy bill cho hợp đồng này
-                    var bill = db.UtilityBills
-                        .FirstOrDefault(b => b.Month == selectedMonth
-                            && b.Year == selectedYear
-                            && b.ContractId == validContract.Id);
-
-                    if (bill != null)
+                    // Kiểm tra hợp đồng còn hiệu lực không
+                    if (activeContract.StartDate <= filterDate && activeContract.EndDate >= filterDate)
                     {
-                        decimal mustPay = bill.TotalAmount;
+                        // Hợp đồng còn hiệu lực
 
-                        // Lấy payment history cho hợp đồng này
-                        decimal paid = db.PaymentHistories
-                            .Where(p => p.RoomId == room.Id
-                                && p.Month == selectedMonth
-                                && p.Year == selectedYear
-                                && p.ContractId == validContract.Id)
-                            .Sum(p => (decimal?)p.TotalAmount) ?? 0;
-
-                        // Xác định màu sắc theo tình trạng thanh toán
-                        if (paid >= mustPay)
+                        // Kiểm tra sắp hết hạn (trong 31 ngày)
+                        var daysUntilEnd = (activeContract.EndDate - filterDate).TotalDays;
+                        if (daysUntilEnd <= 31)
                         {
-                            colorClass = "green"; // Đã thanh toán đủ
+                            isContractNearingEnd = true;
                         }
-                        else if (paid > 0)
+
+                        // Lấy tên khách thuê
+                        var contractTenant = room.ContractTenants
+                            .Where(ct => ct.ContractId == activeContract.Id && ct.Tenant != null)
+                            .Select(ct => ct.Tenant)
+                            .FirstOrDefault();
+
+                        if (contractTenant != null)
                         {
-                            colorClass = "yellow"; // Thanh toán một phần
+                            tenantName = contractTenant.FullName;
+                        }
+                        else if (activeContract.Company != null)
+                        {
+                            tenantName = activeContract.Company.CompanyName;
+                        }
+
+                        // Kiểm tra tình trạng thanh toán
+                        var bill = db.UtilityBills
+                            .FirstOrDefault(b => b.ContractId == activeContract.Id
+                                && b.Month == selectedMonth
+                                && b.Year == selectedYear);
+
+                        if (bill != null)
+                        {
+                            // Có bill cho tháng này
+                            decimal mustPay = bill.TotalAmount;
+
+                            decimal paid = db.PaymentHistories
+                                .Where(p => p.RoomId == room.Id
+                                    && p.ContractId == activeContract.Id
+                                    && p.Month == selectedMonth
+                                    && p.Year == selectedYear)
+                                .Sum(p => (decimal?)p.TotalAmount) ?? 0;
+
+                            if (paid >= mustPay)
+                            {
+                                colorClass = "green"; // Đã thanh toán đủ
+                            }
+                            else if (paid > 0)
+                            {
+                                colorClass = "yellow"; // Thanh toán một phần  
+                            }
+                            else
+                            {
+                                colorClass = "orange"; // Chưa thanh toán
+                            }
                         }
                         else
                         {
-                            colorClass = "orange"; // Chưa thanh toán
+                            // Chưa có bill
+                            colorClass = "blue"; // Đang thuê, chưa có bill
                         }
+                    }
+                    else if (activeContract.EndDate < filterDate)
+                    {
+                        // Hợp đồng đã hết hạn
+                        isContractExpired = true;
+                        colorClass = "red"; // Dùng "red" thay vì "expired"
+
+                        // Lấy tên từ hợp đồng cũ
+                        var contractTenant = room.ContractTenants
+                            .Where(ct => ct.ContractId == activeContract.Id && ct.Tenant != null)
+                            .Select(ct => ct.Tenant)
+                            .FirstOrDefault();
+
+                        if (contractTenant != null)
+                        {
+                            tenantName = contractTenant.FullName + " (Hết HĐ)";
+                        }
+                        else if (activeContract.Company != null)
+                        {
+                            tenantName = activeContract.Company.CompanyName + " (Hết HĐ)";
+                        }
+                    }
+                }
+                else
+                {
+                    // Không có hợp đồng
+                    if (room.IsOccupied)
+                    {
+                        colorClass = "purple"; // Có người ở không hợp đồng
+                        tenantName = "Có người ở";
                     }
                     else
                     {
-                        // Chưa có bill
-                        colorClass = "gray";
+                        colorClass = "gray"; // Phòng trống
+                        tenantName = "";
                     }
                 }
             }
-            else
+            catch (Exception ex)
             {
-                // Phòng không có hợp đồng
-                colorClass = room.IsOccupied ? "blue" : "gray";
-                tenantName = room.IsOccupied ? "Có người ở" : "";
+                // Log error nếu cần
+                System.Diagnostics.Debug.WriteLine($"Error in GetRoomViewModel for room {room.Name}: {ex.Message}");
+
+                // Trả về giá trị mặc định an toàn
+                colorClass = "gray";
+                tenantName = "Lỗi";
             }
 
             return new RoomViewModel
@@ -570,6 +601,6 @@ namespace NhaTroAnCu.Controllers
 
             return View(tenants);
         }
-        
+
     }
 }

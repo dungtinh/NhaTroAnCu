@@ -1,256 +1,416 @@
-﻿@model IEnumerable<NhaTroAnCu.Models.RoomViewModel>
+﻿@model List<NhaTroAnCu.Models.RoomViewModel>
 @{
     ViewBag.Title = "Quản lý phòng trọ";
-    var grouped = Model.GroupBy(r => r.Room.Area).OrderBy(g => g.Key);
-    int selectedDay = ViewBag.SelectedDay;
-    int selectedMonth = ViewBag.SelectedMonth;
-    int selectedYear = ViewBag.SelectedYear;
-
-    // Lấy thống kê từ ViewBag
-    int totalRooms = ViewBag.TotalRooms ?? 0;
-    int rentedRooms = ViewBag.RentedRooms ?? 0;
-    int emptyRooms = ViewBag.EmptyRooms ?? 0;
-    int nearExpiredRooms = ViewBag.NearExpiredRooms ?? 0;
-    int expiredRooms = ViewBag.ExpiredRooms ?? 0;
-    decimal occupancyRate = ViewBag.OccupancyRate ?? 0m;
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<link href="~/css/roomsindex.css" rel="stylesheet" />
+<!-- CSS Inline để đảm bảo override -->
+<style>
+    /* Reset và override Bootstrap */
+    .room-card {
+        border-radius: 12px !important;
+        padding: 20px !important;
+        text-align: center !important;
+        position: relative !important;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1) !important;
+        border: 2px solid transparent !important;
+        cursor: pointer !important;
+        overflow: hidden !important;
+        color: white !important;
+        min-height: 150px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        transition: all 0.3s ease !important;
+        margin-bottom: 10px !important;
+    }
 
-<div class="dashboard-header">
-    <h1 class="dashboard-title">
-        <i class="fas fa-building"></i>
-        Quản lý phòng trọ An Cư
-    </h1>
-    <p class="text-center text-muted">Hệ thống quản lý hiện đại và chuyên nghiệp</p>
-</div>
+    .room-card:hover {
+        transform: translateY(-5px) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+    }
 
-<!-- Filter Card -->
-<div class="filter-card">
-    <h3 class="filter-title">
-        <i class="fas fa-calendar-alt"></i>
-        Lọc theo thời gian
-    </h3>
+    /* Màu sắc cho từng trạng thái */
+    .room-card.room-gray,
+    .room-card.gray {
+        background: linear-gradient(135deg, #95a5a6, #7f8c8d) !important;
+    }
 
-    <form id="filterForm" method="get">
-        <div class="row">
-            <div class="col-md-2">
-                <label class="form-label font-weight-bold">Ngày:</label>
-                <input type="number" id="dayInput" name="day" class="form-control date-input"
-                       min="1" max="31" value="@selectedDay" />
-            </div>
-            <div class="col-md-8">
-                <label class="form-label font-weight-bold">Tháng:</label>
-                <div class="month-selector">
-                    @for (int m = 1; m <= 12; m++)
-                    {
-                        var css = m == selectedMonth ? "month-btn month-selected" : "month-btn";
-                        <div class="@css" data-month="@m">Tháng @m</div>
-                    }
+    .room-card.room-blue,
+    .room-card.blue {
+        background: linear-gradient(135deg, #3498db, #2980b9) !important;
+    }
+
+    .room-card.room-green,
+    .room-card.green {
+        background: linear-gradient(135deg, #27ae60, #229954) !important;
+    }
+
+    .room-card.room-yellow,
+    .room-card.yellow {
+        background: linear-gradient(135deg, #f39c12, #d68910) !important;
+    }
+
+    .room-card.room-orange,
+    .room-card.orange {
+        background: linear-gradient(135deg, #e67e22, #d35400) !important;
+    }
+
+    .room-card.room-red,
+    .room-card.red {
+        background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+    }
+
+    .room-card.room-purple,
+    .room-card.purple {
+        background: linear-gradient(135deg, #9b59b6, #8e44ad) !important;
+    }
+
+    /* Animation cho phòng hết hạn */
+  
+
+    .room-card.room-red,
+    .room-card.red {
+        animation: pulse 2s infinite;
+    }
+
+    /* Room content styles */
+    .room-number {
+        font-size: 1.5rem !important;
+        font-weight: 700 !important;
+        margin-bottom: 8px !important;
+        color: white !important;
+    }
+
+    .room-tenant {
+        font-size: 0.9rem !important;
+        margin-bottom: 15px !important;
+        opacity: 0.9 !important;
+        min-height: 20px !important;
+        color: white !important;
+    }
+
+    .room-actions {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    .btn-room {
+        background: rgba(255, 255, 255, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        color: white !important;
+        padding: 8px 16px !important;
+        border-radius: 6px !important;
+        text-decoration: none !important;
+        font-size: 0.85rem !important;
+        font-weight: 500 !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .btn-room:hover {
+        background: rgba(255, 255, 255, 0.3) !important;
+        color: white !important;
+        text-decoration: none !important;
+    }
+
+    /* Icons */
+    .edit-icon, .history-icon {
+        position: absolute !important;
+        color: rgba(255, 255, 255, 0.8) !important;
+        font-size: 1rem !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .edit-icon {
+        top: 10px !important;
+        left: 10px !important;
+    }
+
+    .history-icon {
+        top: 10px !important;
+        right: 10px !important;
+    }
+
+    .edit-icon:hover, .history-icon:hover {
+        color: white !important;
+        transform: scale(1.2) !important;
+    }
+
+    /* Filter section */
+    .filter-card {
+        background: white !important;
+        border-radius: 12px !important;
+        padding: 25px !important;
+        margin-bottom: 25px !important;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Summary dashboard */
+    .summary-dashboard {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        border-radius: 15px !important;
+        padding: 25px !important;
+        margin: 20px 0 !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+        color: white !important;
+    }
+
+    /* Room grid */
+    .room-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+        gap: 20px !important;
+        padding: 10px 0 !important;
+    }
+
+    /* Area section */
+    .area-section {
+        background: white !important;
+        border-radius: 12px !important;
+        padding: 25px !important;
+        margin-bottom: 25px !important;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1) !important;
+    }
+</style>
+
+<link href="~/css/room-index.css" rel="stylesheet" />
+
+<div class="container-fluid">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">
+            <i class="fas fa-home"></i> Quản lý phòng trọ
+        </h1>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-card">
+        <h3 class="filter-title">
+            <i class="fas fa-calendar-alt"></i> Lọc theo thời gian
+        </h3>
+
+        <form method="get" action="@Url.Action("Index", "Rooms")">
+            <div class="row">
+                <div class="col-md-3">
+                    <label>Ngày:</label>
+                    <input type="number" name="day" value="@ViewBag.SelectedDay" min="1" max="31" class="form-control date-input" />
+                </div>
+                <div class="col-md-3">
+                    <label>Tháng:</label>
+                    <input type="number" name="month" value="@ViewBag.SelectedMonth" min="1" max="12" class="form-control date-input" />
+                </div>
+                <div class="col-md-3">
+                    <label>Năm:</label>
+                    <input type="number" name="year" value="@ViewBag.SelectedYear" min="2020" max="2030" class="form-control date-input" />
+                </div>
+                <div class="col-md-3">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-primary form-control">
+                        <i class="fas fa-filter"></i> Lọc
+                    </button>
                 </div>
             </div>
-            <div class="col-md-2">
-                <label class="form-label font-weight-bold">Năm:</label>
-                <input type="number" id="yearInput" name="year" class="form-control date-input"
-                       min="2000" max="2100" value="@selectedYear" />
-            </div>
-        </div>
-        <input type="hidden" id="monthInput" name="month" value="@selectedMonth" />
-    </form>
-</div>
+        </form>
 
-<!-- Summary Dashboard -->
-<div class="summary-dashboard">
-    <div class="summary-grid">
-        <div class="summary-card occupied">
-            <i class="fas fa-home summary-icon"></i>
-            <div class="summary-label">Đã thuê</div>
-            <div class="summary-value">@rentedRooms/@totalRooms</div>
-        </div>
-
-        <div class="summary-card available">
-            <i class="fas fa-check-circle summary-icon"></i>
-            <div class="summary-label">Còn trống</div>
-            <div class="summary-value">@emptyRooms</div>
-        </div>
-
-        <div class="summary-card warning">
-            <i class="fas fa-clock summary-icon"></i>
-            <div class="summary-label">Sắp hết hạn</div>
-            <div class="summary-value">@nearExpiredRooms</div>
-        </div>
-
-        <div class="summary-card efficiency">
-            <i class="fas fa-chart-line summary-icon"></i>
-            <div class="summary-label">Hiệu suất</div>
-            <div class="summary-value">@occupancyRate.ToString("P0")</div>
-        </div>
-
-        <div class="summary-card expired">
-            <i class="fas fa-exclamation-triangle summary-icon"></i>
-            <div class="summary-label">Đã hết HĐ</div>
-            <div class="summary-value">@expiredRooms</div>
+        <!-- Month Quick Select -->
+        <div class="month-selector mt-3">
+            @for (int i = 1; i <= 12; i++)
+            {
+                var monthClass = i == ViewBag.SelectedMonth ? "month-btn month-selected" : "month-btn";
+                <a href="@Url.Action("Index", new { month = i, year = ViewBag.SelectedYear })"
+                   class="@monthClass">
+                    Tháng @i
+                </a>
+            }
         </div>
     </div>
-</div>
 
-<!-- Rooms Display -->
-@foreach (var areaGroup in grouped)
-{
-    <div class="area-section">
-        <h2 class="area-title">
-            <i class="fas fa-map-marker-alt"></i>
-            DÃY @areaGroup.Key
-        </h2>
+    <!-- Summary Dashboard -->
+    <div class="summary-dashboard">
+        <div class="summary-grid">
+            <div class="summary-card">
+                <i class="fas fa-door-open summary-icon"></i>
+                <div class="summary-value">@ViewBag.TotalRooms</div>
+                <div class="summary-label">Tổng số phòng</div>
+            </div>
 
-        @for (int floor = 0; floor <= 3; floor++)
-        {
-            var floorRooms = areaGroup.Where(r => r.Room.Floor == floor).OrderBy(r => r.Room.RoomNumber);
-            if (floorRooms.Any())
+            <div class="summary-card occupied">
+                <i class="fas fa-users summary-icon"></i>
+                <div class="summary-value">@ViewBag.RentedRooms</div>
+                <div class="summary-label">Phòng đã thuê</div>
+            </div>
+
+            <div class="summary-card">
+                <i class="fas fa-door-closed summary-icon"></i>
+                <div class="summary-value">@ViewBag.EmptyRooms</div>
+                <div class="summary-label">Phòng trống</div>
+            </div>
+
+            <div class="summary-card overdue">
+                <i class="fas fa-exclamation-triangle summary-icon"></i>
+                <div class="summary-value">@ViewBag.ExpiredRooms</div>
+                <div class="summary-label">Hết hạn HĐ</div>
+            </div>
+
+            <div class="summary-card efficiency">
+                <i class="fas fa-chart-pie summary-icon"></i>
+                <div class="summary-value">@String.Format("{0:P0}", ViewBag.OccupancyRate)</div>
+                <div class="summary-label">Tỷ lệ lấp đầy</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rooms by Area -->
+    @{
+        var roomsByArea = Model.GroupBy(r => r.Room.Area).OrderBy(g => g.Key);
+    }
+
+    @foreach (var areaGroup in roomsByArea)
+    {
+        <div class="area-section">
+            <h2 class="area-title">
+                <i class="fas fa-building"></i> Khu @areaGroup.Key
+            </h2>
+
+            @{
+                var roomsByFloor = areaGroup.GroupBy(r => r.Room.Floor).OrderBy(g => g.Key);
+            }
+
+            @foreach (var floorGroup in roomsByFloor)
             {
                 <div class="floor-section">
-                    <h4 class="floor-title">
-                        <i class="fas fa-layer-group"></i>
-                        Tầng @floor
-                    </h4>
+                    <h3 class="floor-title">
+                        <i class="fas fa-layer-group"></i> Tầng @floorGroup.Key
+                    </h3>
 
                     <div class="room-grid">
-                        @foreach (var vm in floorRooms)
+                        @foreach (var item in floorGroup.OrderBy(r => r.Room.RoomNumber))
                         {
-                            var roomClass = vm.ColorClass == "gray" ? "room-available"
-                                          : vm.ColorClass == "green" ? "room-paid"
-                                          : vm.ColorClass == "yellow" ? "room-partial"
-                                          : vm.ColorClass == "expired" ? "room-expired"
-                                          : vm.ColorClass == "orange" ? "room-unpaid"
-                                          : vm.ColorClass == "blue" ? "room-occupied"
-                                          : "room-available";
+                            var roomClass = string.IsNullOrEmpty(item.ColorClass) ? "gray" : item.ColorClass;
+                            <div class="room-card room-@roomClass" data-room-id="@item.Room.Id">
+                                <!-- Edit Icon -->
+                                <a href="@Url.Action("Edit", new { id = item.Room.Id })"
+                                   class="edit-icon">
+                                    <i class="fas fa-edit"></i>
+                                </a>
 
-                            <div class="room-card @roomClass">
-                                @if (vm.IsContractExpired && vm.ContractEndDate.HasValue)
-                                {
-                                    <div class="contract-expired-warning">
-                                        <i class="fas fa-exclamation-circle"></i>
-                                        Đã hết hạn
-                                    </div>
-                                }
-                                else if (vm.IsContractNearingEnd && vm.ContractEndDate.HasValue)
-                                {
-                                    <div class="contract-warning">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                        Sắp hết hạn
-                                    </div>
-                                }
+                                <!-- History Icon -->
+                                <a href="@Url.Action("History", new { id = item.Room.Id })"
+                                   class="history-icon">
+                                    <i class="fas fa-history"></i>
+                                </a>
 
-                                @Html.ActionLink(" ", "Edit", new { id = vm.Room.Id }, new
-                                {
-                                    @class = "edit-icon fas fa-edit",
-                                    title = "Chỉnh sửa phòng"
-                                })
-
-                                @Html.ActionLink(" ", "History", "Contracts", new { roomId = vm.Room.Id }, new
-                                {
-                                    @class = "history-icon fas fa-history",
-                                    title = "Lịch sử thuê phòng"
-                                })
-
+                                <!-- Room Number -->
                                 <div class="room-number">
-                                    <i class="fas fa-door-open"></i>
-                                    @vm.Room.Name
+                                    @item.Room.Name
                                 </div>
 
+                                <!-- Tenant Name -->
                                 <div class="room-tenant">
-                                    @if (!string.IsNullOrEmpty(vm.TenantName))
+                                    @if (!string.IsNullOrEmpty(item.TenantName))
                                     {
-                                        <i class="fas fa-user"></i>
-                                        <span title="@vm.TenantName">@vm.TenantName</span>
-                                    }
-                                    else if (vm.Room.IsOccupied)
-                                    {
-                                        <i class="fas fa-user-slash"></i>
-                                        <span>Đang cập nhật</span>
+                                        <span>@item.TenantName</span>
                                     }
                                     else
                                     {
-                                        <i class="fas fa-home"></i>
-                                        <span>Phòng trống</span>
+                                        <span style="opacity: 0.6;">Trống</span>
                                     }
                                 </div>
 
+                                <!-- Warning badges -->
+                                @if (item.IsContractNearingEnd)
+                                {
+                                    <div class="badge badge-warning mb-2">
+                                        <i class="fas fa-clock"></i> Sắp hết HĐ
+                                    </div>
+                                }
+
+                                @if (item.IsContractExpired)
+                                {
+                                    <div class="badge badge-danger mb-2">
+                                        <i class="fas fa-exclamation-circle"></i> Hết hạn HĐ
+                                    </div>
+                                }
+
+                                <!-- Action Buttons -->
                                 <div class="room-actions">
-                                    @if (vm.Room.IsOccupied || !string.IsNullOrEmpty(vm.TenantName))
-                                    {
-                                        <a href="@Url.Action("Details", "Rooms", new { id = vm.Room.Id })"
-                                           class="btn-room">
-                                            <i class="fas fa-info-circle"></i>
-                                            Chi tiết
-                                        </a>
-                                    }
-                                    else
-                                    {
-                                        <a href="@Url.Action("Create", "Contracts", new { roomId = vm.Room.Id })"
-                                           class="btn-room">
-                                            <i class="fas fa-plus-circle"></i>
-                                            Cho thuê
-                                        </a>
-                                    }
+                                    <a href="@Url.Action("Details", new { id = item.Room.Id })"
+                                       class="btn-room">
+                                        <i class="fas fa-eye"></i> Chi tiết
+                                    </a>
                                 </div>
                             </div>
                         }
                     </div>
                 </div>
             }
-        }
+        </div>
+    }
+</div>
+
+<!-- Legend -->
+<div class="container-fluid mt-4">
+    <div class="filter-card">
+        <h4 class="mb-3">
+            <i class="fas fa-palette"></i> Chú thích màu sắc
+        </h4>
+        <div class="row">
+            <div class="col-md-3">
+                <span class="badge" style="background: #95a5a6;">
+                    <i class="fas fa-square"></i> Xám - Phòng trống
+                </span>
+            </div>
+            <div class="col-md-3">
+                <span class="badge" style="background: #3498db;">
+                    <i class="fas fa-square"></i> Xanh dương - Đang thuê, chưa có bill
+                </span>
+            </div>
+            <div class="col-md-3">
+                <span class="badge" style="background: #27ae60;">
+                    <i class="fas fa-square"></i> Xanh lá - Đã thanh toán
+                </span>
+            </div>
+            <div class="col-md-3">
+                <span class="badge" style="background: #f39c12;">
+                    <i class="fas fa-square"></i> Vàng - Thanh toán một phần
+                </span>
+            </div>
+            <div class="col-md-3 mt-2">
+                <span class="badge" style="background: #e67e22;">
+                    <i class="fas fa-square"></i> Cam - Chưa thanh toán
+                </span>
+            </div>
+            <div class="col-md-3 mt-2">
+                <span class="badge" style="background: #e74c3c;">
+                    <i class="fas fa-square"></i> Đỏ - Hết hạn hợp đồng
+                </span>
+            </div>
+            <div class="col-md-3 mt-2">
+                <span class="badge" style="background: #9b59b6;">
+                    <i class="fas fa-square"></i> Tím - Có người ở không HĐ
+                </span>
+            </div>
+        </div>
     </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {            
+            // Animation for room cards
+            $('.room-card').each(function (index) {
+                $(this).css('animation-delay', (index * 0.05) + 's');
+            });
+
+            // Debug: Log room colors
+            console.log('Room cards found:', $('.room-card').length);
+            $('.room-card').each(function () {
+                var roomName = $(this).find('.room-number').text().trim();
+                var classes = $(this).attr('class');
+                console.log('Room:', roomName, 'Classes:', classes);
+            });
+        });
+    </script>
 }
-
-<script>
-    // Month selector functionality
-    document.querySelectorAll('.month-btn').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            var month = parseInt(btn.getAttribute('data-month'));
-            var year = parseInt(document.getElementById('yearInput').value);
-            var lastDay = new Date(year, month, 0).getDate();
-
-            document.getElementById('monthInput').value = month;
-            document.getElementById('dayInput').value = lastDay;
-
-            // Update UI
-            document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('month-selected'));
-            btn.classList.add('month-selected');
-
-            // Submit form
-            document.getElementById('filterForm').submit();
-        });
-    });
-
-    // Auto submit on input change
-    document.getElementById('dayInput').addEventListener('change', function () {
-        document.getElementById('filterForm').submit();
-    });
-
-    document.getElementById('yearInput').addEventListener('change', function () {
-        var month = parseInt(document.getElementById('monthInput').value);
-        var year = parseInt(this.value);
-        var lastDay = new Date(year, month, 0).getDate();
-        var currentDay = parseInt(document.getElementById('dayInput').value);
-
-        if (currentDay > lastDay) {
-            document.getElementById('dayInput').value = lastDay;
-        }
-        document.getElementById('filterForm').submit();
-    });
-
-    // Add smooth animations on page load
-    document.addEventListener('DOMContentLoaded', function () {
-        const cards = document.querySelectorAll('.room-card, .summary-card, .area-section');
-        cards.forEach((card, index) => {
-            card.style.opacity = '0';
-            card.style.transform = 'translateY(20px)';
-            setTimeout(() => {
-                card.style.transition = 'all 0.6s ease';
-                card.style.opacity = '1';
-                card.style.transform = 'translateY(0)';
-            }, index * 50);
-        });
-    });
-</script>
