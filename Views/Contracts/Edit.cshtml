@@ -1,1 +1,517 @@
-﻿
+﻿@model NhaTroAnCu.Models.ContractEditViewModel
+@using NhaTroAnCu.Models
+@{
+    ViewBag.Title = "Chỉnh sửa Hợp Đồng #" + Model.Id;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<link href="~/CSS/contract-action.css" rel="stylesheet" />
+
+<div class="contract-form-container">
+    <div class="form-header">
+        <h2><i class="fas fa-edit"></i> Chỉnh Sửa Hợp Đồng #@Model.Id</h2>
+        <p>Cập nhật thông tin hợp đồng thuê nhà</p>
+    </div>
+
+    @using (Html.BeginForm("Edit", "Contracts", FormMethod.Post, new { @class = "contract-form", enctype = "multipart/form-data" }))
+    {
+        @Html.AntiForgeryToken()
+        @Html.HiddenFor(m => m.Id)
+        @Html.HiddenFor(m => m.ContractType)
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+        <!-- Thông tin loại hợp đồng (chỉ hiển thị, không cho sửa) -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-info-circle"></i> Loại Hợp Đồng
+            </div>
+            <div class="alert alert-info">
+                <i class="fas fa-@(Model.ContractType == "Company" ? "building" : "user")"></i>
+                <strong>@(Model.ContractType == "Company" ? "Hợp Đồng Công Ty" : "Hợp Đồng Cá Nhân")</strong>
+                @if (Model.ContractType == "Company" && Model.CompanyId.HasValue)
+                {
+                    <span> - @Model.CompanyName</span>
+                }
+            </div>
+        </div>
+
+        <!-- Thông tin chung -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-file-contract"></i> Thông Tin Hợp Đồng
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="StartDate"><i class="fas fa-calendar-alt"></i> Ngày bắt đầu</label>
+                    @Html.TextBoxFor(m => m.StartDate, new { @class = "form-control datetime" , @Value = Model.StartDate.ToString("dd/MM/yyyy") })
+                    @Html.ValidationMessageFor(m => m.StartDate, "", new { @class = "text-danger" })
+                </div>
+
+                <div class="form-group">
+                    <label for="EndDate"><i class="fas fa-calendar-check"></i> Ngày kết thúc</label>
+                    @Html.TextBoxFor(m => m.EndDate, new { @class = "form-control datetime",  @Value = Model.EndDate.ToString("dd/MM/yyyy") })
+                    @Html.ValidationMessageFor(m => m.EndDate, "", new { @class = "text-danger" })
+                </div>
+
+                <div class="form-group">
+                    <label for="MoveInDate"><i class="fas fa-truck-moving"></i> Ngày dọn vào</label>
+                    @Html.TextBoxFor(m => m.MoveInDate, new { @class = "form-control datetime", @Value = Model.MoveInDate.ToString("dd/MM/yyyy") })
+                    @Html.ValidationMessageFor(m => m.MoveInDate, "", new { @class = "text-danger" })
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="ElectricityPrice"><i class="fas fa-bolt"></i> Giá điện (VNĐ/kWh)</label>
+                    @Html.TextBoxFor(m => m.ElectricityPrice, new { @class = "form-control currency-input money", @placeholder = "VD: 3,500" })
+                    @Html.ValidationMessageFor(m => m.ElectricityPrice, "", new { @class = "text-danger" })
+                </div>
+
+                <div class="form-group">
+                    <label for="WaterPrice"><i class="fas fa-tint"></i> Giá nước (VNĐ/m³)</label>
+                    @Html.TextBoxFor(m => m.WaterPrice, new { @class = "form-control currency-input money", @placeholder = "VD: 10,000" })
+                    @Html.ValidationMessageFor(m => m.WaterPrice, "", new { @class = "text-danger" })
+                </div>
+
+                <div class="form-group">
+                    <label for="Status"><i class="fas fa-toggle-on"></i> Trạng thái</label>
+                    @Html.DropDownListFor(m => m.Status, new SelectList(new[] {
+                        new { Value = "Active", Text = "Đang hiệu lực" },
+                        new { Value = "Pending", Text = "Đang chờ" },
+                        new { Value = "Ended", Text = "Đã kết thúc" }
+                    }, "Value", "Text", Model.Status), new { @class = "form-control" })
+                    @Html.ValidationMessageFor(m => m.Status, "", new { @class = "text-danger" })
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="Note"><i class="fas fa-sticky-note"></i> Ghi chú</label>
+                @Html.TextAreaFor(m => m.Note, new { @class = "form-control", @rows = 3, @placeholder = "Nhập ghi chú về hợp đồng..." })
+                @Html.ValidationMessageFor(m => m.Note, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <!-- Danh sách phòng cho hợp đồng công ty -->
+        if (Model.ContractType == "Company")
+        {
+            <div class="form-section">
+                <div class="section-title">
+                    <i class="fas fa-door-open"></i> Danh Sách Phòng Thuê
+                </div>
+
+                <div class="room-selection-grid" id="companyRoomGrid">
+                    @for (int i = 0; i < Model.SelectedRooms.Count; i++)
+                    {
+                        <div class="room-card selected" data-room-id="@Model.SelectedRooms[i].RoomId">
+                            @Html.HiddenFor(m => m.SelectedRooms[i].RoomId)
+                            @Html.HiddenFor(m => m.SelectedRooms[i].RoomName)
+
+                            <div class="room-card-header">
+                                <span class="room-number">@Model.SelectedRooms[i].RoomName</span>
+                                <button type="button" class="btn-remove-room" onclick="removeRoom(this)">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="room-card-body">
+                                <label>Giá thuê thỏa thuận:</label>
+                                @Html.TextBoxFor(m => m.SelectedRooms[i].AgreedPrice, new { @class = "form-control currency-input", @placeholder = "Nhập giá thuê" })
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Nút thêm phòng mới -->
+                <button type="button" class="btn btn-secondary mt-3" onclick="showAddRoomModal()">
+                    <i class="fas fa-plus"></i> Thêm phòng
+                </button>
+            </div>
+        }
+
+        <!-- Thông tin phòng và khách thuê cho hợp đồng cá nhân -->
+        if (Model.ContractType == "Individual")
+        {
+            <div class="form-section">
+                <div class="section-title">
+                    <i class="fas fa-door-open"></i> Thông Tin Phòng
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="RoomId"><i class="fas fa-home"></i> Phòng thuê</label>
+                        @Html.DropDownListFor(m => m.RoomId, new SelectList(ViewBag.AvailableRooms ?? new List<SelectListItem>(), "Value", "Text", Model.RoomId),
+                            new { @class = "form-control", @id = "roomSelect" })
+                        @Html.ValidationMessageFor(m => m.RoomId, "", new { @class = "text-danger" })
+                    </div>
+
+                    <div class="form-group">
+                        <label for="PriceAgreed"><i class="fas fa-money-bill-wave"></i> Giá thuê thỏa thuận (VNĐ/tháng)</label>
+                        @Html.TextBoxFor(m => m.PriceAgreed, new { @class = "form-control currency-input", @placeholder = "VD: 3,000,000" })
+                        @Html.ValidationMessageFor(m => m.PriceAgreed, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danh sách khách thuê -->
+            <div class="form-section">
+                <div class="section-title">
+                    <i class="fas fa-users"></i> Thông Tin Khách Thuê
+                </div>
+
+                <div id="tenantsList">
+                    @for (int i = 0; i < Model.Tenants.Count; i++)
+                    {
+                        <div class="tenant-card" data-index="@i">
+                            @Html.HiddenFor(m => m.Tenants[i].Id)
+
+                            <div class="tenant-header">
+                                <h5>Người thuê @(i + 1)</h5>
+                                @if (i > 0)
+                                {
+                                    <button type="button" class="btn-remove" onclick="removeTenant(this)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                }
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Họ và tên <span class="required">*</span></label>
+                                    @Html.TextBoxFor(m => m.Tenants[i].FullName, new { @class = "form-control", @required = "required" })
+                                </div>
+
+                                <div class="form-group">
+                                    <label>CMND/CCCD <span class="required">*</span></label>
+                                    @Html.TextBoxFor(m => m.Tenants[i].IdentityCard, new { @class = "form-control", @required = "required" })
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Số điện thoại</label>
+                                    @Html.TextBoxFor(m => m.Tenants[i].PhoneNumber, new { @class = "form-control" })
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Ngày sinh</label>
+                                    @Html.TextBoxFor(m => m.Tenants[i].BirthDate, new { @class = "form-control", @type = "date" })
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Giới tính</label>
+                                    @Html.DropDownListFor(m => m.Tenants[i].Gender, new SelectList(new[] {
+                                        new { Value = "", Text = "-- Chọn --" },
+                                        new { Value = "Nam", Text = "Nam" },
+                                        new { Value = "Nữ", Text = "Nữ" }
+                                    }, "Value", "Text", Model.Tenants[i].Gender), new { @class = "form-control" })
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Dân tộc</label>
+                                    @Html.TextBoxFor(m => m.Tenants[i].Ethnicity, new { @class = "form-control" })
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Địa chỉ thường trú</label>
+                                @Html.TextBoxFor(m => m.Tenants[i].PermanentAddress, new { @class = "form-control" })
+                            </div>
+
+                            <div class="form-group">
+                                <label>Biển số xe</label>
+                                @Html.TextBoxFor(m => m.Tenants[i].VehiclePlate, new { @class = "form-control", @placeholder = "VD: 92A-123.45" })
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <button type="button" class="btn btn-secondary" onclick="addTenant()">
+                    <i class="fas fa-plus"></i> Thêm người thuê
+                </button>
+            </div>
+        }
+
+        <!-- File scan hợp đồng -->
+        <div class="form-section">
+            <div class="section-title">
+                <i class="fas fa-file-pdf"></i> File Scan Hợp Đồng
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.ContractScanFilePath))
+            {
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i>
+                    File hiện tại: <a href="@Model.ContractScanFilePath" target="_blank">Xem file</a>
+                </div>
+            }
+
+            <div class="form-group">
+                <label>Tải lên file mới (PDF, JPG, PNG - Tối đa 5MB)</label>
+                <input type="file" name="ContractScanFile" class="form-control-file" accept=".pdf,.jpg,.jpeg,.png" />
+                <small class="form-text text-muted">Bỏ trống nếu không muốn thay đổi file hiện tại</small>
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Lưu thay đổi
+            </button>
+            <a href="@Url.Action("Details", new { id = Model.Id })" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Hủy
+            </a>
+        </div>
+    }
+</div>
+
+<!-- Modal thêm phòng cho hợp đồng công ty -->
+@if (Model.ContractType == "Company")
+{
+    <div class="modal fade" id="addRoomModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Thêm phòng vào hợp đồng</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Chọn phòng:</label>
+                        <select id="modalRoomSelect" class="form-control">
+                            <option value="">-- Chọn phòng --</option>
+                            <!-- Rooms will be loaded via AJAX -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Giá thuê thỏa thuận:</label>
+                        <input type="text" id="modalRoomPrice" class="form-control currency-input" placeholder="Nhập giá thuê" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-primary" onclick="addRoomToContract()">Thêm phòng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/Scripts/jquery.validate.min.js"></script>
+    <script src="~/Scripts/jquery.validate.unobtrusive.min.js"></script>
+    <script src="~/JS/contract-edit.js"></script>
+
+    <script>
+        var contractType = '@Model.ContractType';
+        var contractId = @Model.Id;
+
+        // Initialize form
+        $(document).ready(function() {
+            // Format currency inputs
+            $('.currency-input').on('input', function() {
+                formatCurrency(this);
+            });
+
+            // Initialize date pickers
+            initializeDatePickers();
+
+            // Load available rooms for company contract
+            if (contractType === 'Company') {
+                loadAvailableRooms();
+            }
+        });
+
+        function formatCurrency(input) {
+            let value = input.value.replace(/[^\d]/g, '');
+            if (value) {
+                value = parseInt(value).toLocaleString('vi-VN');
+                input.value = value;
+            }
+        }
+
+        function initializeDatePickers() {
+            // Set min date for end date based on start date
+            $('#StartDate').on('change', function() {
+                var startDate = $(this).val();
+                $('#EndDate').attr('min', startDate);
+                $('#MoveInDate').attr('min', startDate);
+            });
+        }
+
+        // Functions for Individual Contract
+        function addTenant() {
+            var index = $('#tenantsList .tenant-card').length;
+            var tenantHtml = `
+                <div class="tenant-card" data-index="${index}">
+                    <div class="tenant-header">
+                        <h5>Người thuê ${index + 1}</h5>
+                        <button type="button" class="btn-remove" onclick="removeTenant(this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Họ và tên <span class="required">*</span></label>
+                            <input type="text" name="Tenants[${index}].FullName" class="form-control" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label>CMND/CCCD <span class="required">*</span></label>
+                            <input type="text" name="Tenants[${index}].IdentityCard" class="form-control" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Số điện thoại</label>
+                            <input type="text" name="Tenants[${index}].PhoneNumber" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Ngày sinh</label>
+                            <input type="date" name="Tenants[${index}].BirthDate" class="form-control" />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Giới tính</label>
+                            <select name="Tenants[${index}].Gender" class="form-control">
+                                <option value="">-- Chọn --</option>
+                                <option value="Nam">Nam</option>
+                                <option value="Nữ">Nữ</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Dân tộc</label>
+                            <input type="text" name="Tenants[${index}].Ethnicity" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Địa chỉ thường trú</label>
+                        <input type="text" name="Tenants[${index}].PermanentAddress" class="form-control" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Biển số xe</label>
+                        <input type="text" name="Tenants[${index}].VehiclePlate" class="form-control" placeholder="VD: 92A-123.45" />
+                    </div>
+                </div>
+            `;
+
+            $('#tenantsList').append(tenantHtml);
+        }
+
+        function removeTenant(button) {
+            $(button).closest('.tenant-card').remove();
+            updateTenantIndexes();
+        }
+
+        function updateTenantIndexes() {
+            $('#tenantsList .tenant-card').each(function(index) {
+                $(this).attr('data-index', index);
+                $(this).find('h5').text('Người thuê ' + (index + 1));
+
+                // Update all input names
+                $(this).find('input, select').each(function() {
+                    var name = $(this).attr('name');
+                    if (name) {
+                        name = name.replace(/\[\d+\]/, '[' + index + ']');
+                        $(this).attr('name', name);
+                    }
+                });
+            });
+        }
+
+        // Functions for Company Contract
+        function loadAvailableRooms() {
+            $.ajax({
+                url: '/Contracts/GetAvailableRooms',
+                type: 'GET',
+                data: { excludeContractId: contractId },
+                success: function(rooms) {
+                    var select = $('#modalRoomSelect');
+                    select.empty();
+                    select.append('<option value="">-- Chọn phòng --</option>');
+
+                    $.each(rooms, function(i, room) {
+                        // Check if room is already selected
+                        if (!$(`#companyRoomGrid .room-card[data-room-id="${room.Id}"]`).length) {
+                            select.append(`<option value="${room.Id}" data-price="${room.DefaultPrice}">${room.Name}</option>`);
+                        }
+                    });
+                },
+                error: function() {
+                    alert('Không thể tải danh sách phòng');
+                }
+            });
+        }
+
+        function showAddRoomModal() {
+            loadAvailableRooms();
+            $('#addRoomModal').modal('show');
+        }
+
+        function addRoomToContract() {
+            var roomId = $('#modalRoomSelect').val();
+            var roomName = $('#modalRoomSelect option:selected').text();
+            var price = $('#modalRoomPrice').val() || $('#modalRoomSelect option:selected').data('price');
+
+            if (!roomId) {
+                alert('Vui lòng chọn phòng');
+                return;
+            }
+
+            var index = $('#companyRoomGrid .room-card').length;
+            var roomHtml = `
+                <div class="room-card selected" data-room-id="${roomId}">
+                    <input type="hidden" name="SelectedRooms[${index}].RoomId" value="${roomId}" />
+                    <input type="hidden" name="SelectedRooms[${index}].RoomName" value="${roomName}" />
+
+                    <div class="room-card-header">
+                        <span class="room-number">${roomName}</span>
+                        <button type="button" class="btn-remove-room" onclick="removeRoom(this)">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="room-card-body">
+                        <label>Giá thuê thỏa thuận:</label>
+                        <input type="text" name="SelectedRooms[${index}].AgreedPrice" value="${price}" class="form-control currency-input" />
+                    </div>
+                </div>
+            `;
+
+            $('#companyRoomGrid').append(roomHtml);
+            $('#addRoomModal').modal('hide');
+
+            // Reset modal
+            $('#modalRoomSelect').val('');
+            $('#modalRoomPrice').val('');
+
+            // Apply currency format to new input
+            $('.currency-input').off('input').on('input', function() {
+                formatCurrency(this);
+            });
+        }
+
+        function removeRoom(button) {
+            $(button).closest('.room-card').remove();
+            updateRoomIndexes();
+        }
+
+        function updateRoomIndexes() {
+            $('#companyRoomGrid .room-card').each(function(index) {
+                $(this).find('input').each(function() {
+                    var name = $(this).attr('name');
+                    if (name) {
+                        name = name.replace(/\[\d+\]/, '[' + index + ']');
+                        $(this).attr('name', name);
+                    }
+                });
+            });
+        }
+    </script>
+}

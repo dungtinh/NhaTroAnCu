@@ -252,6 +252,7 @@
     <Compile Include="Helpers\TenantPhotoHelper.cs" />
     <Compile Include="Helpers\DateTimeHelper.cs" />
     <Compile Include="Helpers\UtilityBillService.cs" />
+    <Compile Include="Models\ContractViewModel.cs" />
     <Compile Include="Models\IncomeExpenseViewModels.cs" />
     <Compile Include="Models\AccountViewModels.cs" />
     <Compile Include="Models\AddressEntities.cs" />
