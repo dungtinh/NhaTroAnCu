@@ -6,6 +6,7 @@ using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using DocumentFormat.OpenXml.Wordprocessing;
+using Microsoft.AspNet.Identity;
 using NhaTroAnCu.Helpers;
 using NhaTroAnCu.Models;
 
@@ -249,20 +250,12 @@ namespace NhaTroAnCu.Controllers
             if (activeContract != null)
             {
                 // Lấy bill cho hợp đồng này
-                var bill = db.UtilityBills.FirstOrDefault(b =>
+                var currentBill = db.UtilityBills.FirstOrDefault(b =>
                     b.Month == currentMonth &&
                     b.Year == currentYear &&
                     b.ContractId == activeContract.Id);
 
-                // Lấy payment cho phòng và hợp đồng này
-                var payment = db.PaymentHistories
-                    .FirstOrDefault(p => p.RoomId == room.Id
-                        && p.Month == currentMonth
-                        && p.Year == currentYear
-                        && p.ContractId == activeContract.Id);
-
-                ViewBag.Bill = bill;
-                ViewBag.Payment = payment;
+                ViewBag.Bill = currentBill;
 
                 // Lấy chỉ số nước tháng trước
                 var prevBill = new UtilityBillService(db).GetHighestWaterIndexEnd(room.Id);
@@ -274,15 +267,98 @@ namespace NhaTroAnCu.Controllers
                     .Where(ct => ct.ContractId == activeContract.Id && ct.RoomId == room.Id)
                     .ToList();
                 ViewBag.RoomTenants = roomTenants;
+                var totalBill = db.UtilityBills
+            .Where(b => b.ContractId == activeContract.Id)
+            .Sum(b => (decimal?)b.TotalAmount) ?? 0;
+
+                // Tổng đã thu
+                var totalPaid = db.IncomeExpenses
+                    .Where(ie => ie.ContractId == activeContract.Id
+                        && ie.IncomeExpenseCategory.Name == "Thu tiền phòng")
+                    .Sum(ie => (decimal?)ie.Amount) ?? 0;
+
+                // Số tiền thiếu
+                var amountDue = totalBill - totalPaid;
+
+                ViewBag.AmountDue = amountDue > 0 ? amountDue : 0;
+                ViewBag.RoomId = room.Id;
+
+                // Lấy tất cả bills của hợp đồng
+                var bills = db.UtilityBills
+                    .Where(b => b.ContractId == activeContract.Id)
+                    .OrderByDescending(b => b.Year)
+                    .ThenByDescending(b => b.Month)
+                    .ToList();
+
+                // Lấy tất cả thanh toán tiền phòng của hợp đồng
+                var payments = db.IncomeExpenses
+                    .Where(ie => ie.ContractId == activeContract.Id
+                        && ie.IncomeExpenseCategory.Name == "Thu tiền phòng")
+                    .OrderByDescending(ie => ie.TransactionDate)
+                    .ToList();
+
+                // Tạo danh sách theo tháng
+                var paymentHistory = new List<MonthlyPaymentHistory>();
+                decimal cumulativeDeposit = 0; // Số dư tích lũy (cọc)
+
+                foreach (var bill in bills)
+                {
+                    // Lấy các thanh toán trong tháng này
+                    var monthPayments = payments
+                        .Where(p => p.TransactionDate.Month == bill.Month
+                            && p.TransactionDate.Year == bill.Year)
+                        .OrderBy(p => p.TransactionDate)
+                        .ToList();
+
+                    decimal totalPaidInMonth = monthPayments.Sum(p => p.Amount);
+                    decimal monthBalance = totalPaidInMonth - bill.TotalAmount;
+                    cumulativeDeposit += monthBalance;
+
+                    paymentHistory.Add(new MonthlyPaymentHistory
+                    {
+                        Month = bill.Month,
+                        Year = bill.Year,
+                        Bill = bill,
+                        Payments = monthPayments,
+                        TotalBilled = bill.TotalAmount,
+                        TotalPaid = totalPaidInMonth,
+                        MonthBalance = monthBalance,
+                        CumulativeDeposit = cumulativeDeposit
+                    });
+                }
+
+                // Kiểm tra các tháng có thanh toán nhưng chưa có bill
+                var monthsWithPaymentOnly = payments
+                    .GroupBy(p => new { p.TransactionDate.Month, p.TransactionDate.Year })
+                    .Where(g => !bills.Any(b => b.Month == g.Key.Month && b.Year == g.Key.Year))
+                    .Select(g => new MonthlyPaymentHistory
+                    {
+                        Month = g.Key.Month,
+                        Year = g.Key.Year,
+                        Bill = null,
+                        Payments = g.OrderBy(p => p.TransactionDate).ToList(),
+                        TotalBilled = 0,
+                        TotalPaid = g.Sum(p => p.Amount),
+                        MonthBalance = g.Sum(p => p.Amount),
+                        CumulativeDeposit = cumulativeDeposit + g.Sum(p => p.Amount)
+                    })
+                    .ToList();
+
+                paymentHistory.AddRange(monthsWithPaymentOnly);
+                paymentHistory = paymentHistory.OrderByDescending(h => h.Year).ThenByDescending(h => h.Month).ToList();
+
+                ViewBag.PaymentHistory = paymentHistory;
             }
             else
             {
                 ViewBag.Bill = null;
-                ViewBag.Payment = null;
                 ViewBag.WaterPrev = 0;
                 ViewBag.ExtraCharge = 0;
                 ViewBag.Discount = 0;
                 ViewBag.RoomTenants = null;
+                ViewBag.AmountDue = 0;
+                ViewBag.RoomId = room.Id;
+                ViewBag.PaymentHistory = null;
             }
         }
 
@@ -579,6 +655,252 @@ namespace NhaTroAnCu.Controllers
 
             return View(tenants);
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult RecordRoomPayment(int contractId, int roomId, decimal amount, DateTime paymentDate, string note)
+        {
+            try
+            {
+                // Lấy category "Tiền phòng"
+                var category = db.IncomeExpenseCategories
+                    .FirstOrDefault(c => c.Name == "Thu tiền phòng" && c.Type == "Income");
 
+                var income = new IncomeExpense
+                {
+                    CategoryId = category.Id,
+                    ContractId = contractId,
+                    Amount = amount,
+                    TransactionDate = paymentDate,
+                    Description = $"Thu tiền phòng - {note}",
+                    ReferenceNumber = $"THU-{DateTime.Now:yyyyMMddHHmmss}",
+                    CreatedBy = User.Identity.GetUserId(),
+                    CreatedAt = DateTime.Now
+                };
+
+                db.IncomeExpenses.Add(income);
+                db.SaveChanges();
+
+                var pdfBytes = GeneratePaymentReceipt(income.Id);
+
+                // Lưu file PDF vào thư mục tạm
+                string fileName = $"HoaDon_{income.ReferenceNumber}.pdf";
+                string tempPath = Server.MapPath($"~/App_Data/Receipts/{fileName}");
+
+                // Tạo thư mục nếu chưa có
+                string directory = Path.GetDirectoryName(tempPath);
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                System.IO.File.WriteAllBytes(tempPath, pdfBytes);
+
+                return Json(new
+                {
+                    success = true,
+                    receiptUrl = Url.Action("DownloadReceipt", new { fileName = fileName })
+                });
+            }
+            catch
+            {
+                return Json(new { success = false });
+            }
+        }
+        public ActionResult DownloadReceipt(string fileName)
+        {
+            string path = Server.MapPath($"~/App_Data/Receipts/{fileName}");
+            if (System.IO.File.Exists(path))
+            {
+                byte[] fileBytes = System.IO.File.ReadAllBytes(path);
+                return File(fileBytes, "application/pdf", fileName);
+            }
+            return HttpNotFound();
+        }
+        private byte[] GeneratePaymentReceipt(int incomeExpenseId)
+        {
+            // Lấy thông tin thanh toán vừa lưu
+            var payment = db.IncomeExpenses
+                .Include(ie => ie.Contract)
+                .Include(ie => ie.Contract.ContractRooms.Select(cr => cr.Room))
+                .Include(ie => ie.Contract.ContractTenants.Select(ct => ct.Tenant))
+                .Include(ie => ie.Contract.Company)
+                .FirstOrDefault(ie => ie.Id == incomeExpenseId);
+
+            if (payment == null)
+                throw new Exception("Không tìm thấy thông tin thanh toán");
+
+            var contract = payment.Contract;
+            var room = contract.ContractRooms.FirstOrDefault()?.Room;
+
+            // Lấy bill của tháng hiện tại
+            var currentMonth = DateTime.Now.Month;
+            var currentYear = DateTime.Now.Year;
+            var currentBill = db.UtilityBills
+                .FirstOrDefault(b => b.ContractId == contract.Id
+                    && b.Month == currentMonth
+                    && b.Year == currentYear);
+
+            // Tính toán số dư
+            var totalBilled = db.UtilityBills
+                .Where(b => b.ContractId == contract.Id)
+                .Sum(b => (decimal?)b.TotalAmount) ?? 0;
+
+            var totalPaid = db.IncomeExpenses
+                .Where(ie => ie.ContractId == contract.Id
+                    && ie.IncomeExpenseCategory.Name == "Thu tiền phòng")
+                .Sum(ie => (decimal?)ie.Amount) ?? 0;
+
+            var balance = totalPaid - totalBilled;
+
+            // Tạo PDF
+            using (var memoryStream = new MemoryStream())
+            {
+                // Khởi tạo document - Chỉ định đầy đủ namespace
+                var document = new iTextSharp.text.Document(iTextSharp.text.PageSize.A4, 40, 40, 60, 60);
+                var writer = iTextSharp.text.pdf.PdfWriter.GetInstance(document, memoryStream);
+
+                document.Open();
+
+                // Font tiếng Việt
+                string fontPath = Server.MapPath("~/fonts/times.ttf");
+                iTextSharp.text.pdf.BaseFont bf = iTextSharp.text.pdf.BaseFont.CreateFont(
+                    fontPath,
+                    iTextSharp.text.pdf.BaseFont.IDENTITY_H,
+                    iTextSharp.text.pdf.BaseFont.EMBEDDED);
+
+                iTextSharp.text.Font titleFont = new iTextSharp.text.Font(bf, 18, iTextSharp.text.Font.BOLD);
+                iTextSharp.text.Font headerFont = new iTextSharp.text.Font(bf, 14, iTextSharp.text.Font.BOLD);
+                iTextSharp.text.Font normalFont = new iTextSharp.text.Font(bf, 12, iTextSharp.text.Font.NORMAL);
+                iTextSharp.text.Font boldFont = new iTextSharp.text.Font(bf, 12, iTextSharp.text.Font.BOLD);
+                iTextSharp.text.Font smallFont = new iTextSharp.text.Font(bf, 10, iTextSharp.text.Font.NORMAL);
+
+                // HEADER - Tiêu đề
+                var titlePara = new iTextSharp.text.Paragraph("HÓA ĐƠN THU TIỀN PHÒNG TRỌ", titleFont);
+                titlePara.Alignment = iTextSharp.text.Element.ALIGN_CENTER;
+                document.Add(titlePara);
+
+                document.Add(new iTextSharp.text.Paragraph($"Số: {payment.ReferenceNumber}", normalFont));
+                document.Add(new iTextSharp.text.Paragraph($"Ngày: {payment.TransactionDate:dd/MM/yyyy}", normalFont));
+                document.Add(new iTextSharp.text.Paragraph(" "));
+
+                // THÔNG TIN HỢP ĐỒNG
+                document.Add(new iTextSharp.text.Paragraph("I. THÔNG TIN HỢP ĐỒNG", headerFont));
+                document.Add(new iTextSharp.text.Paragraph($"Mã hợp đồng: #{contract.Id}", normalFont));
+                document.Add(new iTextSharp.text.Paragraph($"Phòng: {room?.Name ?? "N/A"}", normalFont));
+
+                if (contract.ContractType == "Individual")
+                {
+                    var tenant = contract.ContractTenants.FirstOrDefault()?.Tenant;
+                    document.Add(new iTextSharp.text.Paragraph($"Khách thuê: {tenant?.FullName ?? "N/A"}", normalFont));
+                    document.Add(new iTextSharp.text.Paragraph($"CMND/CCCD: {tenant?.IdentityCard ?? "N/A"}", normalFont));
+                    document.Add(new iTextSharp.text.Paragraph($"Điện thoại: {tenant?.PhoneNumber ?? "N/A"}", normalFont));
+                }
+                else
+                {
+                    var company = contract.Company;
+                    document.Add(new iTextSharp.text.Paragraph($"Công ty: {company?.CompanyName ?? "N/A"}", normalFont));
+                    document.Add(new iTextSharp.text.Paragraph($"Mã số thuế: {company?.TaxCode ?? "N/A"}", normalFont));
+                }
+
+                document.Add(new iTextSharp.text.Paragraph(" "));
+
+                // THÔNG TIN PHIẾU BÁO THÁNG NÀY
+                if (currentBill != null)
+                {
+                    document.Add(new iTextSharp.text.Paragraph($"II. PHIẾU BÁO THÁNG {currentMonth}/{currentYear}", headerFont));
+
+                    var table = new iTextSharp.text.pdf.PdfPTable(2);
+                    table.WidthPercentage = 100;
+                    table.SetWidths(new float[] { 60, 40 });
+
+                    AddTableRow(table, "Tiền phòng:", currentBill.RentAmount.ToString("N0") + "đ", normalFont);
+                    AddTableRow(table, "Tiền điện:", currentBill.ElectricityAmount.ToString("N0") + "đ", normalFont);
+                    AddTableRow(table, "Tiền nước:", currentBill.WaterAmount.ToString("N0") + "đ", normalFont);
+
+                    if (currentBill.ExtraCharge > 0)
+                        AddTableRow(table, "Phụ thu:", currentBill.ExtraCharge.ToString("N0") + "đ", normalFont);
+                    if (currentBill.Discount > 0)
+                        AddTableRow(table, "Giảm giá:", currentBill.Discount.ToString("N0") + "đ", normalFont);
+
+                    AddTableRow(table, "TỔNG CỘNG:", currentBill.TotalAmount.ToString("N0") + "đ", boldFont);
+
+                    document.Add(table);
+                    document.Add(new iTextSharp.text.Paragraph(" "));
+                }
+
+                // THÔNG TIN THANH TOÁN
+                document.Add(new iTextSharp.text.Paragraph("III. THÔNG TIN THANH TOÁN", headerFont));
+                document.Add(new iTextSharp.text.Paragraph($"Số tiền thu: {payment.Amount.ToString("N0")}đ", boldFont));
+                document.Add(new iTextSharp.text.Paragraph($"Bằng chữ: {NumberToText(payment.Amount)}", normalFont));
+                document.Add(new iTextSharp.text.Paragraph($"Ghi chú: {payment.Description}", normalFont));
+                document.Add(new iTextSharp.text.Paragraph(" "));
+
+                // TÌNH TRẠNG CÔNG NỢ
+                document.Add(new iTextSharp.text.Paragraph("IV. TIỀN CỌC", headerFont));
+                if (balance >= 0)
+                {
+                    document.Add(new iTextSharp.text.Paragraph($"Tiền thừa (đặt cọc): {balance.ToString("N0")}đ", boldFont));
+                }
+                else
+                {
+                    document.Add(new iTextSharp.text.Paragraph($"Âm cọc: {Math.Abs(balance).ToString("N0")}đ", boldFont));
+                }
+
+                document.Add(new iTextSharp.text.Paragraph(" "));
+
+                // LƯU Ý
+                document.Add(new iTextSharp.text.Paragraph("V. LƯU Ý QUAN TRỌNG", headerFont));
+                var nextMonth = DateTime.Now.AddMonths(1).Month;
+                var nextYear = DateTime.Now.AddMonths(1).Year;
+
+                document.Add(new iTextSharp.text.Paragraph($"• Hạn đóng tiền tháng tới: 10/{nextMonth:00}/{nextYear}", normalFont));
+                document.Add(new iTextSharp.text.Paragraph($"• Đề nghị chụp đồng hồ nước vào ngày 09/{nextMonth:00}/{nextYear} để tính phí nước", normalFont));
+                document.Add(new iTextSharp.text.Paragraph("• Điện được tính theo công tơ điện tử", normalFont));
+                document.Add(new iTextSharp.text.Paragraph("• Vui lòng giữ hóa đơn này để đối chiếu khi cần", normalFont));
+                document.Add(new iTextSharp.text.Paragraph(" "));
+
+                // CHỮ KÝ
+                document.Add(new iTextSharp.text.Paragraph(" "));
+                document.Add(new iTextSharp.text.Paragraph(" "));
+
+                var signTable = new iTextSharp.text.pdf.PdfPTable(2);
+                signTable.WidthPercentage = 100;
+                signTable.DefaultCell.Border = 0;
+                signTable.SetWidths(new float[] { 50, 50 });
+
+                var cellLeft = new iTextSharp.text.pdf.PdfPCell(new iTextSharp.text.Phrase("Người nộp tiền", normalFont));
+                cellLeft.HorizontalAlignment = iTextSharp.text.Element.ALIGN_CENTER;
+                cellLeft.Border = 0;
+                signTable.AddCell(cellLeft);
+
+                var cellRight = new iTextSharp.text.pdf.PdfPCell(new iTextSharp.text.Phrase("Người thu tiền", normalFont));
+                cellRight.HorizontalAlignment = iTextSharp.text.Element.ALIGN_CENTER;
+                cellRight.Border = 0;
+                signTable.AddCell(cellRight);
+
+                signTable.AddCell(new iTextSharp.text.pdf.PdfPCell(new iTextSharp.text.Phrase(" ", normalFont)) { Border = 0, FixedHeight = 60 });
+                signTable.AddCell(new iTextSharp.text.pdf.PdfPCell(new iTextSharp.text.Phrase(" ", normalFont)) { Border = 0, FixedHeight = 60 });
+
+                document.Add(signTable);
+
+                document.Close();
+                writer.Close();
+
+                return memoryStream.ToArray();
+            }
+        }
+        private string NumberToText(decimal number)
+        {
+            // Hàm chuyển số thành chữ tiếng Việt
+            // Code đơn giản:
+            return $"{number:N0} đồng";
+            // Có thể thêm logic chuyển đổi phức tạp hơn nếu cần
+        }
+        // Helper functions
+        private void AddTableRow(iTextSharp.text.pdf.PdfPTable table, string label, string value, iTextSharp.text.Font font)
+        {
+            table.AddCell(new iTextSharp.text.pdf.PdfPCell(new iTextSharp.text.Phrase(label, font)) { Border = 0, PaddingBottom = 5 });
+            table.AddCell(new iTextSharp.text.pdf.PdfPCell(new iTextSharp.text.Phrase(value, font)) { Border = 0, PaddingBottom = 5, HorizontalAlignment = iTextSharp.text.Element.ALIGN_RIGHT });
+        }
     }
 }

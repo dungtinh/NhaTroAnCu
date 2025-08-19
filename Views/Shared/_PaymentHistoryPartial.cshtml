@@ -1,0 +1,224 @@
+﻿@{
+    var paymentHistory = ViewBag.PaymentHistory as List<NhaTroAnCu.Models.MonthlyPaymentHistory>;
+}
+
+<!-- Box 6: LỊCH SỬ PHIẾU BÁO & THANH TOÁN -->
+<div class="detail-card">
+    <div class="card-header bg-gradient-dark">
+        <i class="fas fa-history"></i>
+        <span>Lịch sử phiếu báo & thanh toán</span>
+    </div>
+    <div class="card-body">
+        @if (paymentHistory != null && paymentHistory.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover payment-history-table">
+                    <thead class="thead-light">
+                        <tr>
+                            <th width="15%">Tháng/Năm</th>
+                            <th width="20%">Phiếu báo</th>
+                            <th width="20%">Đã thu</th>
+                            <th width="15%">+/- Tháng</th>
+                            <th width="15%">Đặt cọc</th>
+                            <th width="15%">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var month in paymentHistory)
+                        {
+                            <!-- Dòng chính của tháng -->
+                            <tr class="month-main-row @(month.MonthBalance < 0 ? "table-warning" : "")"
+                                data-month="@month.Month" data-year="@month.Year">
+                                <td class="font-weight-bold">
+                                    <i class="fas fa-calendar-alt text-primary"></i>
+                                    Tháng @month.Month/@month.Year
+                                </td>
+                                <td>
+                                    @if (month.Bill != null)
+                                    {
+                                        <span class="text-danger font-weight-bold">
+                                            @month.TotalBilled.ToString("N0")đ
+                                        </span>
+                                        <br />
+                                        <small class="text-muted">
+                                            Phiếu #@month.Bill.Id
+                                        </small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Chưa có phiếu</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="text-success font-weight-bold">
+                                        @month.TotalPaid.ToString("N0")đ
+                                    </span>
+                                    @if (month.Payments.Count > 0)
+                                    {
+                                        <br />
+                                        <small class="text-muted">
+                                            @month.Payments.Count lần thu
+                                        </small>
+                                    }
+                                </td>
+                                <td>
+                                    @if (month.MonthBalance == 0)
+                                    {
+                                        <span class="badge badge-success">Đủ</span>
+                                    }
+                                    else if (month.MonthBalance > 0)
+                                    {
+                                        <span class="text-primary">+@month.MonthBalance.ToString("N0")đ</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-danger">@month.MonthBalance.ToString("N0")đ</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="font-weight-bold @(month.CumulativeDeposit >= 0 ? "text-info" : "text-danger")">
+                                        @month.CumulativeDeposit.ToString("N0")đ
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (month.Payments.Count > 0)
+                                    {
+                                        <button class="btn btn-sm btn-info toggle-detail"
+                                                data-month="@month.Month" data-year="@month.Year">
+                                            <i class="fas fa-chevron-down"></i> Chi tiết
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+
+                            <!-- Dòng chi tiết phiếu báo (ẩn) -->
+                            if (month.Bill != null)
+                            {
+                                <tr class="bill-detail-row" data-parent="@month.Month-@month.Year" style="display: none;">
+                                    <td colspan="6" class="pl-5">
+                                        <div class="bill-detail p-2 bg-light rounded">
+                                            <strong><i class="fas fa-file-invoice text-warning"></i> Chi tiết phiếu báo:</strong>
+                                            <div class="row mt-2">
+                                                <div class="col-md-3">
+                                                    <small>Tiền phòng: <strong>@month.Bill.RentAmount.ToString("N0")đ</strong></small>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <small>Tiền điện: <strong>@month.Bill.ElectricityAmount.ToString("N0")đ</strong></small>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <small>Tiền nước: <strong>@month.Bill.WaterAmount.ToString("N0")đ</strong></small>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <small>Phụ thu/Giảm: <strong>@((month.Bill.ExtraCharge - month.Bill.Discount).ToString("N0"))đ</strong></small>
+                                                </div>
+                                            </div>
+                                            @if (!string.IsNullOrEmpty(month.Bill.BillNote))
+                                            {
+                                                <small class="text-muted mt-1">Ghi chú: @month.Bill.BillNote</small>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+
+                            <!-- Dòng chi tiết thanh toán (ẩn) -->
+                            if (month.Payments.Count > 0)
+                            {
+                                <tr class="payment-detail-row" data-parent="@month.Month-@month.Year" style="display: none;">
+                                    <td colspan="6" class="pl-5">
+                                        <div class="payment-detail p-2">
+                                            <strong><i class="fas fa-money-check-alt text-success"></i> Chi tiết thanh toán:</strong>
+                                            <table class="table table-sm mt-2">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Ngày thu</th>
+                                                        <th>Số tiền</th>
+                                                        <th>Ghi chú</th>
+                                                        <th>Mã GD</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var payment in month.Payments)
+                                                    {
+                                                        <tr>
+                                                            <td>@payment.TransactionDate.ToString("dd/MM/yyyy")</td>
+                                                            <td class="text-success font-weight-bold">
+                                                                @payment.Amount.ToString("N0")đ
+                                                            </td>
+                                                            <td>@payment.Description</td>
+                                                            <td><small>@payment.ReferenceNumber</small></td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                    <tfoot class="bg-light">
+                        <tr class="font-weight-bold">
+                            <td>TỔNG CỘNG</td>
+                            <td class="text-danger">
+                                @paymentHistory.Sum(h => h.TotalBilled).ToString("N0")đ
+                            </td>
+                            <td class="text-success">
+                                @paymentHistory.Sum(h => h.TotalPaid).ToString("N0")đ
+                            </td>
+                            <td>
+                                @{
+                                    var totalBalance = paymentHistory.Sum(h => h.TotalPaid) - paymentHistory.Sum(h => h.TotalBilled);
+                                }
+                                <span class="@(totalBalance >= 0 ? "text-primary" : "text-danger")">
+                                    @(totalBalance >= 0 ? "+" : "")@totalBalance.ToString("N0")đ
+                                </span>
+                            </td>
+                            <td class="text-info">
+                                @((paymentHistory.LastOrDefault()?.CumulativeDeposit ?? 0).ToString("N0"))đ
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div class="mt-3 text-muted">
+                <small>
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Ghi chú:</strong> Cột "Đặt cọc" = Tổng đã thu - Tổng phải thu (tích lũy)
+                </small>
+            </div>
+        }
+        else
+        {
+            <p class="text-muted text-center py-4">
+                <i class="fas fa-inbox fa-3x mb-3"></i><br />
+                Chưa có lịch sử
+            </p>
+        }
+    </div>
+</div>
+
+<style>
+    .bg-gradient-info {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        color: white;
+    }
+
+    .payment-history-table .month-main-row {
+        cursor: pointer;
+    }
+
+        .payment-history-table .month-main-row:hover {
+            background-color: #f8f9fa;
+        }
+
+    .bill-detail, .payment-detail {
+        font-size: 14px;
+    }
+
+    .toggle-detail {
+        transition: all 0.3s;
+    }
+</style>
