@@ -1,78 +1,125 @@
 ﻿@model NhaTroAnCu.Models.Room
 @{
     ViewBag.Title = "Chi tiết phòng " + Model.Name;
-    var now = DateTime.Now;
-    var currentMonth = now.Month;
-    var currentYear = now.Year;
-    var contract = new NhaTroAnCu.Models.Contract();
-    //
-    var bill = ViewBag.Bill as NhaTroAnCu.Models.UtilityBill;
+    Layout = "~/Views/Shared/_Layout.cshtml";
 
-    decimal paidTotal = 0;
-    decimal billTotal = bill?.TotalAmount ?? 0;
-    decimal debt = billTotal - paidTotal;
+    // Lấy hợp đồng active từ ViewBag (được set trong Controller)
+    var activeContract = ViewBag.ActiveContract as NhaTroAnCu.Models.Contract;
 
-    var prevBill = new NhaTroAnCu.Models.UtilityBill();
+    // Lấy danh sách khách thuê từ hợp đồng active
+    var tenants = activeContract != null ?
+        activeContract.ContractTenants.Where(ct => ct.RoomId == Model.Id).Select(ct => ct.Tenant).ToList() :
+        new List<NhaTroAnCu.Models.Tenant>();
 
-    int waterPrev = ViewBag.WaterPrev ?? 0;
+    // Kiểm tra trạng thái hợp đồng
+    bool isNearingEnd = activeContract != null &&
+        (activeContract.EndDate - DateTime.Now).TotalDays > 0 &&
+        (activeContract.EndDate - DateTime.Now).TotalDays <= 30;
 
-    decimal waterPrice = contract?.WaterPrice ?? 15000;
-    decimal rentPrice = contract?.PriceAgreed ?? Model.DefaultPrice;
-    bool isNearingEnd = contract != null &&
-        (contract.EndDate - DateTime.Now).TotalDays > 0 &&
-        (contract.EndDate - DateTime.Now).TotalDays <= 31;
+    bool isExpired = activeContract != null && activeContract.EndDate < DateTime.Now;
+
+    // Lấy giá thuê thực tế từ ContractRoom
+    decimal actualPrice = Model.DefaultPrice;
+    if (activeContract != null)
+    {
+        var contractRoom = activeContract.ContractRooms.FirstOrDefault(cr => cr.RoomId == Model.Id);
+        if (contractRoom != null)
+        {
+            actualPrice = contractRoom.PriceAgreed;
+        }
+    }
 }
 
-<!-- Link to CSS file -->
+<!-- Link CSS file -->
 <link href="~/css/room-details.css" rel="stylesheet" />
 
-<div class="room-details">
-    <!-- HEADER -->
-    <div class="room-header animate-slide-up">
-        <h2>
-            <span class="room-icon">
-                <i class="fas fa-door-open fa-2x"></i>
-            </span>
-            Phòng @Model.Name
+<div class="room-details-container">
+    <!-- Header -->
+    <div class="page-header">
+        <h2 class="page-title">
+            <i class="fas fa-door-open"></i>
+            Chi tiết phòng @Model.Name
         </h2>
+        <a href="@Url.Action("Index", "Rooms")" class="btn-back">
+            <i class="fas fa-arrow-left"></i> Quay lại
+        </a>
     </div>
 
     <div class="row">
-        <div class="col-md-5">
-            <!-- ROOM UTILITIES -->
-            <div class="custom-card animate-slide-up">
-                <div class="card-header header-purple">
-                    <span><i class="fas fa-tv"></i> Tiện ích & Thông tin phòng</span>
-                    <span class="status-badge status-active">Giá: @Model.DefaultPrice.ToString("N0")đ</span>
+        <!-- LEFT COLUMN -->
+        <div class="col-md-4">
+
+            <!-- 1. THÔNG TIN PHÒNG & TIỆN ÍCH -->
+            <div class="detail-card room-info-card">
+                <div class="card-header bg-gradient-primary">
+                    <i class="fas fa-home"></i>
+                    <span>Tiện ích & Thông tin phòng</span>
                 </div>
                 <div class="card-body">
+                    <!-- Thông tin cơ bản -->
+                    <div class="room-basic-info">
+                        <div class="info-item">
+                            <span class="info-label">Tên phòng:</span>
+                            <span class="info-value">@Model.Name</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Dãy:</span>
+                            <span class="info-value">@Model.Area</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Tầng:</span>
+                            <span class="info-value">@Model.Floor</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Giá mặc định:</span>
+                            <span class="info-value price">@Model.DefaultPrice.ToString("N0")đ</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Trạng thái:</span>
+                            <span class="badge @(Model.IsOccupied ? "badge-success" : "badge-warning")">
+                                @(Model.IsOccupied ? "Đang có người ở" : "Còn trống")
+                            </span>
+                        </div>
+                    </div>
+
+                    <hr class="divider" />
+
+                    <!-- Danh sách tiện ích -->
+                    <h5 class="section-subtitle">
+                        <i class="fas fa-plug"></i> Tiện ích
+                    </h5>
                     <ul class="utilities-list">
                         <li>
-                            <span class="utility-name"><i class="fas fa-snowflake"></i> Điều hòa</span>
+                            <span class="utility-icon"><i class="fas fa-snowflake"></i></span>
+                            <span class="utility-name">Điều hòa</span>
                             <span class="utility-status @(Model.HasAirCondition ? "has-utility" : "no-utility")">
                                 @(Model.HasAirCondition ? "Có" : "Không")
                             </span>
                         </li>
                         <li>
-                            <span class="utility-name"><i class="fas fa-ice-cream"></i> Tủ lạnh</span>
+                            <span class="utility-icon"><i class="fas fa-cube"></i></span>
+                            <span class="utility-name">Tủ lạnh</span>
                             <span class="utility-status @(Model.HasFridge ? "has-utility" : "no-utility")">
                                 @(Model.HasFridge ? "Có" : "Không")
                             </span>
                         </li>
                         <li>
-                            <span class="utility-name"><i class="fas fa-tint"></i> Bình lọc nước</span>
+                            <span class="utility-icon"><i class="fas fa-fire"></i></span>
+                            <span class="utility-name">Bình nóng lạnh</span>
                             <span class="utility-status @(Model.HasWaterHeater ? "has-utility" : "no-utility")">
                                 @(Model.HasWaterHeater ? "Có" : "Không")
                             </span>
                         </li>
                         <li>
-                            <span class="utility-name"><i class="fas fa-bed"></i> Giường</span>
+                            <span class="utility-icon"><i class="fas fa-bed"></i></span>
+                            <span class="utility-name">Giường</span>
                             <span class="utility-status @(Model.HasBed ? "has-utility" : "no-utility")">
                                 @(Model.HasBed ? "Có" : "Không")
                             </span>
                         </li>
                         <li>
-                            <span class="utility-name"><i class="fas fa-door-closed"></i> Tủ quần áo</span>
+                            <span class="utility-icon"><i class="fas fa-door-closed"></i></span>
+                            <span class="utility-name">Tủ quần áo</span>
                             <span class="utility-status @(Model.HasWardrobe ? "has-utility" : "no-utility")">
                                 @(Model.HasWardrobe ? "Có" : "Không")
                             </span>
@@ -81,723 +128,579 @@
                 </div>
             </div>
 
-            <!-- CONTRACT INFO -->
-            @if (contract != null)
-            {
-                <div class="custom-card animate-slide-up" style="animation-delay: 0.1s;">
-                    <div class="card-header header-blue">
-                        <span><i class="fas fa-file-contract"></i> Thông tin hợp đồng & khách thuê</span>
-                    </div>
-                    <div class="card-body">
-                        @if (isNearingEnd)
-                        {
-                            <div class="contract-warning">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <div>
-                                    <strong>Hợp đồng sắp hết hạn!</strong><br>
-                                    Ngày hết hạn: <strong>@contract.EndDate.ToString("dd/MM/yyyy")</strong>
-                                </div>
-                            </div>
-                        }
-
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <small class="text-muted">Giá thuê thực tế</small>
-                                <div class="h5 mb-0">@contract.PriceAgreed.ToString("N0")đ</div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <small class="text-muted">Ngày vào</small>
-                                <div class="font-weight-bold">@contract.MoveInDate.ToString("dd/MM/yyyy")</div>
-                            </div>
-                            <div class="col-6">
-                                <small class="text-muted">Ngày ký HĐ</small>
-                                <div class="font-weight-bold">@contract.StartDate.ToString("dd/MM/yyyy")</div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <small class="text-muted">Ngày hết hạn hợp đồng</small>
-                            <div class="h5 text-danger">@contract.EndDate.ToString("dd/MM/yyyy")</div>
-                        </div>
-
-                        <!-- Extension Form -->
-                        @if (contract.Status == "Active")
-                        {
-                            <div class="extension-form">
-                                <h6 class="mb-3"><i class="fas fa-calendar-plus"></i> Gia hạn hợp đồng</h6>
-                                <form id="extendContractForm">
-                                    @Html.Hidden("contractId", contract.Id)
-                                    <div class="row align-items-end">
-                                        <div class="col-md-3">
-                                            <label>Số tháng</label>
-                                            <input type="number" min="1" max="36" class="form-control form-control-custom" name="extendMonths" value="12" />
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label>Ghi chú</label>
-                                            <input type="text" class="form-control form-control-custom" name="note" placeholder="Tùy chọn" />
-                                        </div>
-                                        <div class="col-md-3">
-                                            <button type="submit" class="btn btn-primary btn-custom w-100">
-                                                <i class="fas fa-check"></i> Gia hạn
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <br />
-                                </form>
-                                <div id="extendResult" class="text-success mt-2"></div>
-                            </div>
-
-                            <!-- Extension History -->
-
-                            var extensionLogs = contract.ContractExtensionHistories?
-                                .OrderByDescending(x => x.ExtendedAt)
-                                .ToList() ?? new List<NhaTroAnCu.Models.ContractExtensionHistory>();
-
-                            if (extensionLogs.Any())
-                            {
-                                <div class="mt-4">
-                                    <h6><i class="fas fa-history"></i> Lịch sử gia hạn</h6>
-                                    <div class="table-responsive">
-                                        <table class="table table-sm custom-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Ngày gia hạn</th>
-                                                    <th>Cũ → Mới</th>
-                                                    <th>Số tháng</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach (var log in extensionLogs)
-                                                {
-                                                    <tr>
-                                                        <td>@log.ExtendedAt.ToString("dd/MM/yyyy")</td>
-                                                        <td>
-                                                            @(log.OldEndDate?.ToString("dd/MM/yy") ?? "-") →
-                                                            @(log.NewEndDate?.ToString("dd/MM/yy") ?? "-")
-                                                        </td>
-                                                        <td>+@log.ExtendMonths tháng</td>
-                                                    </tr>
-                                                }
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            }
-                        }
-
-                        <!-- Tenants -->
-                        <div class="mt-4">
-                            <h6><i class="fas fa-users"></i> Khách thuê</h6>
-                            @foreach (var ct in contract.ContractTenants)
-                            {
-                                <div class="tenant-list-item">
-                                    <i class="fas fa-user-circle text-primary"></i>
-                                    <div>
-                                        <strong>@ct.Tenant.FullName</strong><br>
-                                        <a href="https://zalo.me/@ct.Tenant.PhoneNumber" target="_blank">
-                                            <img src="https://stc-zaloprofile.zdn.vn/pc/v1/images/zalo_sharelogo.png" style="height:16px;vertical-align:middle;margin-right:4px;" />
-                                            @ct.Tenant.PhoneNumber
-                                        </a>
-                                    </div>
-                                </div>
-                            }
-
-                            <div class="tenant-photos">
-                                @foreach (var ct in contract.ContractTenants)
-                                {
-                                    if (!string.IsNullOrEmpty(ct.Tenant.Photo))
-                                    {
-                                        var photos = ct.Tenant.Photo.Split(';');
-                                        <div class="tenant-photo-group">
-                                            <h6><i class="fas fa-camera"></i> @ct.Tenant.FullName</h6>
-                                            <div class="photo-gallery">
-                                                @foreach (var photo in photos.Where(p => !string.IsNullOrWhiteSpace(p)))
-                                                {
-                                                    <img src="@photo" alt="@ct.Tenant.FullName" title="@ct.Tenant.FullName"
-                                                         class="tenant-photo-item" onclick="showPhotoModal('@photo', '@ct.Tenant.FullName')" />
-                                                }
-                                            </div>
-                                        </div>
-                                    }
-                                }
-                            </div>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="action-buttons">
-                            <a href="@Url.Action("Edit", "Contracts", new { id = contract.Id })" class="btn btn-warning btn-custom">
-                                <i class="fas fa-edit"></i> Sửa HĐ
-                            </a>
-                            <a href="@Url.Action("ExportContract", "Contracts", new { id = contract.Id })" target="_blank" class="btn btn-primary btn-custom">
-                                <i class="fas fa-file-pdf"></i> Xuất HĐ
-                            </a>
-                            @using (Html.BeginForm("UploadContractScan", "Contracts", FormMethod.Post, new { enctype = "multipart/form-data", style = "display:inline" }))
-                            {
-                                @Html.Hidden("contractId", contract.Id)
-                                <label for="scanFile" class="btn btn-secondary btn-custom mb-0">
-                                    <i class="fas fa-upload"></i> Upload scan
-                                </label>
-                                <input type="file" id="scanFile" name="scanFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="this.form.submit()" />
-                            }
-                            @if (!string.IsNullOrEmpty(contract.ContractScanFilePath))
-                            {
-                                <a href="@Url.Content(contract.ContractScanFilePath)" target="_blank" class="btn btn-info btn-custom">
-                                    <i class="fas fa-eye"></i> Xem scan
-                                </a>
-                            }
-                            <a href="@Url.Action("End", "Contracts", new { id = contract.Id })" class="btn btn-danger btn-custom">
-                                <i class="fas fa-times-circle"></i> Kết thúc HĐ
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            }
-
-        </div>
-
-        <div class="col-md-7">
-            <!-- UTILITY BILL MODAL -->
-            <div class="modal fade" id="utilityBillModal" tabindex="-1" role="dialog">
-                <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">
-                                <i class="fas fa-file-invoice-dollar"></i>
-                                @(bill != null ? "Sửa phiếu báo tiền" : "Tạo phiếu báo tiền")
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
-                            </button>
-                        </div>
-                        <div class="modal-body p-4">
-                            @{
-                                var utilityBillVm = new NhaTroAnCu.Models.UtilityBillCreateViewModel
-                                {
-                                    RoomId = Model.Id,
-                                    ContractId = contract?.Id ?? 0,
-                                    Month = currentMonth,
-                                    Year = currentYear,
-                                    WaterIndexStart = waterPrev,
-                                    WaterPrice = waterPrice,
-                                    RentAmount = rentPrice,
-                                    WaterIndexEnd = bill?.WaterIndexEnd ?? waterPrev,
-                                    ElectricityAmount = bill?.ElectricityAmount ?? 0,
-                                    ExtraCharge = bill?.ExtraCharge ?? (ViewBag.ExtraCharge ?? 0),
-                                    Discount = bill?.Discount ?? (ViewBag.Discount ?? 0),
-                                    TotalAmount = bill?.TotalAmount ?? 0,
-                                    BillNote = bill?.BillNote,
-                                    BillStatus = bill?.BillStatus
-                                };
-                            }
-                            @Html.Partial("_CreateOrEditUtilityBillPartial", utilityBillVm)
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- CURRENT BILL Section -->
-            <div class="custom-card animate-slide-up" style="animation-delay: 0.2s;">
-                <div class="card-header header-teal">
-                    <span>
-                        <i class="fas fa-file-invoice-dollar"></i>
-                        @if (bill != null)
-                        {
-                            <text>Phiếu báo tiền tháng @bill.Month/@bill.Year - HĐ #@bill.ContractId</text>
-                        }
-                        else if (contract != null)
-                        {
-                            <text>Phiếu báo tiền tháng @currentMonth/@currentYear - HĐ #@contract.Id</text>
-                        }
-                        else
-                        {
-                            <text>Chưa có hợp đồng hiện tại</text>
-                        }
-                    </span>
-                    @if (contract != null)
-                    {
-                        <button class="btn btn-warning btn-sm btn-custom" data-toggle="modal" data-target="#utilityBillModal">
-                            <i class="fas @(bill != null ? "fa-edit" : "fa-plus")"></i>
-                            @(bill != null ? "Sửa phiếu" : "Tạo phiếu")
-                        </button>
-                    }
+            <!-- 2. THÔNG TIN HỢP ĐỒNG -->
+            <div class="detail-card contract-info-card">
+                <div class="card-header bg-gradient-blue">
+                    <i class="fas fa-file-contract"></i>
+                    <span>Thông tin hợp đồng</span>
                 </div>
                 <div class="card-body">
-                    @if (bill != null)
+                    @if (activeContract != null)
                     {
-                        <div class="bill-details">
-                            <div class="row">
-                                @*<div class="col-md-6">
-                                        <dl>
-                                            <dt><i class="fas fa-file-contract"></i> Mã hợp đồng</dt>
-                                            <dd class="text-info font-weight-bold">#@bill.ContractId</dd>
-                                            <dt><i class="fas fa-tachometer-alt"></i> Chỉ số nước đầu</dt>
-                                            <dd>@waterPrev</dd>
-                                            <dt><i class="fas fa-tachometer-alt"></i> Chỉ số nước cuối</dt>
-                                            <dd>@bill.WaterIndexEnd</dd>
-                                            <dt><i class="fas fa-tint"></i> Tiền nước</dt>
-                                            <dd class="text-primary">@((bill.WaterAmount ?? 0).ToString("N0"))đ</dd>
-                                        </dl>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <dl>
-                                            <dt><i class="fas fa-bolt"></i> Tiền điện</dt>
-                                            <dd class="text-warning">@((bill.ElectricityAmount ?? 0).ToString("N0"))đ</dd>
-                                            <dt><i class="fas fa-home"></i> Tiền thuê</dt>
-                                            <dd class="text-info">@((bill.RentAmount ?? 0).ToString("N0"))đ</dd>
-                                            <dt><i class="fas fa-plus-circle"></i> Cộng thêm</dt>
-                                            <dd class="text-success">+@((bill.ExtraCharge ?? 0).ToString("N0"))đ</dd>
-                                            <dt><i class="fas fa-minus-circle"></i> Giảm trừ</dt>
-                                            <dd class="text-danger">-@((bill.Discount ?? 0).ToString("N0"))đ</dd>
-                                        </dl>
-                                    </div>*@
-                            </div>
-
-                            <div class="bill-total">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="h5 mb-0">Tổng cần thanh toán:</span>
-                                    <span class="h3 mb-0 text-danger font-weight-bold">
-                                        @(bill.TotalAmount .ToString("N0"))đ
-                                    </span>
+                        <!-- Cảnh báo hợp đồng sắp hết hạn -->
+                        if (isNearingEnd)
+                        {
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <div>
+                                    <strong>Hợp đồng sắp hết hạn!</strong><br />
+                                    Còn @((activeContract.EndDate - DateTime.Now).Days) ngày
                                 </div>
                             </div>
+                        }
 
-                            @if (!string.IsNullOrEmpty(bill.BillNote))
+                        if (isExpired)
+                        {
+                            <div class="alert alert-danger">
+                                <i class="fas fa-times-circle"></i>
+                                <strong>Hợp đồng đã hết hạn!</strong>
+                            </div>
+                        }
+
+                        <!-- Thông tin hợp đồng -->
+                        <div class="contract-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Mã hợp đồng:</span>
+                                <span class="detail-value">#@activeContract.Id</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Loại hợp đồng:</span>
+                                <span class="detail-value">
+                                    @(activeContract.ContractType == "Company" ? "Công ty" : "Cá nhân")
+                                </span>
+                            </div>
+                            @if (activeContract.ContractType == "Company" && activeContract.Company != null)
                             {
-                                <div class="mt-3">
-                                    <small class="text-muted">Ghi chú:</small>
-                                    <div>@bill.BillNote</div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Công ty:</span>
+                                    <span class="detail-value">@activeContract.Company.CompanyName</span>
                                 </div>
                             }
+                            <div class="detail-row">
+                                <span class="detail-label">Giá thuê thỏa thuận:</span>
+                                <span class="detail-value price">@actualPrice.ToString("N0")đ</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Ngày bắt đầu:</span>
+                                <span class="detail-value">@activeContract.StartDate.ToString("dd/MM/yyyy")</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Ngày kết thúc:</span>
+                                <span class="detail-value">@activeContract.EndDate.ToString("dd/MM/yyyy")</span>
+                            </div>                          
+                            <div class="detail-row">
+                                <span class="detail-label">Giá điện:</span>
+                                <span class="detail-value">@activeContract.ElectricityPrice.ToString("N0")đ/kWh</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Giá nước:</span>
+                                <span class="detail-value">@activeContract.WaterPrice.ToString("N0")đ/m³</span>
+                            </div>
                         </div>
-                    }
-                    else if (contract != null)
-                    {
-                        <div class="text-center py-4">
-                            <i class="fas fa-file-invoice fa-3x text-muted mb-3"></i>
-                            <p class="text-muted">Chưa có phiếu báo tiền cho hợp đồng #@contract.Id tháng này</p>
-                            <p class="text-info">Nhấn nút "Tạo phiếu" để tạo phiếu báo tiền mới</p>
+
+                        <!-- Các nút hành động -->
+                        <div class="contract-actions">
+                            <a href="@Url.Action("Details", "Contracts", new { id = activeContract.Id })"
+                               class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i> Chi tiết
+                            </a>
+                            <a href="@Url.Action("Edit", "Contracts", new { id = activeContract.Id })"
+                               class="btn btn-sm btn-warning">
+                                <i class="fas fa-edit"></i> Sửa
+                            </a>
+                            <a href="@Url.Action("Export", "Contracts", new { id = activeContract.Id })"
+                               class="btn btn-sm btn-success">
+                                <i class="fas fa-download"></i> Xuất HĐ
+                            </a>
+                            <button type="button" class="btn btn-sm btn-primary"
+                                    onclick="uploadContract(@activeContract.Id)">
+                                <i class="fas fa-upload"></i> Upload scan
+                            </button>
+                            @if (!isExpired)
+                            {
+                                <button type="button" class="btn btn-sm btn-danger"
+                                        onclick="endContract(@activeContract.Id)">
+                                    <i class="fas fa-times-circle"></i> Kết thúc
+                                </button>
+                            }
                         </div>
                     }
                     else
                     {
-                        <div class="text-center py-4">
-                            <i class="fas fa-exclamation-circle fa-3x text-warning mb-3"></i>
-                            <p class="text-muted">Không có hợp đồng hiện tại</p>
+                        <!-- Không có hợp đồng -->
+                        <div class="no-data">
+                            <i class="fas fa-file-contract fa-3x"></i>
+                            <p>Phòng chưa có hợp đồng đang hoạt động</p>
+                            <a href="@Url.Action("Create", "Contracts", new { roomId = Model.Id })"
+                               class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Tạo hợp đồng mới
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- 3. THÔNG TIN KHÁCH THUÊ -->
+            <div class="detail-card tenant-info-card">
+                <div class="card-header bg-gradient-green">
+                    <i class="fas fa-users"></i>
+                    <span>Thông tin khách thuê</span>
+                    @if (tenants.Any())
+                    {
+                        <span class="badge badge-light">@tenants.Count người</span>
+                    }
+                </div>
+                <div class="card-body">
+                    @if (tenants.Any())
+                    {
+                        <div class="tenant-list">
+                            @foreach (var tenant in tenants)
+                            {
+                                <div class="tenant-item">
+                                    <div class="tenant-avatar">
+                                        @if (!string.IsNullOrEmpty(tenant.Photo))
+                                        {
+                                            <img src="@tenant.Photo" alt="@tenant.FullName" />
+                                        }
+                                        else
+                                        {
+                                            <i class="fas fa-user"></i>
+                                        }
+                                    </div>
+                                    <div class="tenant-details">
+                                        <div class="tenant-name">@tenant.FullName</div>
+                                        <div class="tenant-info-row">
+                                            <i class="fas fa-phone"></i> @tenant.PhoneNumber
+                                        </div>
+                                        <div class="tenant-info-row">
+                                            <i class="fas fa-id-card"></i> @tenant.IdentityCard
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(tenant.VehiclePlate))
+                                        {
+                                            <div class="tenant-info-row">
+                                                <i class="fas fa-motorcycle"></i> @tenant.VehiclePlate
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Các nút hành động -->
+                        <div class="tenant-actions">
+                            @if (activeContract != null && activeContract.Status == "Active")
+                            {
+                                <button type="button" class="btn btn-sm btn-primary"
+                                        onclick="addTenant(@Model.Id, @activeContract.Id)">
+                                    <i class="fas fa-user-plus"></i> Thêm người
+                                </button>
+                            }
+                            <button type="button" class="btn btn-sm btn-info"
+                                    onclick="editTenants(@Model.Id)">
+                                <i class="fas fa-user-edit"></i> Sửa thông tin
+                            </button>
+                            @if (tenants.Count > 1)
+                            {
+                                <button type="button" class="btn btn-sm btn-danger"
+                                        onclick="removeTenant(@Model.Id)">
+                                    <i class="fas fa-user-minus"></i> Xóa người
+                                </button>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="no-data">
+                            <i class="fas fa-users fa-3x"></i>
+                            <p>Chưa có thông tin khách thuê</p>
+                            @if (activeContract != null && activeContract.Status == "Active")
+                            {
+                                <button type="button" class="btn btn-primary"
+                                        onclick="addTenant(@Model.Id, @activeContract.Id)">
+                                    <i class="fas fa-user-plus"></i> Thêm khách thuê
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="col-md-8">
+            <!-- 4. PHIẾU BÁO TIỀN HẰNG THÁNG -->
+            <div class="detail-card">
+                <div class="card-header bg-gradient-orange">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>Phiếu báo tiền tháng @DateTime.Now.Month/@DateTime.Now.Year</span>
+                    @if (activeContract != null)
+                    {
+                        <span class="badge badge-light">HĐ #@activeContract.Id</span>
+                    }
+                </div>
+                <div class="card-body">
+                    @{
+                        // Lấy phiếu báo tiền tháng hiện tại
+                        var currentMonth = DateTime.Now.Month;
+                        var currentYear = DateTime.Now.Year;
+                        var currentBill = ViewBag.CurrentBill as NhaTroAnCu.Models.UtilityBill;
+
+                        // Lấy chỉ số nước tháng trước
+                        var waterPrev = ViewBag.WaterPrev ?? 0;
+                    }
+
+                    @if (activeContract != null)
+                    {
+                        if (currentBill != null)
+                        {
+                            <!-- Hiển thị thông tin phiếu đã tạo -->
+                            <div class="bill-details">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="detail-row">
+                                            <span class="detail-label">Chỉ số nước:</span>
+                                            <span class="detail-value">@currentBill.WaterIndexStart - @currentBill.WaterIndexEnd</span>
+                                        </div>
+                                        <div class="detail-row">
+                                            <span class="detail-label">Tiền nước:</span>
+                                            <span class="detail-value price">@currentBill.WaterAmount.ToString("N0")đ</span>
+                                        </div>
+                                        <div class="detail-row">
+                                            <span class="detail-label">Tiền điện:</span>
+                                            <span class="detail-value price">@currentBill.ElectricityAmount.ToString("N0")đ</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="detail-row">
+                                            <span class="detail-label">Tiền phòng:</span>
+                                            <span class="detail-value price">@currentBill.RentAmount.ToString("N0")đ</span>
+                                        </div>
+                                        <div class="detail-row">
+                                            <span class="detail-label">Phụ thu:</span>
+                                            <span class="detail-value">@(currentBill.ExtraCharge .ToString("N0"))đ</span>
+                                        </div>
+                                        <div class="detail-row">
+                                            <span class="detail-label">Giảm trừ:</span>
+                                            <span class="detail-value">@(currentBill.Discount.ToString("N0"))đ</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bill-total-box">
+                                    <div class="total-label">Tổng cần thu:</div>
+                                    <div class="total-amount">@currentBill.TotalAmount.ToString("N0")đ</div>
+                                </div>
+
+                                @if (!string.IsNullOrEmpty(currentBill.BillNote))
+                                {
+                                    <div class="bill-note">
+                                        <i class="fas fa-sticky-note"></i> Ghi chú: @currentBill.BillNote
+                                    </div>
+                                }
+
+                                <div class="bill-actions">
+                                    <button type="button" class="btn btn-warning"
+                                            onclick="openEditBillModal(@Model.Id)">
+                                        <i class="fas fa-edit"></i> Sửa phiếu
+                                    </button>
+                                    <button type="button" class="btn btn-success"
+                                            onclick="exportBill(@currentBill.Id)">
+                                        <i class="fas fa-print"></i> In phiếu
+                                    </button>
+                                    <button type="button" class="btn btn-danger"
+                                            onclick="deleteBill(@currentBill.Id)">
+                                        <i class="fas fa-trash"></i> Xóa phiếu
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <!-- Chưa có phiếu báo tiền -->
+                            <div class="no-data">
+                                <i class="fas fa-file-invoice fa-3x"></i>
+                                <p>Chưa có phiếu báo tiền tháng @currentMonth/@currentYear</p>
+                                <button type="button" class="btn btn-primary"
+                                        onclick="openCreateBillModal(@Model.Id)">
+                                    <i class="fas fa-plus"></i> Tạo phiếu mới
+                                </button>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="no-data">
+                            <i class="fas fa-exclamation-triangle fa-3x"></i>
                             <p>Vui lòng tạo hợp đồng trước khi tạo phiếu báo tiền</p>
                         </div>
                     }
                 </div>
             </div>
 
-            <!-- PAYMENT COLLECTION -->
-            <div class="custom-card animate-slide-up" style="animation-delay: 0.3s;">
-                <div class="card-header header-green">
-                    <span>
-                        <i class="fas fa-hand-holding-usd"></i>
-                        Ghi nhận thanh toán tháng @currentMonth/@currentYear
-                    </span>
-                </div>
-                <div class="card-body">
-                    @if (bill != null)
-                    {
-                        <form id="paymentForm">
-                            <input type="hidden" name="utilityBillId" value="@bill.Id" />
-                            <div class="row align-items-end">
-                                <div class="col-md-5">
-                                    <label><i class="fas fa-money-bill-wave"></i> Số tiền nhận</label>
-                                    <input class="form-control form-control-custom money" name="amount" required />
-                                </div>
-                                <div class="col-md-5">
-                                    <label><i class="fas fa-sticky-note"></i> Ghi chú</label>
-                                    <input type="text" class="form-control form-control-custom" name="note" placeholder="Ghi chú thanh toán" />
-                                </div>
-                                <div class="col-md-2">
-                                    <button type="submit" class="btn btn-success btn-custom w-100">
-                                        <i class="fas fa-check"></i> Ghi nhận
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-
-                        <div class="payment-summary">
-                            <div class="summary-item">
-                                <div class="summary-label">Đã thu</div>
-                                <div class="summary-value text-primary" id="paidTotal">@paidTotal.ToString("N0")đ</div>
-                            </div>
-                            <div class="summary-item">
-                                <div class="summary-label">Còn nợ</div>
-                                <div class="summary-value text-danger" id="debt">@debt.ToString("N0")đ</div>
-                            </div>
-                            <div class="summary-item">
-                                <div class="summary-label">Tổng cần thanh toán</div>
-                                <div class="summary-value" id="totalBill">@billTotal.ToString("N0")đ</div>
-                            </div>
+            <!-- Modal tạo/sửa phiếu báo tiền -->
+            <div class="modal fade" id="utilityBillModal" tabindex="-1" role="dialog">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="fas fa-file-invoice-dollar"></i>
+                                <span id="modalTitle">Tạo phiếu báo tiền</span>
+                            </h5>
+                            <button type="button" class="close" data-dismiss="modal">
+                                <span>&times;</span>
+                            </button>
                         </div>
-
-                        @*if (payments.Any())
-                            {
-                                <div class="mt-4">
-                                    <h6><i class="fas fa-history"></i> Lịch sử thanh toán trong tháng</h6>
-                                    <div class="table-responsive">
-                                        <table class="table table-sm custom-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Số tiền</th>
-                                                    <th>Ngày thu</th>
-                                                    <th>Ghi chú</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach (var p in payments.OrderByDescending(x => x.PaidDate))
-                                                {
-                                                    <tr>
-                                                        <td class="font-weight-bold">@p.TotalAmount.ToString("N0")đ</td>
-                                                        <td>@p.PaidDate.ToString("dd/MM/yyyy HH:mm")</td>
-                                                        <td>@p.Note</td>
-                                                    </tr>
-                                                }
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            }*@
-                    }
-                    else
-                    {
-                        <div class="text-center py-4">
-                            <i class="fas fa-exclamation-circle fa-3x text-warning mb-3"></i>
-                            <p class="text-muted">Vui lòng tạo phiếu báo tiền trước khi ghi nhận thanh toán</p>
+                        <div class="modal-body" id="modalContent">
+                            <!-- Content sẽ được load bằng AJAX -->
                         </div>
-                    }
-                </div>
-            </div>
-
-            <!-- BILL HISTORY Section - Cập nhật để hiển thị ContractId -->
-            <div class="custom-card animate-slide-up" style="animation-delay: 0.4s;">
-                <div class="card-header header-orange">
-                    <span><i class="fas fa-history"></i> Lịch sử phiếu báo tiền</span>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table custom-table">
-                            <thead>
-                                <tr>
-                                    <th>Tháng/Năm</th>
-                                    <th>Mã HĐ</th>
-                                    <th>Tổng tiền</th>
-                                    <th>Trạng thái</th>
-                                    <th>Ghi chú</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @*@foreach (var b in (Model.UtilityBills ?? new List<NhaTroAnCu.Models.UtilityBill>())
-                                        .OrderByDescending(x => x.Year).ThenByDescending(x => x.Month))
-                                    {
-                                        <tr>
-                                            <td>
-                                                <span class="badge badge-primary">@b.Month/@b.Year</span>
-                                            </td>
-                                            <td>
-                                                <span class="badge badge-info">#@(b.ContractId ?? 0)</span>
-                                            </td>
-                                            <td class="font-weight-bold">@((b.TotalAmount ?? 0).ToString("N0"))đ</td>
-                                            <td>
-                                                @if (b.BillStatus == "Final")
-                                                {
-                                                    <span class="badge badge-success">Đã lập</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="badge badge-warning">@b.BillStatus</span>
-                                                }
-                                            </td>
-                                            <td>@b.BillNote</td>
-                                        </tr>
-                                    }*@
-                            </tbody>
-                        </table>
                     </div>
                 </div>
             </div>
 
-            <!-- PAYMENT HISTORY -->
-            <div class="custom-card animate-slide-up" style="animation-delay: 0.5s;">
-                <div class="card-header header-purple">
-                    <span><i class="fas fa-receipt"></i> Lịch sử tất cả các lần thanh toán</span>
+            <!-- 5. GHI NHẬN THANH TOÁN -->
+            <div class="detail-card">
+                <div class="card-header bg-gradient-purple">
+                    <i class="fas fa-money-check-alt"></i>
+                    <span>Ghi nhận thanh toán</span>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table custom-table">
-
-                            <tr>
-                                <th>Tháng/Năm</th>
-                                <th>Số tiền</th>
-                                <th>Ngày thu</th>
-                                <th>Ghi chú</th>
-                            </tr>
-
-                            <tbody>
-                                @*@foreach (var p in (Model.PaymentHistories ?? new List<NhaTroAnCu.Models.PaymentHistory>()).OrderByDescending(x => x.PaidDate))
-                                    {
-                                        <tr>
-                                            <td>
-                                                <span class="badge badge-success">@p.Month/@p.Year</span>
-                                            </td>
-                                            <td class="font-weight-bold text-success">@p.TotalAmount.ToString("N0")đ</td>
-                                            <td>@p.PaidDate.ToString("dd/MM/yyyy HH:mm")</td>
-                                            <td>@p.Note</td>
-                                        </tr>
-                                    }*@
-                            </tbody>
-                        </table>
+                    <div class="text-center py-4">
+                        <button type="button" class="btn btn-success">
+                            <i class="fas fa-plus-circle"></i> Ghi nhận thanh toán
+                        </button>
                     </div>
                 </div>
             </div>
 
-        </div>
-    </div>
-
-
-</div>
-<div class="modal fade" id="photoModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="photoModalTitle">Ảnh CCCD</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
-                </button>
-            </div>
-            <div class="modal-body text-center">
-                <img id="modalPhoto" src="" style="max-width: 100%; height: auto;" />
+            <!-- 6. LỊCH SỬ PHIẾU BÁO & THANH TOÁN -->
+            <div class="detail-card">
+                <div class="card-header bg-gradient-dark">
+                    <i class="fas fa-history"></i>
+                    <span>Lịch sử phiếu báo & thanh toán</span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted text-center py-4">Chưa có lịch sử</p>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-    .tenant-photo-group {
-        margin-bottom: 15px;
-    }
-
-    .photo-gallery {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-
-    .tenant-photo-item {
-        width: 100px;
-        height: 70px;
-        object-fit: cover;
-        border: 2px solid #ddd;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.3s;
-    }
-
-        .tenant-photo-item:hover {
-            border-color: #007bff;
-            transform: scale(1.05);
-        }
-</style>
 @section Scripts {
     <script>
-        function showPhotoModal(photoUrl, tenantName) {
-            $('#modalPhoto').attr('src', photoUrl);
-            $('#photoModalTitle').text('CCCD - ' + tenantName);
-            $('#photoModal').modal('show');
+        // Contract functions
+        function uploadContract(contractId) {
+            // TODO: Implement upload contract scan
+            alert('Upload scan hợp đồng #' + contractId);
         }
-        $(document).ready(function() {
-            // Initialize tooltips
-            $('[data-toggle="tooltip"]').tooltip();
 
-            // Smooth scroll for animations
-            $('.animate-slide-up').each(function(i) {
-                $(this).css('animation-delay', (i * 0.1) + 's');
-            });
+        function endContract(contractId) {
+            if (confirm('Bạn có chắc chắn muốn kết thúc hợp đồng này?')) {
+                window.location.href = '@Url.Action("EndContract", "Contracts")/' + contractId;
+            }
+        }
 
-            // AJAX Create/Update Utility Bill
-            $('#utilityBillForm').submit(function (e) {
-                e.preventDefault();
-                var form = $(this);
-                var btn = form.find('button[type="submit"]');
+        // Tenant functions
+        function addTenant(roomId, contractId) {
+            window.location.href = '@Url.Action("AddTenant", "TenantContracts")?contractId=' + contractId + '&roomId=' + roomId;
+        }
 
-                btn.html('<i class="fas fa-spinner fa-spin"></i> Đang xử lý...').prop('disabled', true);
+        function editTenants(roomId) {
+            window.location.href = '@Url.Action("ManageTenants", "Rooms", new { id = "__id__" })'.replace('__id__', roomId);
+        }
 
-                $.post('/UtilityBills/CreateOrUpdateAjax', form.serialize(), function (res) {
-                    if (res.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Thành công!',
-                            text: 'Đã lưu phiếu báo tiền!',
-                            showConfirmButton: false,
-                            timer: 1500
-                        }).then(() => {
-                            location.reload();
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Lỗi!',
-                            text: res.message || 'Có lỗi xảy ra'
-                        });
-                        btn.html('Lưu').prop('disabled', false);
-                    }
-                }).fail(function() {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Lỗi!',
-                        text: 'Không thể kết nối server'
-                    });
-                    btn.html('Lưu').prop('disabled', false);
-                });
-            });
+        function removeTenant(roomId) {
+            if (confirm('Bạn có chắc chắn muốn xóa khách thuê này?')) {
+                // TODO: Implement remove tenant
+                alert('Xóa khách thuê từ phòng #' + roomId);
+            }
+        }
 
-            // AJAX Payment Collection
-            $('#paymentForm').submit(function (e) {
-                e.preventDefault();
-                var form = $(this);
-                var btn = form.find('button[type="submit"]');
+        // Utility Bill functions
+        function openCreateBillModal(roomId) {
+            $('#modalTitle').text('Tạo phiếu báo tiền mới');
 
-                btn.html('<i class="fas fa-spinner fa-spin"></i> Đang xử lý...').prop('disabled', true);
-
-                $.post('/Payments/CollectPayment', form.serialize(), function (res) {
-                    if (res.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Thành công!',
-                            text: 'Ghi nhận thanh toán thành công!',
-                            showConfirmButton: false,
-                            timer: 1500
-                        }).then(() => {
-                            location.reload();
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Lỗi!',
-                            text: 'Có lỗi xảy ra!'
-                        });
-                        btn.html('<i class="fas fa-check"></i> Ghi nhận').prop('disabled', false);
-                    }
-                }).fail(function() {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Lỗi!',
-                        text: 'Không thể kết nối server'
-                    });
-                    btn.html('<i class="fas fa-check"></i> Ghi nhận').prop('disabled', false);
-                });
-            });
-
-            // Modal trigger with Bootstrap
-            $('.btn-warning[data-toggle="modal"]').click(function () {
-                $('#utilityBillModal').modal('show');
-            });
-
-            // Contract Extension
-            $('#extendContractForm').submit(function (e) {
-                e.preventDefault();
-                var form = $(this);
-                var extendMonths = form.find('input[name="extendMonths"]').val();
-                var note = form.find('input[name="note"]').val();
-                var contractId = form.find('input[name="contractId"]').val();
-                var btn = form.find('button[type="submit"]');
-
-                Swal.fire({
-                    title: 'Xác nhận gia hạn',
-                    text: `Bạn có chắc muốn gia hạn hợp đồng thêm ${extendMonths} tháng?`,
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Đồng ý',
-                    cancelButtonText: 'Hủy'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        btn.html('<i class="fas fa-spinner fa-spin"></i> Đang xử lý...').prop('disabled', true);
-
-                        $.post('@Url.Action("ExtendContract", "Contracts")', {
-                            contractId: contractId,
-                            extendMonths: extendMonths,
-                            note: note
-                        }, function (res) {
-                            if (res.success) {
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Thành công!',
-                                    text: `Gia hạn thành công! Hợp đồng mới hết hạn: ${res.newEndDate}`,
-                                    showConfirmButton: false,
-                                    timer: 2000
-                                }).then(() => {
-                                    location.reload();
-                                });
-                            } else {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Lỗi!',
-                                    text: res.message || 'Không thể gia hạn hợp đồng'
-                                });
-                                btn.html('<i class="fas fa-check"></i> Gia hạn').prop('disabled', false);
-                            }
-                        }).fail(function() {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Lỗi!',
-                                text: 'Không thể kết nối server'
-                            });
-                            btn.html('<i class="fas fa-check"></i> Gia hạn').prop('disabled', false);
-                        });
-                    }
-                });
-            });
-
-            // Add hover effect to cards
-            $('.custom-card').hover(
-                function() {
-                    $(this).addClass('shadow-lg');
+            // Load form tạo phiếu báo tiền qua AJAX
+            $.ajax({
+                url: '@Url.Action("CreateUtilityBillPartial", "UtilityBills")',
+                data: { roomId: roomId },
+                success: function(data) {
+                    $('#modalContent').html(data);
+                    initBillForm();
+                    $('#utilityBillModal').modal('show');
                 },
-                function() {
-                    $(this).removeClass('shadow-lg');
+                error: function() {
+                    alert('Có lỗi xảy ra khi tải form!');
                 }
-            );
-        });
-        $('#depositForm').submit(function (e) {
-            e.preventDefault();
-            var form = $(this);
-            var btn = form.find('button[type="submit"]');
-            btn.html('<i class="fas fa-spinner fa-spin"></i> Đang xử lý...').prop('disabled', true);
-            $.post(form.attr('action'), form.serialize(), function (res) {
-                if (res.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Thành công!',
-                        text: 'Đã ghi nhận tiền đặt cọc!',
-                        showConfirmButton: false,
-                        timer: 1500
-                    }).then(() => {
-                        location.reload();
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Lỗi!',
-                        text: res.message || 'Có lỗi xảy ra'
-                    });
-                    btn.html('<i class="fas fa-check"></i> Ghi nhận').prop('disabled', false);
-                }
-            }).fail(function () {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Lỗi!',
-                    text: 'Không thể kết nối server'
-                });
-                btn.html('<i class="fas fa-check"></i> Ghi nhận').prop('disabled', false);
             });
-        });
-    </script>
+        }
 
-    <!-- Include existing scripts -->
-    <script src="~/js/Scripts_TaoPhieuBaoTien.js"></script>
+        function openEditBillModal(roomId) {
+            $('#modalTitle').text('Sửa phiếu báo tiền');
+
+            // Load form sửa phiếu báo tiền qua AJAX
+            $.ajax({
+                url: '@Url.Action("CreateUtilityBillPartial", "UtilityBills")',
+                data: { roomId: roomId },
+                success: function(data) {
+                    $('#modalContent').html(data);
+                    initBillForm();
+                    $('#utilityBillModal').modal('show');
+                },
+                error: function() {
+                    alert('Có lỗi xảy ra khi tải form!');
+                }
+            });
+        }
+
+        // Helper function to get money value (using the getMoney from layout)
+        function getMoney(selector) {
+            const anElement = AutoNumeric.getAutoNumericElement(selector);
+            return anElement ? anElement.getNumber() : 0;
+        }
+
+        function initBillForm() {
+            // Re-initialize AutoNumeric for newly loaded money inputs
+            $('#modalContent .money').each(function() {
+                var $input = $(this);
+
+                // Skip if already initialized
+                if ($input.data('autonumeric-initialized')) {
+                    return;
+                }
+
+                // Create hidden input for raw value
+                var $hiddenInput = $('<input>')
+                    .attr('type', 'hidden')
+                    .attr('name', $input.attr('name'))
+                    .attr('id', $input.attr('id') + '_raw')
+                    .insertAfter($input);
+
+                // Change name of display input
+                $input.attr('name', $input.attr('name') + '_display');
+
+                // Initialize AutoNumeric
+                var anInstance = new AutoNumeric($input[0], {
+                    digitGroupSeparator: '.',
+                    decimalCharacter: ',',
+                    decimalPlaces: 0,
+                    unformatOnSubmit: false
+                });
+
+                // Update hidden input when value changes
+                $input.on('input change blur', function() {
+                    var rawValue = anInstance.getNumber();
+                    $hiddenInput.val(rawValue);
+                });
+
+                // Set initial value if exists
+                if ($input.val()) {
+                    var initialValue = anInstance.getNumber();
+                    $hiddenInput.val(initialValue);
+                }
+
+                // Mark as initialized
+                $input.data('autonumeric-initialized', true);
+            });
+
+            // Auto calculate water usage
+            $('#waterCurrent').on('input', function() {
+                updateWaterUsedAndMoney();
+            });
+
+            // Calculate total on change
+            $('#electricMoney, #rentMoney, #extraCharge, #discount').on('change input', function() {
+                updateTotalMoney();
+            });
+
+            // Initialize calculations
+            updateWaterUsedAndMoney();
+            updateTotalMoney();
+
+            // Handle form submit
+            $('#utilityBillForm').on('submit', function(e) {
+                e.preventDefault();
+
+                // Form will automatically use hidden inputs created by AutoNumeric
+                var formData = $(this).serialize();
+
+                $.ajax({
+                    url: '@Url.Action("CreateOrUpdateAjax", "UtilityBills")',
+                    type: 'POST',
+                    data: formData,
+                    success: function(result) {
+                        if (result.success) {
+                            alert(result.message);
+                            $('#utilityBillModal').modal('hide');
+                            location.reload();
+                        } else {
+                            alert(result.message);
+                        }
+                    },
+                    error: function() {
+                        alert('Có lỗi xảy ra!');
+                    }
+                });
+            });
+        }
+
+        // Calculate water usage and money
+        function updateWaterUsedAndMoney() {
+            var start = parseInt($('#waterPrev').val()) || 0;
+            var end = parseInt($('#waterCurrent').val()) || 0;
+            var price = getMoney('#waterPrice') || 0;
+            var used = end - start;
+
+            if (used < 0) used = 0;
+            $('#waterUsed').val(used);
+
+            var waterMoney = used * price;
+
+            // Set water money value
+            var waterMoneyElement = AutoNumeric.getAutoNumericElement('#waterMoney');
+            if (waterMoneyElement) {
+                waterMoneyElement.set(waterMoney);
+            } else {
+                $('#waterMoney').val(waterMoney);
+            }
+
+            updateTotalMoney();
+        }
+
+        // Calculate total money
+        function updateTotalMoney() {
+            var electric = getMoney('#electricMoney') || 0;
+            var water = getMoney('#waterMoney') || 0;
+            var rent = getMoney('#rentMoney') || 0;
+            var extra = getMoney('#extraCharge') || 0;
+            var discount = getMoney('#discount') || 0;
+
+            var total = electric + water + rent + extra - discount;
+            if (total < 0) total = 0;
+
+            // Set total value
+            var totalElement = AutoNumeric.getAutoNumericElement('#totalMoney');
+            if (totalElement) {
+                totalElement.set(total);
+            } else {
+                $('#totalMoney').val(total);
+            }
+        }
+
+        function exportBill(billId) {
+            window.open('@Url.Action("Export", "UtilityBills")/' + billId);
+        }
+
+        function deleteBill(billId) {
+            if (confirm('Bạn có chắc chắn muốn xóa phiếu báo tiền này?')) {
+                $.ajax({
+                    url: '@Url.Action("Delete", "UtilityBills")/' + billId,
+                    type: 'POST',
+                    success: function() {
+                        location.reload();
+                    }
+                });
+            }
+        }
+    </script>
 }

@@ -1,94 +1,185 @@
-﻿
-body {
-    background-color: #f5f7fa;
-}
-/* Room Details Page Styles */
-.room-details {
-    font-family: 'Inter', sans-serif;
+﻿/* =====================================================
+   ROOM DETAILS CSS - Separated Version
+   ===================================================== */
+
+/* Variables */
+:root {
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --blue-gradient: linear-gradient(135deg, #5e72e4 0%, #825ee4 100%);
+    --green-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --orange-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --purple-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    --dark-gradient: linear-gradient(135deg, #29323c 0%, #485563 100%);
+    --shadow: 0 5px 15px rgba(0,0,0,0.08);
+    --shadow-hover: 0 10px 30px rgba(0,0,0,0.15);
+    --border-radius: 12px;
+    --transition: all 0.3s ease;
 }
 
-/* Header Styles */
-.room-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+/* Container */
+.room-details-container {
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Page Header */
+.page-header {
+    background: white;
+    padding: 20px 30px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.page-title {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+    .page-title i {
+        color: #667eea;
+    }
+
+.btn-back {
+    background: #6c757d;
     color: white;
-    padding: 2rem;
-    border-radius: 15px;
-    margin-bottom: 2rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    padding: 8px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
-    .room-header h2 {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin: 0;
-        display: flex;
-        align-items: center;
+    .btn-back:hover {
+        background: #5a6268;
+        color: white;
+        text-decoration: none;
+        transform: translateX(-3px);
     }
 
-    .room-header .room-icon {
-        background: rgba(255, 255, 255, 0.2);
-        padding: 15px;
-        border-radius: 50%;
-        margin-right: 1rem;
-        display: inline-flex;
-    }
-
-/* Card Styles */
-.custom-card {
-    border: none;
-    border-radius: 15px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+/* Detail Cards */
+.detail-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
     overflow: hidden;
-    margin-bottom: 1.5rem;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: var(--transition);
 }
 
-    .custom-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    .detail-card:hover {
+        box-shadow: var(--shadow-hover);
+        transform: translateY(-2px);
     }
 
-    .custom-card .card-header {
-        border: none;
-        font-weight: 600;
-        font-size: 1.1rem;
-        padding: 1.2rem 1.5rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+/* Card Headers with Gradients */
+.card-header {
+    padding: 15px 20px;
+    color: white;
+    font-weight: 600;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+    .card-header i {
+        font-size: 1.2rem;
     }
 
-        .custom-card .card-header i {
-            margin-right: 0.5rem;
-        }
+    .card-header .badge {
+        margin-left: auto;
+    }
 
-/* Different header colors */
-.header-purple {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+.bg-gradient-primary {
+    background: var(--primary-gradient);
 }
 
-.header-blue {
-    background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-    color: white;
+.bg-gradient-blue {
+    background: var(--blue-gradient);
 }
 
-.header-teal {
-    background: linear-gradient(135deg, #00bcd4 0%, #00838f 100%);
-    color: white;
+.bg-gradient-green {
+    background: var(--green-gradient);
 }
 
-.header-green {
-    background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
-    color: white;
+.bg-gradient-orange {
+    background: var(--orange-gradient);
 }
 
-.header-orange {
-    background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
-    color: white;
+.bg-gradient-purple {
+    background: var(--purple-gradient);
 }
 
-/* Utilities list */
+.bg-gradient-dark {
+    background: var(--dark-gradient);
+}
+
+/* Card Body */
+.card-body {
+    padding: 20px;
+}
+
+/* Room Basic Info */
+.room-basic-info {
+    margin-bottom: 15px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+    .info-item:last-child {
+        border-bottom: none;
+    }
+
+.info-label {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.info-value {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+    .info-value.price {
+        color: #f5576c;
+    }
+
+/* Divider */
+.divider {
+    margin: 20px 0;
+    border: none;
+    border-top: 2px solid #f0f0f0;
+}
+
+/* Section Subtitle */
+.section-subtitle {
+    color: #2c3e50;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Utilities List */
 .utilities-list {
     list-style: none;
     padding: 0;
@@ -96,588 +187,373 @@ body {
 }
 
     .utilities-list li {
-        padding: 0.8rem 0;
-        border-bottom: 1px solid #f0f0f0;
         display: flex;
-        justify-content: space-between;
         align-items: center;
+        padding: 10px;
+        background: #f8f9fa;
+        margin-bottom: 8px;
+        border-radius: 8px;
+        transition: var(--transition);
     }
 
-        .utilities-list li:last-child {
-            border-bottom: none;
+        .utilities-list li:hover {
+            background: #e9ecef;
         }
 
-    .utilities-list .utility-name {
-        font-weight: 500;
-        color: #333;
+.utility-icon {
+    width: 30px;
+    color: #6c757d;
+    font-size: 1.1rem;
+}
+
+.utility-name {
+    flex: 1;
+    font-weight: 500;
+    color: #333;
+}
+
+.utility-status {
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 15px;
+    font-size: 0.9rem;
+}
+
+.has-utility {
+    color: #fff;
+    background: #28a745;
+}
+
+.no-utility {
+    color: #fff;
+    background: #6c757d;
+}
+
+/* Alerts */
+.alert {
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+    .alert i {
+        font-size: 1.3rem;
     }
 
-        .utilities-list .utility-name i {
-            width: 25px;
-            color: #666;
-            margin-right: 10px;
-        }
-
-    .utilities-list .utility-status {
-        font-weight: 600;
-    }
-
-    .utilities-list .has-utility {
-        color: #4CAF50;
-    }
-
-    .utilities-list .no-utility {
-        color: #9e9e9e;
-    }
-
-/* Contract warning */
-.contract-warning {
+.alert-warning {
     background: #fff3cd;
     border-left: 4px solid #ffc107;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
+    color: #856404;
+}
+
+.alert-danger {
+    background: #f8d7da;
+    border-left: 4px solid #dc3545;
+    color: #721c24;
+}
+
+/* Contract Details */
+.contract-details {
+    margin-bottom: 20px;
+}
+
+.detail-row {
     display: flex;
-    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
 }
 
-    .contract-warning i {
-        color: #ff9800;
-        margin-right: 0.8rem;
-        font-size: 1.2rem;
+    .detail-row:last-child {
+        border-bottom: none;
     }
 
-/* Tenant Photos */
-.tenant-photos {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 1rem;
-}
-
-    .tenant-photos img {
-        width: 80px;
-        height: 80px;
-        object-fit: cover;
-        border-radius: 10px;
-        border: 3px solid #fff;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-        transition: transform 0.3s ease;
-    }
-
-        .tenant-photos img:hover {
-            transform: scale(1.1);
-        }
-
-/* Button Styles */
-.btn-custom {
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
+.detail-label {
+    color: #6c757d;
     font-weight: 500;
-    font-size: 0.9rem;
-    border: none;
-    transition: all 0.3s ease;
-    margin: 0.2rem;
 }
 
-    .btn-custom:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    }
-
-    .btn-custom i {
-        margin-right: 5px;
-    }
-
-/* Bill Details */
-.bill-details dl {
-    margin-bottom: 0;
-}
-
-.bill-details dt {
-    font-weight: 500;
-    color: #666;
-    margin-bottom: 0.3rem;
-}
-
-    .bill-details dt i {
-        width: 20px;
-        margin-right: 5px;
-    }
-
-.bill-details dd {
+.detail-value {
+    color: #2c3e50;
     font-weight: 600;
-    color: #333;
-    margin-bottom: 1rem;
 }
 
-.bill-total {
-    background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
-    padding: 1rem;
-    border-radius: 10px;
-    margin-top: 1rem;
-}
+    .detail-value.price {
+        color: #f5576c;
+    }
 
-/* Payment Summary */
-.payment-summary {
-    background: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: 10px;
+/* Action Buttons */
+.contract-actions,
+.tenant-actions {
     display: flex;
-    justify-content: space-around;
-    align-items: center;
-    margin-top: 1rem;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding-top: 15px;
 }
 
-    .payment-summary .summary-item {
+/* Tenant List */
+.tenant-list {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.tenant-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    transition: var(--transition);
+}
+
+    .tenant-item:hover {
+        background: #e9ecef;
+        transform: translateX(5px);
+    }
+
+.tenant-avatar {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    color: white;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+    .tenant-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+.tenant-details {
+    flex: 1;
+}
+
+.tenant-name {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+}
+
+.tenant-info-row {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+    .tenant-info-row i {
+        width: 16px;
         text-align: center;
     }
 
-    .payment-summary .summary-label {
-        font-size: 0.9rem;
-        color: #666;
-        margin-bottom: 0.3rem;
-    }
-
-    .payment-summary .summary-value {
-        font-size: 1.3rem;
-        font-weight: 700;
-    }
-
-/* Tables */
-.custom-table {
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
-    border: none;
+/* No Data State */
+.no-data {
+    text-align: center;
+    padding: 40px 20px;
 }
 
-    .custom-table thead {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+    .no-data i {
+        color: #dee2e6;
+        margin-bottom: 15px;
     }
 
-    .custom-table th {
-        border: none;
-        padding: 1rem;
-        font-weight: 600;
-        font-size: 0.95rem;
+    .no-data p {
+        color: #6c757d;
+        margin-bottom: 20px;
     }
 
-    .custom-table td {
-        padding: 0.8rem 1rem;
-        vertical-align: middle;
-        border-top: 1px solid #f0f0f0;
-    }
-
-    .custom-table tbody tr:hover {
-        background-color: #f5f5f5;
-    }
-
-    .custom-table tbody tr {
-        transition: background-color 0.3s ease;
-    }
-
-/* Modal Styles */
-.modal-content {
-    border-radius: 15px;
-    border: none;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-}
-
-.modal-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 15px 15px 0 0;
-    border: none;
-    padding: 1.5rem;
-}
-
-.modal-title {
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.85rem;
     font-weight: 600;
+}
+
+.badge-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.badge-warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.badge-light {
+    background: rgba(255,255,255,0.3);
+    color: white;
+}
+
+/* Buttons */
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+    .btn-primary:hover {
+        background: #0056b3;
+    }
+
+.btn-info {
+    background: #17a2b8;
+    color: white;
+}
+
+    .btn-info:hover {
+        background: #138496;
+    }
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+    .btn-success:hover {
+        background: #218838;
+    }
+
+.btn-warning {
+    background: #ffc107;
+    color: #212529;
+}
+
+    .btn-warning:hover {
+        background: #e0a800;
+    }
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+    .btn-danger:hover {
+        background: #c82333;
+    }
+
+/* Scrollbar Styling */
+.tenant-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tenant-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.tenant-list::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+    .tenant-list::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
+/* Bill Details */
+.bill-details {
+    padding: 10px 0;
+}
+
+.bill-total-box {
+    background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin: 20px 0;
     display: flex;
+    justify-content: space-between;
     align-items: center;
 }
 
-    .modal-title i {
-        margin-right: 10px;
+.total-label {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.total-amount {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #f5576c;
+}
+
+.bill-note {
+    background: #fff3cd;
+    padding: 10px 15px;
+    border-radius: 6px;
+    color: #856404;
+    margin-top: 15px;
+}
+
+    .bill-note i {
+        margin-right: 8px;
     }
+
+.bill-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+/* Modal Styles */
+.modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.modal-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 
 .modal-header .close {
     color: white;
     opacity: 0.8;
-    font-size: 1.5rem;
 }
 
     .modal-header .close:hover {
         opacity: 1;
     }
-
-/* Form Styles */
-.form-control-custom {
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
-    padding: 0.6rem 1rem;
-    transition: all 0.3s ease;
-}
-
-    .form-control-custom:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        outline: none;
-    }
-
-/* Animations */
-@keyframes slideInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.animate-slide-up {
-    animation: slideInUp 0.6s ease-out;
-    animation-fill-mode: both;
-}
-
-/* Status Badge */
-.status-badge {
-    display: inline-block;
-    padding: 0.3rem 1rem;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-
-.status-active {
-    background: #e8f5e9;
-    color: #2e7d32;
-}
-
-.status-inactive {
-    background: #ffebee;
-    color: #c62828;
-}
-
-/* Extension Form */
-.extension-form {
-    background: #f5f7fa;
-    padding: 1.5rem;
-    border-radius: 10px;
-    margin-top: 1rem;
-}
-
-    .extension-form h6 {
-        color: #333;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-    }
-
-        .extension-form h6 i {
-            margin-right: 8px;
-            color: #667eea;
-        }
-
-/* Badge Styles */
-.badge {
-    padding: 0.4rem 0.8rem;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 0.85rem;
-}
-
-.badge-primary {
-    background-color: #667eea;
-    color: white;
-}
-
-.badge-success {
-    background-color: #4CAF50;
-    color: white;
-}
-
-/* Empty State */
-.text-center.py-4 {
-    padding: 3rem 0;
-}
-
-.text-center i.fa-3x {
-    opacity: 0.5;
-}
-
-/* Contract Info Grid */
-.contract-info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-}
-
-/* Tenant List */
-.tenant-list-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 1rem;
-    padding: 0.5rem 0;
-}
-
-    .tenant-list-item i {
-        font-size: 1.5rem;
-        margin-right: 1rem;
-    }
-
-/* Action Buttons Container */
-.action-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 1rem;
-}
-
-/* Zalo Link */
-a[href*="zalo.me"] {
-    text-decoration: none;
-    color: #0068FF;
-    transition: color 0.3s ease;
-}
-
-    a[href*="zalo.me"]:hover {
-        color: #0056D2;
-    }
-
-/* Responsive */
-@media (max-width: 768px) {
-    .room-header h2 {
-        font-size: 1.8rem;
-    }
-
-    .room-header {
-        padding: 1.5rem;
-    }
-
-    .payment-summary {
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .custom-card {
-        margin-bottom: 1rem;
-    }
-
-    .btn-custom {
-        font-size: 0.85rem;
-        padding: 0.4rem 0.8rem;
-    }
-
-    .extension-form {
-        padding: 1rem;
-    }
-
-    .modal-dialog {
-        margin: 1rem;
-    }
-}
-
-/* Loading States */
-.btn-custom:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
-/* Success/Error Messages */
-#extendResult {
-    display: block;
-    margin-top: 0.5rem;
-    font-weight: 500;
-}
-
-/* Hover Shadow Effect */
-.shadow-lg {
-    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175) !important;
-}
-
-/* Print Styles */
-@media print {
-    .btn-custom,
-    .modal,
-    .extension-form {
-        display: none !important;
-    }
-
-    .custom-card {
-        box-shadow: none;
-        page-break-inside: avoid;
-    }
-}
-/* Add these styles to your room-details.css file */
-
-/* Enhanced Card Body Styles */
-.custom-card .card-body {
-    padding: 1.75rem 1.5rem !important;
-    background: #ffffff;
-}
-
-/* More spacing between cards */
-.custom-card {
-    margin-bottom: 2rem !important; /* Increased from 1.5rem */
-}
-
-    /* Better visual separation for card sections */
-    .custom-card .card-header {
-        margin-bottom: 0;
-        border-bottom: 2px solid rgba(0, 0, 0, 0.05);
-    }
-
-    /* Add subtle background to card bodies for better contrast */
-    .custom-card .card-body {
-        background-color: #ffffff;
-        position: relative;
-    }
-
-        /* Add inner spacing for card content */
-        .custom-card .card-body > *:not(:last-child) {
-            margin-bottom: 1.25rem;
-        }
-
-/* Enhance utilities list spacing */
-.utilities-list li {
-    padding: 1rem 0.5rem; /* Increased vertical padding */
-    transition: background-color 0.2s ease;
-}
-
-    .utilities-list li:hover {
-        background-color: rgba(0, 0, 0, 0.02);
-        margin: 0 -0.5rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
-    }
-
-/* Better spacing for form sections */
-.extension-form {
-    background: #f8f9fa;
-    padding: 2rem; /* Increased from 1.5rem */
-    border-radius: 12px;
-    margin-top: 1.5rem;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-/* Improve bill details spacing */
-.bill-details dl {
-    margin-bottom: 0.5rem;
-}
-
-.bill-details dt {
-    margin-bottom: 0.5rem; /* Increased from 0.3rem */
-    font-size: 0.9rem;
-}
-
-.bill-details dd {
-    margin-bottom: 1.25rem; /* Increased from 1rem */
-    font-size: 1.1rem;
-}
-
-/* Better payment summary spacing */
-.payment-summary {
-    padding: 2rem; /* Increased from 1.5rem */
-    margin-top: 1.5rem; /* Increased from 1rem */
-    border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-/* Add spacing between form rows */
-.custom-card form .row {
-    margin-bottom: 1rem;
-}
-
-    .custom-card form .row:last-child {
-        margin-bottom: 0;
-    }
-
-/* Contract info sections */
-.contract-info-grid,
-.tenant-list-item,
-.contract-warning {
-    margin-bottom: 1.5rem;
-}
-
-/* Table spacing improvements */
-.custom-table {
-    margin-top: 0.5rem;
-}
-
-    .custom-table td,
-    .custom-table th {
-        padding: 1rem 1.2rem; /* Increased padding */
-    }
-
-/* Add breathing room to action buttons */
-.action-buttons {
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-/* Better visual hierarchy with shadows */
-.custom-card {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-
-    .custom-card:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.12);
-    }
-
-/* Add container padding for overall spacing */
-.room-details .row {
-    margin-left: -20px;
-    margin-right: -20px;
-}
-
-    .room-details .row > [class*="col-"] {
-        padding-left: 20px;
-        padding-right: 20px;
-    }
-
-/* Ensure consistent spacing in modals */
-.modal-body {
-    padding: 2rem !important;
-}
-
-/* Add subtle dividers between sections */
-.custom-card .card-body > div:not(:last-child):not(.bill-total):not(.payment-summary) {
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
-    margin-bottom: 1.5rem;
-}
-
-/* Remove divider for specific elements */
-.custom-card .card-body > .extension-form,
-.custom-card .card-body > .contract-warning,
-.custom-card .card-body > form {
-    border-bottom: none !important;
-    padding-bottom: 0 !important;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .custom-card .card-body {
-        padding: 1.25rem 1rem !important;
-    }
-
-    .custom-card {
-        margin-bottom: 1.5rem !important;
-    }
-
-    .room-details .row {
-        margin-left: -10px;
-        margin-right: -10px;
-    }
-
-        .room-details .row > [class*="col-"] {
-            padding-left: 10px;
-            padding-right: 10px;
-        }
-}

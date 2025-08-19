@@ -40,6 +40,8 @@
         <AssociationConnector Association="NhaTroAnCuModel.FK__ContractT__Tenan__70A8B9AE" />
         <AssociationConnector Association="NhaTroAnCuModel.FK__IncomeExp__Categ__32AB8735" />
         <AssociationConnector Association="NhaTroAnCuModel.AspNetUserRoles" />
+        <EntityTypeShape EntityType="NhaTroAnCuModel.ContractRooms_Backup_20250819_103317" Width="1.5" PointX="7.375" PointY="13.75" />
+        <AssociationConnector Association="NhaTroAnCuModel.FK_UtilityBills_Rooms" />
       </Diagram>
     </edmx:Diagrams>
   </edmx:Designer>

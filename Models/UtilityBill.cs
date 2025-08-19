@@ -30,7 +30,9 @@ namespace NhaTroAnCu.Models
         public string BillStatus { get; set; }
         public System.DateTime CreatedAt { get; set; }
         public Nullable<System.DateTime> UpdatedAt { get; set; }
+        public int RoomId { get; set; }
     
         public virtual Contract Contract { get; set; }
+        public virtual Room Room { get; set; }
     }
 }

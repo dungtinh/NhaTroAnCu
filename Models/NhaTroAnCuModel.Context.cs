@@ -48,6 +48,7 @@ namespace NhaTroAnCu.Models
         public virtual DbSet<vw_CompanyTenants> vw_CompanyTenants { get; set; }
         public virtual DbSet<vw_ContractDetails> vw_ContractDetails { get; set; }
         public virtual DbSet<vw_RoomStatus> vw_RoomStatus { get; set; }
+        public virtual DbSet<ContractRooms_Backup_20250819_103317> ContractRooms_Backup_20250819_103317 { get; set; }
     
         public virtual ObjectResult<Nullable<int>> sp_AddEmployeeToRoom(Nullable<int> contractId, Nullable<int> roomId, string fullName, string identityCard, string phoneNumber, Nullable<System.DateTime> birthDate, string gender, string permanentAddress)
         {

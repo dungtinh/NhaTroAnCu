@@ -107,6 +107,21 @@
           <Property Name="PriceAgreed" Type="decimal" Precision="18" Scale="2" Nullable="false" />
           <Property Name="Notes" Type="nvarchar(max)" />
         </EntityType>
+        <!--Errors Found During Generation:
+warning 6002: The table/view 'NhaTroAnCu.dbo.ContractRooms_Backup_20250819_103317' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
+        <EntityType Name="ContractRooms_Backup_20250819_103317">
+          <Key>
+            <PropertyRef Name="Id" />
+            <PropertyRef Name="ContractId" />
+            <PropertyRef Name="RoomId" />
+            <PropertyRef Name="PriceAgreed" />
+          </Key>
+          <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="ContractId" Type="int" Nullable="false" />
+          <Property Name="RoomId" Type="int" Nullable="false" />
+          <Property Name="PriceAgreed" Type="decimal" Precision="18" Scale="2" Nullable="false" />
+          <Property Name="Notes" Type="nvarchar(max)" />
+        </EntityType>
         <EntityType Name="Contracts">
           <Key>
             <PropertyRef Name="Id" />
@@ -241,6 +256,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.FPTReaderAPI' does not have a prima
           <Property Name="BillStatus" Type="nvarchar" MaxLength="50" />
           <Property Name="CreatedAt" Type="datetime" Nullable="false" />
           <Property Name="UpdatedAt" Type="datetime" />
+          <Property Name="RoomId" Type="int" Nullable="false" />
         </EntityType>
         <!--Errors Found During Generation:
 warning 6002: The table/view 'NhaTroAnCu.dbo.vw_CompanyRoomDetails' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
@@ -533,6 +549,18 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.vw_RoomStatus' does not have a prim
             </Dependent>
           </ReferentialConstraint>
         </Association>
+        <Association Name="FK_UtilityBills_Rooms">
+          <End Role="Rooms" Type="Self.Rooms" Multiplicity="1" />
+          <End Role="UtilityBills" Type="Self.UtilityBills" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Rooms">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="UtilityBills">
+              <PropertyRef Name="RoomId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
         <Function Name="sp_AddEmployeeToRoom" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
           <Parameter Name="ContractId" Type="int" Mode="In" />
           <Parameter Name="RoomId" Type="int" Mode="In" />
@@ -577,6 +605,15 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.vw_RoomStatus' does not have a prim
           <EntitySet Name="Rooms" EntityType="Self.Rooms" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Tenants" EntityType="Self.Tenants" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="UtilityBills" EntityType="Self.UtilityBills" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="ContractRooms_Backup_20250819_103317" EntityType="Self.ContractRooms_Backup_20250819_103317" store:Type="Tables" store:Schema="dbo">
+            <DefiningQuery>SELECT 
+    [ContractRooms_Backup_20250819_103317].[Id] AS [Id], 
+    [ContractRooms_Backup_20250819_103317].[ContractId] AS [ContractId], 
+    [ContractRooms_Backup_20250819_103317].[RoomId] AS [RoomId], 
+    [ContractRooms_Backup_20250819_103317].[PriceAgreed] AS [PriceAgreed], 
+    [ContractRooms_Backup_20250819_103317].[Notes] AS [Notes]
+    FROM [dbo].[ContractRooms_Backup_20250819_103317] AS [ContractRooms_Backup_20250819_103317]</DefiningQuery>
+          </EntitySet>
           <EntitySet Name="FPTReaderAPI" EntityType="Self.FPTReaderAPI" store:Type="Tables" store:Schema="dbo">
             <DefiningQuery>SELECT 
     [FPTReaderAPI].[ApiKey] AS [ApiKey], 
@@ -716,6 +753,10 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.vw_RoomStatus' does not have a prim
             <End Role="Contracts" EntitySet="Contracts" />
             <End Role="UtilityBills" EntitySet="UtilityBills" />
           </AssociationSet>
+          <AssociationSet Name="FK_UtilityBills_Rooms" Association="Self.FK_UtilityBills_Rooms">
+            <End Role="Rooms" EntitySet="Rooms" />
+            <End Role="UtilityBills" EntitySet="UtilityBills" />
+          </AssociationSet>
         </EntityContainer>
       </Schema></edmx:StorageModels>
     <!-- CSDL content -->
@@ -825,6 +866,11 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.vw_RoomStatus' does not have a prim
             <Parameter Name="CompanyId" Mode="In" Type="Int32" />
             <Parameter Name="IncludeInactive" Mode="In" Type="Boolean" />
           </FunctionImport>
+          <EntitySet Name="ContractRooms_Backup_20250819_103317" EntityType="NhaTroAnCuModel.ContractRooms_Backup_20250819_103317" />
+          <AssociationSet Name="FK_UtilityBills_Rooms" Association="NhaTroAnCuModel.FK_UtilityBills_Rooms">
+            <End Role="Room" EntitySet="Rooms" />
+            <End Role="UtilityBill" EntitySet="UtilityBills" />
+          </AssociationSet>
         </EntityContainer>
         <EntityType Name="C__MigrationHistory">
           <Key>
@@ -1030,6 +1076,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.vw_RoomStatus' does not have a prim
           <Property Name="HasWardrobe" Type="Boolean" Nullable="false" />
           <NavigationProperty Name="ContractRooms" Relationship="NhaTroAnCuModel.FK_ContractRooms_Rooms" FromRole="Room" ToRole="ContractRoom" />
           <NavigationProperty Name="ContractTenants" Relationship="NhaTroAnCuModel.FK__ContractT__RoomI__719CDDE7" FromRole="Room" ToRole="ContractTenant" />
+          <NavigationProperty Name="UtilityBills" Relationship="NhaTroAnCuModel.FK_UtilityBills_Rooms" FromRole="Room" ToRole="UtilityBill" />
         </EntityType>
         <EntityType Name="Tenant">
           <Key>
@@ -1070,6 +1117,8 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.vw_RoomStatus' does not have a prim
           <Property Name="CreatedAt" Type="DateTime" Nullable="false" Precision="3" />
           <Property Name="UpdatedAt" Type="DateTime" Precision="3" />
           <NavigationProperty Name="Contract" Relationship="NhaTroAnCuModel.FK_UtilityBills_Contracts" FromRole="UtilityBill" ToRole="Contract" />
+          <Property Name="RoomId" Type="Int32" Nullable="false" />
+          <NavigationProperty Name="Room" Relationship="NhaTroAnCuModel.FK_UtilityBills_Rooms" FromRole="UtilityBill" ToRole="Room" />
         </EntityType>
         <EntityType Name="FPTReaderAPI">
           <Key>
@@ -1357,6 +1406,31 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.vw_RoomStatus' does not have a prim
           <Property Type="DateTime" Name="ContractEndDate" Nullable="true" />
           <Property Type="String" Name="ContractStatus" Nullable="true" MaxLength="20" />
         </ComplexType>
+        <EntityType Name="ContractRooms_Backup_20250819_103317">
+          <Key>
+            <PropertyRef Name="Id" />
+            <PropertyRef Name="ContractId" />
+            <PropertyRef Name="RoomId" />
+            <PropertyRef Name="PriceAgreed" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ContractId" Type="Int32" Nullable="false" />
+          <Property Name="RoomId" Type="Int32" Nullable="false" />
+          <Property Name="PriceAgreed" Type="Decimal" Nullable="false" Precision="18" Scale="2" />
+          <Property Name="Notes" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+        </EntityType>
+        <Association Name="FK_UtilityBills_Rooms">
+          <End Type="NhaTroAnCuModel.Room" Role="Room" Multiplicity="1" />
+          <End Type="NhaTroAnCuModel.UtilityBill" Role="UtilityBill" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Room">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="UtilityBill">
+              <PropertyRef Name="RoomId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
         </Schema>
     </edmx:ConceptualModels>
     <!-- C-S mapping content -->
@@ -1576,6 +1650,7 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.vw_RoomStatus' does not have a prim
           <EntitySetMapping Name="UtilityBills">
             <EntityTypeMapping TypeName="NhaTroAnCuModel.UtilityBill">
               <MappingFragment StoreEntitySet="UtilityBills">
+                <ScalarProperty Name="RoomId" ColumnName="RoomId" />
                 <ScalarProperty Name="UpdatedAt" ColumnName="UpdatedAt" />
                 <ScalarProperty Name="CreatedAt" ColumnName="CreatedAt" />
                 <ScalarProperty Name="BillStatus" ColumnName="BillStatus" />
@@ -1713,6 +1788,17 @@ warning 6002: The table/view 'NhaTroAnCu.dbo.vw_RoomStatus' does not have a prim
               </ComplexTypeMapping>
             </ResultMapping>
           </FunctionImportMapping>
+          <EntitySetMapping Name="ContractRooms_Backup_20250819_103317">
+            <EntityTypeMapping TypeName="NhaTroAnCuModel.ContractRooms_Backup_20250819_103317">
+              <MappingFragment StoreEntitySet="ContractRooms_Backup_20250819_103317">
+                <ScalarProperty Name="Notes" ColumnName="Notes" />
+                <ScalarProperty Name="PriceAgreed" ColumnName="PriceAgreed" />
+                <ScalarProperty Name="RoomId" ColumnName="RoomId" />
+                <ScalarProperty Name="ContractId" ColumnName="ContractId" />
+                <ScalarProperty Name="Id" ColumnName="Id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
         </EntityContainerMapping>
       </Mapping>
     </edmx:Mappings>
