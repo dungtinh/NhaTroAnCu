@@ -235,6 +235,7 @@
     <Compile Include="App_Start\IdentityConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="App_Start\Startup.Auth.cs" />
+    <Compile Include="Controllers\ContractRoomsController.cs" />
     <Compile Include="Controllers\FPTReaderController.cs" />
     <Compile Include="Controllers\AccountController.cs" />
     <Compile Include="Controllers\CardReaderController.cs" />
@@ -255,6 +256,7 @@
     <Compile Include="Helpers\DateTimeHelper.cs" />
     <Compile Include="Helpers\UtilityBillService.cs" />
     <Compile Include="Models\CompanyTenantViewModel.cs" />
+    <Compile Include="Models\ContractRoomsViewModel.cs" />
     <Compile Include="Models\ContractViewModel.cs" />
     <Compile Include="Models\IncomeExpenseViewModels.cs" />
     <Compile Include="Models\AccountViewModels.cs" />
@@ -616,6 +618,7 @@
     <Content Include="Views\Shared\_PaymentRecordingPartial.cshtml" />
     <Content Include="Views\Shared\_PaymentHistoryPartial.cshtml" />
     <Content Include="Views\Shared\_TenantManagement.cshtml" />
+    <Content Include="Views\ContractRooms\Index.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Uploads\ContractScans\" />

@@ -1,0 +1,72 @@
+﻿@model NhaTroAnCu.Models.ContractRoomsViewModel
+<div class="form-section">
+    <div class="section-title">
+        <i class="fas fa-building"></i> Quản Lý Phòng Của Công Ty
+        <a class="btn btn-sm btn-success float-right" href="/ContractRooms">
+            <i class="fas fa-plus"></i> Quản lý phòng
+        </a>
+    </div>
+
+    <div id="companyRoomsContainer">
+        @if (Model.SelectedRooms != null && Model.SelectedRooms.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover" id="roomsTable">
+                    <thead>
+                        <tr>
+                            <th>Phòng</th>
+                            <th>Giá mặc định</th>
+                            <th>Giá thỏa thuận</th>
+                            <th>Số người thuê</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.SelectedRooms.Count; i++)
+                        {
+                            var room = Model.SelectedRooms[i];
+                            var tenantCount = ViewBag.RoomTenantCounts != null &&
+                                            ViewBag.RoomTenantCounts.ContainsKey(room.RoomId)
+                                            ? ViewBag.RoomTenantCounts[room.RoomId] : 0;
+                            <tr class="room-row" data-room-id="@room.RoomId" data-index="@i">
+                                <td>
+                                    <strong>@room.RoomName</strong>
+                                </td>
+                                <td>
+                                    <span class="text-muted">@room.DefaultPrice.ToString("N0") VNĐ</span>
+                                </td>
+                                <td>
+                                    @Html.TextBoxFor(m => m.SelectedRooms[i].AgreedPrice,
+                                        new { @class = "form-control money room-price", data_room_id = room.RoomId })
+                                </td>
+                                <td>
+                                    <span class="badge badge-info tenant-count-badge">
+                                        <i class="fas fa-users"></i> @tenantCount người
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th>Tổng cộng:</th>
+                            <th>
+                                <span id="totalRent">0</span> VNĐ
+                            </th>
+                            <th colspan="2">
+                                <span id="totalRooms">@Model.SelectedRooms.Count</span> phòng
+                            </th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                Hợp đồng chưa có phòng nào.
+                <a href="/ContractRooms">Thêm phòng ngay</a>
+            </div>
+        }
+    </div>
+</div>
