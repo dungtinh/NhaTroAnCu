@@ -62,6 +62,8 @@ namespace NhaTroAnCu.Models
         public decimal? PriceAgreed { get; set; }
 
         public List<TenantViewModel> Tenants { get; set; }
+          public List<CompanyTenantViewModel> CompanyTenants { get; set; }
+    public int[] DeletedContractTenantIds { get; set; }
 
         public ContractEditViewModel()
         {
