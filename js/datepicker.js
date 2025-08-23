@@ -34,34 +34,6 @@
     $('.datetime').each(function () {
         if (!$(this).val() || $(this).val() === '') {
             $(this).datepicker('setDate', today);
-        } else {
-            // Fix format nếu value đang ở dạng MM/dd/yyyy
-            var currentVal = $(this).val();
-            if (currentVal && currentVal.indexOf('/') > -1) {
-                var parts = currentVal.split('/');
-                if (parts.length === 3) {
-                    var month = parseInt(parts[0]);
-                    var day = parseInt(parts[1]);
-                    var year = parseInt(parts[2]);
-
-                    // Kiểm tra nếu format là MM/dd/yyyy (month <= 12, day có thể > 12)
-                    if (month <= 12 && day > 12) {
-                        // Đây chắc chắn là MM/dd/yyyy, swap lại
-                        var correctedDate = dd + '/' + mm + '/' + yyyy;
-                        $(this).val(correctedDate);
-                        $(this).datepicker('update', correctedDate);
-                    } else if (month > 12 && day <= 31) {
-                        // Đây đã là dd/MM/yyyy, giữ nguyên
-                        // Không làm gì
-                    } else if (month <= 12 && day <= 12) {
-                        // Không chắc chắn, có thể hỏi user hoặc dựa vào context
-                        // Mặc định coi là đang sai format (MM/dd/yyyy)
-                        var correctedDate = day + '/' + month + '/' + year;
-                        $(this).val(correctedDate);
-                        $(this).datepicker('update', correctedDate);
-                    }
-                }
-            }
         }
     });
 
