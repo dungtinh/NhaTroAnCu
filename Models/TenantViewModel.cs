@@ -8,6 +8,30 @@ using DataType = System.ComponentModel.DataAnnotations.DataType;
 
 namespace NhaTroAnCu.Models
 {
+    public class TenantManagementViewModel
+    {
+        public TenantManagementViewModel()
+        {
+            Tenants = new List<TenantViewModel>();
+        }
+
+        /// <summary>
+        /// Danh sách người thuê
+        /// </summary>
+        public List<TenantViewModel> Tenants { get; set; }
+
+        /// <summary>
+        /// Contract ID (nếu đang edit contract existing)
+        /// </summary>
+        public int ContractId { get; set; }
+
+
+        /// <summary>
+        /// Room ID (cho hợp đồng cá nhân - 1 phòng)
+        /// </summary>
+        public int RoomId { get; set; }
+    }
+
     public class TenantViewModel
     {
         public int? Id { get; set; } // ContractTenant.Id
