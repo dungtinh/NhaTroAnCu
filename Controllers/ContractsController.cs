@@ -459,282 +459,7 @@ namespace NhaTroAnCu.Controllers
                 db?.Dispose();
             }
             base.Dispose(disposing);
-        }
-        public ActionResult Edit(int? id)
-        {
-            if (id == null)
-            {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
-            }
-
-            Contract contract = db.Contracts
-                .Include(c => c.ContractRooms.Select(cr => cr.Room))
-                .Include(c => c.ContractTenants.Select(ct => ct.Tenant))
-                .Include(c => c.Company)
-                .FirstOrDefault(c => c.Id == id);
-
-            if (contract == null)
-            {
-                return HttpNotFound();
-            }
-
-            // Create ViewModel
-            var model = new ContractEditViewModel
-            {
-                Id = contract.Id,
-                ContractType = contract.ContractType,
-                StartDate = contract.StartDate,
-                EndDate = contract.EndDate,
-                MoveInDate = contract.MoveInDate,
-                ElectricityPrice = contract.ElectricityPrice,
-                WaterPrice = contract.WaterPrice,
-                Note = contract.Note,
-                Status = contract.Status,
-                ContractScanFilePath = contract.ContractScanFilePath,
-                CompanyId = contract.CompanyId,
-                CompanyName = contract.Company?.CompanyName
-            };
-
-            if (contract.ContractType == "Company")
-            {
-                // Load rooms for company contract
-                model.SelectedRooms = contract.ContractRooms.Select(cr => new RoomSelectionModel
-                {
-                    RoomId = cr.RoomId,
-                    RoomName = cr.Room.Name,
-                    DefaultPrice = cr.Room.DefaultPrice,
-                    AgreedPrice = cr.PriceAgreed
-                }).ToList();
-            }
-            else // Individual contract
-            {
-                // Get room and price for individual contract
-                var contractRoom = contract.ContractRooms.FirstOrDefault();
-                if (contractRoom != null)
-                {
-                    model.RoomId = contractRoom.RoomId;
-                    model.PriceAgreed = contractRoom.PriceAgreed;
-                }
-
-                // Load tenants
-                model.Tenants = contract.ContractTenants.Select(ct => new TenantViewModel
-                {
-                    Id = ct.TenantId,
-                    FullName = ct.Tenant.FullName,
-                    IdentityCard = ct.Tenant.IdentityCard,
-                    PhoneNumber = ct.Tenant.PhoneNumber,
-                    BirthDate = ct.Tenant.BirthDate,
-                    Gender = ct.Tenant.Gender,
-                    Ethnicity = ct.Tenant.Ethnicity,
-                    PermanentAddress = ct.Tenant.PermanentAddress,
-                    VehiclePlate = ct.Tenant.VehiclePlate
-                }).ToList();
-
-                // Load available rooms for dropdown
-                var occupiedRoomIds = db.ContractRooms
-                    .Where(cr => cr.Contract.Status == "Active" && cr.ContractId != id)
-                    .Select(cr => cr.RoomId)
-                    .ToList();
-
-                ViewBag.AvailableRooms = db.Rooms
-                    .Where(r => !occupiedRoomIds.Contains(r.Id) || r.Id == model.RoomId)
-                    .Select(r => new SelectListItem
-                    {
-                        Value = r.Id.ToString(),
-                        Text = r.Name + " - " + r.DefaultPrice.ToString("N0") + " VNĐ"
-                    })
-                    .ToList();
-            }
-
-            return View(model);
-        }
-
-        // POST: Contracts/Edit/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Edit(ContractEditViewModel model, HttpPostedFileBase ContractScanFile)
-        {
-            if (ModelState.IsValid)
-            {
-                using (var transaction = db.Database.BeginTransaction())
-                {
-                    try
-                    {
-                        // Get existing contract
-                        var contract = db.Contracts
-                            .Include(c => c.ContractRooms)
-                            .Include(c => c.ContractTenants)
-                            .FirstOrDefault(c => c.Id == model.Id);
-
-                        if (contract == null)
-                        {
-                            return HttpNotFound();
-                        }
-
-                        // Update basic contract information
-                        contract.StartDate = model.StartDate;
-                        contract.EndDate = model.EndDate;
-                        contract.MoveInDate = model.MoveInDate;
-                        contract.ElectricityPrice = model.ElectricityPrice;
-                        contract.WaterPrice = model.WaterPrice;
-                        contract.Note = model.Note;
-                        contract.Status = model.Status;
-
-                        // Handle file upload
-                        if (ContractScanFile != null && ContractScanFile.ContentLength > 0)
-                        {
-                            var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
-                            var extension = Path.GetExtension(ContractScanFile.FileName).ToLower();
-
-                            if (!allowedExtensions.Contains(extension))
-                            {
-                                ModelState.AddModelError("", "Chỉ chấp nhận file PDF, JPG hoặc PNG");
-                                transaction.Rollback();
-                                return View(model);
-                            }
-
-                            if (ContractScanFile.ContentLength > 5 * 1024 * 1024) // 5MB
-                            {
-                                ModelState.AddModelError("", "File không được vượt quá 5MB");
-                                transaction.Rollback();
-                                return View(model);
-                            }
-
-                            // Delete old file if exists
-                            if (!string.IsNullOrEmpty(contract.ContractScanFilePath))
-                            {
-                                var oldFilePath = Server.MapPath(contract.ContractScanFilePath);
-                                if (System.IO.File.Exists(oldFilePath))
-                                {
-                                    System.IO.File.Delete(oldFilePath);
-                                }
-                            }
-
-                            // Save new file
-                            var fileName = $"Contract_{model.Id}_{DateTime.Now:yyyyMMddHHmmss}{extension}";
-                            var uploadPath = Server.MapPath("~/Uploads/Contracts");
-
-                            if (!Directory.Exists(uploadPath))
-                            {
-                                Directory.CreateDirectory(uploadPath);
-                            }
-
-                            var filePath = Path.Combine(uploadPath, fileName);
-                            ContractScanFile.SaveAs(filePath);
-                            contract.ContractScanFilePath = $"/Uploads/Contracts/{fileName}";
-                        }
-
-                        if (contract.ContractType == "Company")
-                        {
-                            // Update rooms for company contract
-                            UpdateCompanyContractRooms(contract, model);
-                        }
-                        else // Individual contract
-                        {
-                            // Update room for individual contract
-                            UpdateIndividualContractRoom(contract, model);
-
-                            // Update tenants
-                            UpdateContractTenants(contract, model);
-                        }
-
-                        db.SaveChanges();
-                        transaction.Commit();
-
-                        TempData["Success"] = "Cập nhật hợp đồng thành công!";
-                        return RedirectToAction("Details", new { id = contract.Id });
-                    }
-                    catch (Exception ex)
-                    {
-                        transaction.Rollback();
-                        ModelState.AddModelError("", "Có lỗi xảy ra: " + ex.Message);
-                    }
-                }
-            }
-
-            // Reload data for view if validation fails
-            if (model.ContractType == "Individual")
-            {
-                var occupiedRoomIds = db.ContractRooms
-                    .Where(cr => cr.Contract.Status == "Active" && cr.ContractId != model.Id)
-                    .Select(cr => cr.RoomId)
-                    .ToList();
-
-                ViewBag.AvailableRooms = db.Rooms
-                    .Where(r => !occupiedRoomIds.Contains(r.Id) || r.Id == model.RoomId)
-                    .Select(r => new SelectListItem
-                    {
-                        Value = r.Id.ToString(),
-                        Text = r.Name + " - " + r.DefaultPrice.ToString("N0") + " VNĐ"
-                    })
-                    .ToList();
-            }
-
-            return View(model);
-        }
-
-        // Helper method to update rooms for company contract
-        private void UpdateCompanyContractRooms(Contract contract, ContractEditViewModel model)
-        {
-            // Remove old contract rooms
-            db.ContractRooms.RemoveRange(contract.ContractRooms);
-
-            // Add new contract rooms
-            if (model.SelectedRooms != null && model.SelectedRooms.Any())
-            {
-                foreach (var room in model.SelectedRooms)
-                {
-                    var contractRoom = new ContractRoom
-                    {
-                        ContractId = contract.Id,
-                        RoomId = room.RoomId,
-                        PriceAgreed = room.AgreedPrice,
-                        Notes = ""
-                    };
-                    db.ContractRooms.Add(contractRoom);
-
-                    // Update room status
-                    var roomEntity = db.Rooms.Find(room.RoomId);
-                    if (roomEntity != null)
-                    {
-                        roomEntity.IsOccupied = contract.Status == "Active";
-                    }
-                }
-
-                // Calculate total price for company contract
-                contract.PriceAgreed = model.SelectedRooms.Sum(r => r.AgreedPrice);
-            }
-        }
-
-        // Helper method to update room for individual contract
-        private void UpdateIndividualContractRoom(Contract contract, ContractEditViewModel model)
-        {
-            // Remove old contract room
-            db.ContractRooms.RemoveRange(contract.ContractRooms);
-
-            if (model.RoomId.HasValue && model.PriceAgreed.HasValue)
-            {
-                // Add new contract room
-                var contractRoom = new ContractRoom
-                {
-                    ContractId = contract.Id,
-                    RoomId = model.RoomId.Value,
-                    PriceAgreed = model.PriceAgreed.Value,
-                    Notes = ""
-                };
-                db.ContractRooms.Add(contractRoom);
-
-                // Update room status
-                var room = db.Rooms.Find(model.RoomId.Value);
-                if (room != null)
-                {
-                    room.IsOccupied = contract.Status == "Active";
-                }
-
-                // Update contract price
-                contract.PriceAgreed = model.PriceAgreed.Value;
-            }
-        }
+        }        
 
         // Helper method to update tenants
         private void UpdateContractTenants(Contract contract, ContractEditViewModel model)
@@ -835,6 +560,522 @@ namespace NhaTroAnCu.Controllers
                 .ToList();
 
             return Json(availableRooms, JsonRequestBehavior.AllowGet);
+        }
+        // GET: Contracts/Edit/5
+        public ActionResult Edit(int? id)
+        {
+            if (id == null)
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+            }
+
+            Contract contract = db.Contracts
+                .Include(c => c.ContractRooms.Select(cr => cr.Room))
+                .Include(c => c.ContractTenants.Select(ct => ct.Tenant))
+                .Include(c => c.Company)
+                .FirstOrDefault(c => c.Id == id);
+
+            if (contract == null)
+            {
+                return HttpNotFound();
+            }
+
+            // Create ViewModel
+            var model = new ContractEditViewModel
+            {
+                Id = contract.Id,
+                ContractType = contract.ContractType,
+                StartDate = contract.StartDate,
+                EndDate = contract.EndDate,
+                MoveInDate = contract.MoveInDate,
+                ElectricityPrice = contract.ElectricityPrice,
+                WaterPrice = contract.WaterPrice,
+                Note = contract.Note,
+                Status = contract.Status,
+                ContractScanFilePath = contract.ContractScanFilePath,
+                CompanyId = contract.CompanyId,
+                CompanyName = contract.Company?.CompanyName
+            };
+
+            if (contract.ContractType == "Company")
+            {
+                // Load rooms for company contract
+                model.SelectedRooms = contract.ContractRooms.Select(cr => new RoomSelectionModel
+                {
+                    RoomId = cr.RoomId,
+                    RoomName = cr.Room.Name,
+                    DefaultPrice = cr.Room.DefaultPrice,
+                    AgreedPrice = cr.PriceAgreed
+                }).ToList();
+            }
+            else // Individual contract
+            {
+                // Get room and price for individual contract
+                var contractRoom = contract.ContractRooms.FirstOrDefault();
+                if (contractRoom != null)
+                {
+                    model.RoomId = contractRoom.RoomId;
+                    model.PriceAgreed = contractRoom.PriceAgreed;
+                }
+
+                // Load tenants
+                model.Tenants = contract.ContractTenants.Select(ct => new TenantViewModel
+                {
+                    Id = ct.TenantId,
+                    FullName = ct.Tenant.FullName,
+                    IdentityCard = ct.Tenant.IdentityCard,
+                    PhoneNumber = ct.Tenant.PhoneNumber,
+                    BirthDate = ct.Tenant.BirthDate,
+                    Gender = ct.Tenant.Gender,
+                    Ethnicity = ct.Tenant.Ethnicity,
+                    PermanentAddress = ct.Tenant.PermanentAddress,
+                    VehiclePlate = ct.Tenant.VehiclePlate
+                }).ToList();
+
+                // Load available rooms for dropdown
+                // CÁCH 1: Lấy data trước rồi format trong memory
+                var occupiedRoomIds = db.ContractRooms
+                    .Where(cr => cr.Contract.Status == "Active" && cr.ContractId != id)
+                    .Select(cr => cr.RoomId)
+                    .ToList();
+
+                var availableRooms = db.Rooms
+                    .Where(r => !occupiedRoomIds.Contains(r.Id) || r.Id == model.RoomId)
+                    .ToList(); // Thực thi query trước
+
+                // Format trong memory sau khi đã lấy data
+                ViewBag.AvailableRooms = availableRooms.Select(r => new SelectListItem
+                {
+                    Value = r.Id.ToString(),
+                    Text = r.Name + " - " + r.DefaultPrice.ToString("N0") + " VNĐ",
+                    Selected = r.Id == model.RoomId
+                }).ToList();
+            }
+
+            return View(model);
+        }
+
+        // AJAX method để lấy danh sách phòng available cho hợp đồng công ty
+        [HttpGet]
+        public JsonResult GetAvailableRoomsForCompany(int contractId)
+        {
+            try
+            {
+                // Lấy hợp đồng hiện tại
+                var currentContract = db.Contracts
+                    .Include(c => c.ContractRooms)
+                    .FirstOrDefault(c => c.Id == contractId);
+
+                if (currentContract == null)
+                {
+                    return Json(new { success = false, message = "Hợp đồng không tồn tại" }, JsonRequestBehavior.AllowGet);
+                }
+
+                if (currentContract.ContractType != "Company")
+                {
+                    return Json(new { success = false, message = "Không phải hợp đồng công ty" }, JsonRequestBehavior.AllowGet);
+                }
+
+                // Lấy danh sách phòng đã bị chiếm bởi các hợp đồng Active khác
+                var occupiedRoomIds = db.ContractRooms
+                    .Where(cr => cr.Contract.Status == "Active" && cr.ContractId != contractId)
+                    .Select(cr => cr.RoomId)
+                    .ToList();
+
+                // Lấy danh sách phòng hiện tại của hợp đồng
+                var currentRoomIds = currentContract.ContractRooms.Select(cr => cr.RoomId).ToList();
+
+                // Lấy tất cả phòng available hoặc đang thuộc hợp đồng hiện tại
+                var availableRooms = db.Rooms
+                    .Where(r => !occupiedRoomIds.Contains(r.Id) || currentRoomIds.Contains(r.Id))
+                    .Select(r => new
+                    {
+                        Id = r.Id,
+                        Name = r.Name,
+                        DefaultPrice = r.DefaultPrice,
+                        FormattedPrice = r.DefaultPrice.ToString("N0") + " VNĐ",
+                        IsCurrentlySelected = currentRoomIds.Contains(r.Id)
+                    })
+                    .OrderBy(r => r.Name)
+                    .ToList();
+
+                return Json(new { success = true, rooms = availableRooms }, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Có lỗi xảy ra: " + ex.Message }, JsonRequestBehavior.AllowGet);
+            }
+        }
+
+        // POST: Contracts/Edit/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Edit(ContractEditViewModel model, HttpPostedFileBase ContractScanFile)
+        {
+            // Parse dates từ form
+            if (Request.Form["StartDate"] != null)
+            {
+                var startDateStr = Request.Form["StartDate"];
+                var parsedDate = DateTimeHelper.ParseDate(startDateStr);
+                if (parsedDate.HasValue)
+                    model.StartDate = parsedDate.Value;
+            }
+
+            if (Request.Form["EndDate"] != null)
+            {
+                var endDateStr = Request.Form["EndDate"];
+                var parsedDate = DateTimeHelper.ParseDate(endDateStr);
+                if (parsedDate.HasValue)
+                    model.EndDate = parsedDate.Value;
+            }
+
+            if (Request.Form["MoveInDate"] != null)
+            {
+                var moveInDateStr = Request.Form["MoveInDate"];
+                var parsedDate = DateTimeHelper.ParseDate(moveInDateStr);
+                if (parsedDate.HasValue)
+                    model.MoveInDate = parsedDate.Value;
+            }
+
+            if (ModelState.IsValid)
+            {
+                using (var transaction = db.Database.BeginTransaction())
+                {
+                    try
+                    {
+                        // Get existing contract
+                        var contract = db.Contracts
+                            .Include(c => c.ContractRooms)
+                            .Include(c => c.ContractTenants)
+                            .FirstOrDefault(c => c.Id == model.Id);
+
+                        if (contract == null)
+                        {
+                            return HttpNotFound();
+                        }
+
+                        // Update basic contract info
+                        contract.StartDate = model.StartDate;
+                        contract.EndDate = model.EndDate;
+                        contract.MoveInDate = model.MoveInDate;
+                        contract.ElectricityPrice = model.ElectricityPrice;
+                        contract.WaterPrice = model.WaterPrice;
+                        contract.Note = model.Note;
+                        contract.Status = model.Status;
+
+                        // Handle contract scan file upload
+                        if (ContractScanFile != null && ContractScanFile.ContentLength > 0)
+                        {
+                            var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
+                            var extension = Path.GetExtension(ContractScanFile.FileName).ToLower();
+
+                            if (!allowedExtensions.Contains(extension))
+                            {
+                                ModelState.AddModelError("", "File phải là PDF, JPG hoặc PNG");
+                                return View(model);
+                            }
+
+                            if (ContractScanFile.ContentLength > 5 * 1024 * 1024) // 5MB
+                            {
+                                ModelState.AddModelError("", "File không được vượt quá 5MB");
+                                return View(model);
+                            }
+
+                            // Delete old file if exists
+                            if (!string.IsNullOrEmpty(contract.ContractScanFilePath))
+                            {
+                                var oldFilePath = Server.MapPath(contract.ContractScanFilePath);
+                                if (System.IO.File.Exists(oldFilePath))
+                                {
+                                    System.IO.File.Delete(oldFilePath);
+                                }
+                            }
+
+                            // Save new file
+                            var fileName = $"Contract_{model.Id}_{DateTime.Now:yyyyMMddHHmmss}{extension}";
+                            var uploadPath = Server.MapPath("~/Uploads/Contracts");
+
+                            if (!Directory.Exists(uploadPath))
+                            {
+                                Directory.CreateDirectory(uploadPath);
+                            }
+
+                            var filePath = Path.Combine(uploadPath, fileName);
+                            ContractScanFile.SaveAs(filePath);
+                            contract.ContractScanFilePath = $"/Uploads/Contracts/{fileName}";
+                        }
+
+                        // Update rooms based on contract type
+                        if (contract.ContractType == "Company")
+                        {
+                            UpdateCompanyContractRooms(contract, model);
+                        }
+                        else // Individual contract
+                        {
+                            UpdateIndividualContractRoom(contract, model);
+                            UpdateIndividualContractTenants(contract, model);
+                        }
+
+                        db.SaveChanges();
+                        transaction.Commit();
+
+                        TempData["Success"] = "Cập nhật hợp đồng thành công!";
+
+                        // Redirect based on contract type
+                        if (contract.ContractType == "Company")
+                        {
+                            return RedirectToAction("Details", new { id = contract.Id });
+                        }
+                        else
+                        {
+                            // For individual contract, redirect to room details
+                            var roomId = contract.ContractRooms.FirstOrDefault()?.RoomId;
+                            if (roomId.HasValue)
+                            {
+                                return RedirectToAction("Details", "Rooms", new { id = roomId.Value });
+                            }
+                            return RedirectToAction("Details", new { id = contract.Id });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        ModelState.AddModelError("", "Có lỗi xảy ra: " + ex.Message);
+                    }
+                }
+            }
+
+            // Reload data for view if validation fails
+            ReloadEditViewData(model);
+            return View(model);
+        }
+
+        // Helper method to update rooms for company contract
+        private void UpdateCompanyContractRooms(Contract contract, ContractEditViewModel model)
+        {
+            // Get current room IDs
+            var currentRoomIds = contract.ContractRooms.Select(cr => cr.RoomId).ToList();
+            var newRoomIds = model.SelectedRooms?.Select(r => r.RoomId).ToList() ?? new List<int>();
+
+            // Remove deleted rooms
+            var roomsToRemove = contract.ContractRooms.Where(cr => !newRoomIds.Contains(cr.RoomId)).ToList();
+            foreach (var room in roomsToRemove)
+            {
+                // Update room status
+                var roomEntity = db.Rooms.Find(room.RoomId);
+                if (roomEntity != null)
+                {
+                    roomEntity.IsOccupied = false;
+                }
+                db.ContractRooms.Remove(room);
+            }
+
+            // Update existing and add new rooms
+            if (model.SelectedRooms != null && model.SelectedRooms.Any())
+            {
+                decimal totalPrice = 0;
+
+                foreach (var roomModel in model.SelectedRooms)
+                {
+                    var existingRoom = contract.ContractRooms.FirstOrDefault(cr => cr.RoomId == roomModel.RoomId);
+
+                    if (existingRoom != null)
+                    {
+                        // Update existing room price
+                        existingRoom.PriceAgreed = roomModel.AgreedPrice;
+                    }
+                    else
+                    {
+                        // Add new room
+                        var newRoom = new ContractRoom
+                        {
+                            ContractId = contract.Id,
+                            RoomId = roomModel.RoomId,
+                            PriceAgreed = roomModel.AgreedPrice,
+                            Notes = ""
+                        };
+                        db.ContractRooms.Add(newRoom);
+
+                        // Update room status
+                        var roomEntity = db.Rooms.Find(roomModel.RoomId);
+                        if (roomEntity != null)
+                        {
+                            roomEntity.IsOccupied = contract.Status == "Active";
+                        }
+                    }
+
+                    totalPrice += roomModel.AgreedPrice;
+                }
+
+                // Update total contract price
+                contract.PriceAgreed = totalPrice;
+            }
+            else
+            {
+                throw new Exception("Hợp đồng công ty phải có ít nhất một phòng");
+            }
+        }
+
+        // Helper method to update room for individual contract
+        private void UpdateIndividualContractRoom(Contract contract, ContractEditViewModel model)
+        {
+            if (!model.RoomId.HasValue || !model.PriceAgreed.HasValue)
+            {
+                throw new Exception("Vui lòng chọn phòng và nhập giá thuê");
+            }
+
+            // Get current room
+            var currentRoom = contract.ContractRooms.FirstOrDefault();
+
+            if (currentRoom != null)
+            {
+                // If room changed, update old room status
+                if (currentRoom.RoomId != model.RoomId.Value)
+                {
+                    var oldRoom = db.Rooms.Find(currentRoom.RoomId);
+                    if (oldRoom != null)
+                    {
+                        oldRoom.IsOccupied = false;
+                    }
+
+                    // Update to new room
+                    currentRoom.RoomId = model.RoomId.Value;
+                }
+
+                // Update price
+                currentRoom.PriceAgreed = model.PriceAgreed.Value;
+            }
+            else
+            {
+                // Create new contract room if not exists
+                var contractRoom = new ContractRoom
+                {
+                    ContractId = contract.Id,
+                    RoomId = model.RoomId.Value,
+                    PriceAgreed = model.PriceAgreed.Value,
+                    Notes = ""
+                };
+                db.ContractRooms.Add(contractRoom);
+            }
+
+            // Update new room status
+            var newRoom = db.Rooms.Find(model.RoomId.Value);
+            if (newRoom != null)
+            {
+                newRoom.IsOccupied = contract.Status == "Active";
+            }
+
+            // Update contract price
+            contract.PriceAgreed = model.PriceAgreed.Value;
+        }
+
+        // Helper method to update tenants for individual contract
+        private void UpdateIndividualContractTenants(Contract contract, ContractEditViewModel model)
+        {
+            if (model.Tenants == null || !model.Tenants.Any())
+            {
+                throw new Exception("Hợp đồng cá nhân phải có ít nhất một người thuê");
+            }
+
+            // Get existing tenant IDs
+            var existingTenantIds = contract.ContractTenants.Select(ct => ct.TenantId).ToList();
+            var updatedTenantIds = model.Tenants.Where(t => t.Id.HasValue).Select(t => t.Id.Value).ToList();
+
+            // Remove deleted tenants
+            var tenantsToRemove = contract.ContractTenants
+                .Where(ct => !updatedTenantIds.Contains(ct.TenantId))
+                .ToList();
+
+            foreach (var ct in tenantsToRemove)
+            {
+                db.ContractTenants.Remove(ct);
+
+                // Check if tenant is associated with other contracts
+                var tenant = db.Tenants.Find(ct.TenantId);
+                if (tenant != null)
+                {
+                    var hasOtherContracts = db.ContractTenants
+                        .Any(c => c.TenantId == tenant.Id && c.ContractId != contract.Id);
+
+                    if (!hasOtherContracts)
+                    {
+                        db.Tenants.Remove(tenant);
+                    }
+                }
+            }
+
+            // Update existing and add new tenants
+            foreach (var tenantModel in model.Tenants)
+            {
+                Tenant tenant;
+
+                if (tenantModel.Id.HasValue)
+                {
+                    // Update existing tenant
+                    tenant = db.Tenants.Find(tenantModel.Id.Value);
+                    if (tenant != null)
+                    {
+                        tenant.FullName = tenantModel.FullName;
+                        tenant.IdentityCard = tenantModel.IdentityCard;
+                        tenant.PhoneNumber = tenantModel.PhoneNumber;
+                        tenant.BirthDate = tenantModel.BirthDate;
+                        tenant.Gender = tenantModel.Gender;
+                        tenant.Ethnicity = tenantModel.Ethnicity;
+                        tenant.PermanentAddress = tenantModel.PermanentAddress;
+                        tenant.VehiclePlate = tenantModel.VehiclePlate;
+                    }
+                }
+                else
+                {
+                    // Create new tenant
+                    tenant = new Tenant
+                    {
+                        FullName = tenantModel.FullName,
+                        IdentityCard = tenantModel.IdentityCard,
+                        PhoneNumber = tenantModel.PhoneNumber,
+                        BirthDate = tenantModel.BirthDate,
+                        Gender = tenantModel.Gender,
+                        Ethnicity = tenantModel.Ethnicity,
+                        PermanentAddress = tenantModel.PermanentAddress,
+                        VehiclePlate = tenantModel.VehiclePlate
+                    };
+                    db.Tenants.Add(tenant);
+                    db.SaveChanges(); // Save to get the ID
+
+                    // Create contract-tenant relationship
+                    var contractTenant = new ContractTenant
+                    {
+                        ContractId = contract.Id,
+                        TenantId = tenant.Id,
+                        RoomId = model.RoomId.Value
+                    };
+                    db.ContractTenants.Add(contractTenant);
+                }
+            }
+        }
+
+        // Helper method to reload view data if validation fails
+        private void ReloadEditViewData(ContractEditViewModel model)
+        {
+            if (model.ContractType == "Individual")
+            {
+                // Reload available rooms for individual contract
+                var occupiedRoomIds = db.ContractRooms
+                    .Where(cr => cr.Contract.Status == "Active" && cr.ContractId != model.Id)
+                    .Select(cr => cr.RoomId)
+                    .ToList();
+
+                ViewBag.AvailableRooms = db.Rooms
+                    .Where(r => !occupiedRoomIds.Contains(r.Id) || r.Id == model.RoomId)
+                    .Select(r => new SelectListItem
+                    {
+                        Value = r.Id.ToString(),
+                        Text = r.Name + " - " + r.DefaultPrice.ToString("N0") + " VNĐ",
+                        Selected = r.Id == model.RoomId
+                    })
+                    .ToList();
+            }
+            // Không cần load rooms cho Company contract vì sử dụng AJAX
         }
     }
 }

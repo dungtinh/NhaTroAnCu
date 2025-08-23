@@ -18,7 +18,11 @@
         @Html.AntiForgeryToken()
         @Html.HiddenFor(m => m.Id)
         @Html.HiddenFor(m => m.ContractType)
+        @Html.HiddenFor(m => m.CompanyId)
         @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+        <!-- Alert Container -->
+        <div id="alert-container"></div>
 
         <!-- Thông tin loại hợp đồng (chỉ hiển thị, không cho sửa) -->
         <div class="form-section">
@@ -36,6 +40,8 @@
         </div>
 
         <!-- Thông tin chung -->
+        <!-- Sửa lại phần thông tin hợp đồng trong Edit.cshtml -->
+
         <div class="form-section">
             <div class="section-title">
                 <i class="fas fa-file-contract"></i> Thông Tin Hợp Đồng
@@ -44,19 +50,31 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="StartDate"><i class="fas fa-calendar-alt"></i> Ngày bắt đầu</label>
-                    @Html.TextBoxFor(m => m.StartDate, new { @class = "form-control datetime" , @Value = Model.StartDate.ToString("dd/MM/yyyy") })
+                    @Html.TextBoxFor(m => m.StartDate, "{0:dd/MM/yyyy}", new
+                    {
+                        @class = "form-control datetime",
+                        @placeholder = "dd/MM/yyyy"
+                    })
                     @Html.ValidationMessageFor(m => m.StartDate, "", new { @class = "text-danger" })
                 </div>
 
                 <div class="form-group">
                     <label for="EndDate"><i class="fas fa-calendar-check"></i> Ngày kết thúc</label>
-                    @Html.TextBoxFor(m => m.EndDate, new { @class = "form-control datetime",  @Value = Model.EndDate.ToString("dd/MM/yyyy") })
+                    @Html.TextBoxFor(m => m.EndDate, "{0:dd/MM/yyyy}", new
+                    {
+                        @class = "form-control datetime",
+                        @placeholder = "dd/MM/yyyy"
+                    })
                     @Html.ValidationMessageFor(m => m.EndDate, "", new { @class = "text-danger" })
                 </div>
 
                 <div class="form-group">
                     <label for="MoveInDate"><i class="fas fa-truck-moving"></i> Ngày dọn vào</label>
-                    @Html.TextBoxFor(m => m.MoveInDate, new { @class = "form-control datetime", @Value = Model.MoveInDate.ToString("dd/MM/yyyy") })
+                    @Html.TextBoxFor(m => m.MoveInDate, "{0:dd/MM/yyyy}", new
+                    {
+                        @class = "form-control datetime",
+                        @placeholder = "dd/MM/yyyy"
+                    })
                     @Html.ValidationMessageFor(m => m.MoveInDate, "", new { @class = "text-danger" })
                 </div>
             </div>
@@ -64,23 +82,23 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="ElectricityPrice"><i class="fas fa-bolt"></i> Giá điện (VNĐ/kWh)</label>
-                    @Html.TextBoxFor(m => m.ElectricityPrice, new { @class = "form-control currency-input money", @placeholder = "VD: 3,500" })
+                    @Html.TextBoxFor(m => m.ElectricityPrice, new { @class = "form-control money" })
                     @Html.ValidationMessageFor(m => m.ElectricityPrice, "", new { @class = "text-danger" })
                 </div>
 
                 <div class="form-group">
                     <label for="WaterPrice"><i class="fas fa-tint"></i> Giá nước (VNĐ/m³)</label>
-                    @Html.TextBoxFor(m => m.WaterPrice, new { @class = "form-control currency-input money", @placeholder = "VD: 10,000" })
+                    @Html.TextBoxFor(m => m.WaterPrice, new { @class = "form-control money" })
                     @Html.ValidationMessageFor(m => m.WaterPrice, "", new { @class = "text-danger" })
                 </div>
 
                 <div class="form-group">
-                    <label for="Status"><i class="fas fa-toggle-on"></i> Trạng thái</label>
-                    @Html.DropDownListFor(m => m.Status, new SelectList(new[] {
-                        new { Value = "Active", Text = "Đang hiệu lực" },
-                        new { Value = "Pending", Text = "Đang chờ" },
-                        new { Value = "Ended", Text = "Đã kết thúc" }
-                    }, "Value", "Text", Model.Status), new { @class = "form-control" })
+                    <label for="Status"><i class="fas fa-flag"></i> Trạng thái</label>
+                    @Html.DropDownListFor(m => m.Status, new List<SelectListItem>
+                    {
+                        new SelectListItem { Value = "Active", Text = "Đang hoạt động" },
+                        new SelectListItem { Value = "Ended", Text = "Đã kết thúc" }
+                    }, "-- Chọn trạng thái --", new { @class = "form-control" })
                     @Html.ValidationMessageFor(m => m.Status, "", new { @class = "text-danger" })
                 </div>
             </div>
@@ -92,136 +110,171 @@
             </div>
         </div>
 
-        <!-- Danh sách phòng cho hợp đồng công ty -->
         if (Model.ContractType == "Company")
         {
+            <!-- Danh sách phòng cho hợp đồng công ty -->
             <div class="form-section">
                 <div class="section-title">
                     <i class="fas fa-door-open"></i> Danh Sách Phòng Thuê
+                    <button type="button" class="btn btn-sm btn-primary float-right" id="btnAddRoom">
+                        <i class="fas fa-plus"></i> Thêm phòng
+                    </button>
                 </div>
 
-                <div class="room-selection-grid" id="companyRoomGrid">
-                    @for (int i = 0; i < Model.SelectedRooms.Count; i++)
+                <div id="room-list">
+                    @if (Model.SelectedRooms != null && Model.SelectedRooms.Any())
                     {
-                        <div class="room-card selected" data-room-id="@Model.SelectedRooms[i].RoomId">
-                            @Html.HiddenFor(m => m.SelectedRooms[i].RoomId)
-                            @Html.HiddenFor(m => m.SelectedRooms[i].RoomName)
-
-                            <div class="room-card-header">
-                                <span class="room-number">@Model.SelectedRooms[i].RoomName</span>
-                                <button type="button" class="btn-remove-room" onclick="removeRoom(this)">
-                                    <i class="fas fa-times"></i>
-                                </button>
+                        for (int i = 0; i < Model.SelectedRooms.Count; i++)
+                        {
+                            <div class="room-item border p-3 mb-2" data-room-id="@Model.SelectedRooms[i].RoomId">
+                                <div class="row align-items-center">
+                                    <div class="col-md-4">
+                                        <strong>@Model.SelectedRooms[i].RoomName</strong>
+                                        @Html.HiddenFor(m => m.SelectedRooms[i].RoomId)
+                                        @Html.HiddenFor(m => m.SelectedRooms[i].RoomName)
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="input-group">
+                                            @Html.TextBoxFor(m => m.SelectedRooms[i].AgreedPrice,
+                                                new
+                                                     {
+                                                         @class = "form-control money room-price-input",
+                                                      @data_room_id = Model.SelectedRooms[i].RoomId
+                                                     })
+                                            <span class="input-group-addon">VNĐ</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button type="button" class="btn btn-danger btn-sm btn-remove-room"
+                                                data-room-id="@Model.SelectedRooms[i].RoomId">
+                                            <i class="fa fa-trash"></i> Xóa
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="room-card-body">
-                                <label>Giá thuê thỏa thuận:</label>
-                                @Html.TextBoxFor(m => m.SelectedRooms[i].AgreedPrice, new { @class = "form-control currency-input", @placeholder = "Nhập giá thuê" })
-                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> Chưa có phòng nào được chọn
                         </div>
                     }
                 </div>
 
-                <!-- Nút thêm phòng mới -->
-                <button type="button" class="btn btn-secondary mt-3" onclick="showAddRoomModal()">
-                    <i class="fas fa-plus"></i> Thêm phòng
-                </button>
+                <div class="mt-3">
+                    <strong>Tổng giá trị hợp đồng: </strong>
+                    <span id="totalContractPrice" class="text-primary font-weight-bold">0 VNĐ</span>
+                </div>
             </div>
         }
-
-        <!-- Thông tin phòng và khách thuê cho hợp đồng cá nhân -->
-        if (Model.ContractType == "Individual")
+        else
         {
+            <!-- Thông tin phòng và khách thuê cho hợp đồng cá nhân -->
             <div class="form-section">
                 <div class="section-title">
-                    <i class="fas fa-door-open"></i> Thông Tin Phòng
+                    <i class="fas fa-home"></i> Thông Tin Phòng Thuê
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="RoomId"><i class="fas fa-home"></i> Phòng thuê</label>
-                        @Html.DropDownListFor(m => m.RoomId, new SelectList(ViewBag.AvailableRooms ?? new List<SelectListItem>(), "Value", "Text", Model.RoomId),
+                        <label for="RoomId"><i class="fas fa-door-open"></i> Phòng <span class="text-danger">*</span></label>
+                        @Html.DropDownListFor(m => m.RoomId,
+                            ViewBag.AvailableRooms as IEnumerable<SelectListItem> ?? new List<SelectListItem>(),
+                            "-- Chọn phòng --",
                             new { @class = "form-control", @id = "roomSelect" })
                         @Html.ValidationMessageFor(m => m.RoomId, "", new { @class = "text-danger" })
                     </div>
 
                     <div class="form-group">
                         <label for="PriceAgreed"><i class="fas fa-money-bill-wave"></i> Giá thuê thỏa thuận (VNĐ/tháng)</label>
-                        @Html.TextBoxFor(m => m.PriceAgreed, new { @class = "form-control currency-input", @placeholder = "VD: 3,000,000" })
+                        @Html.TextBoxFor(m => m.PriceAgreed, new { @class = "form-control money" })
                         @Html.ValidationMessageFor(m => m.PriceAgreed, "", new { @class = "text-danger" })
                     </div>
                 </div>
             </div>
 
-            <!-- Danh sách khách thuê -->
+            <!-- Danh sách khách thuê cho hợp đồng cá nhân -->
             <div class="form-section">
                 <div class="section-title">
                     <i class="fas fa-users"></i> Thông Tin Khách Thuê
                 </div>
 
                 <div id="tenantsList">
-                    @for (int i = 0; i < Model.Tenants.Count; i++)
+                    @if (Model.Tenants != null && Model.Tenants.Any())
                     {
-                        <div class="tenant-card" data-index="@i">
-                            @Html.HiddenFor(m => m.Tenants[i].Id)
+                        for (int i = 0; i < Model.Tenants.Count; i++)
+                        {
+                            <div class="tenant-card" data-index="@i">
+                                @Html.HiddenFor(m => m.Tenants[i].Id)
 
-                            <div class="tenant-header">
-                                <h5>Người thuê @(i + 1)</h5>
-                                @if (i > 0)
-                                {
-                                    <button type="button" class="btn-remove" onclick="removeTenant(this)">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                }
+                                <div class="tenant-header">
+                                    <h5>Người thuê @(i + 1)</h5>
+                                    @if (i > 0)
+                                    {
+                                        <button type="button" class="btn-remove" onclick="removeTenant(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    }
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Họ và tên <span class="required">*</span></label>
+                                        @Html.TextBoxFor(m => m.Tenants[i].FullName, new { @class = "form-control", @required = "required" })
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>CMND/CCCD <span class="required">*</span></label>
+                                        @Html.TextBoxFor(m => m.Tenants[i].IdentityCard, new { @class = "form-control", @required = "required" })
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Số điện thoại</label>
+                                        @Html.TextBoxFor(m => m.Tenants[i].PhoneNumber, new { @class = "form-control" })
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Ngày sinh</label>
+                                        @Html.TextBoxFor(m => m.Tenants[i].BirthDate,
+                                            new
+                                                 {
+                                                     @class = "form-control datetime",
+                                                  @Value = Model.Tenants[i].BirthDate?.ToString("dd/MM/yyyy")
+                                                 })
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Giới tính</label>
+                                        @Html.DropDownListFor(m => m.Tenants[i].Gender,
+                                            new List<SelectListItem>
+                                            {
+                                                new SelectListItem { Value = "Nam", Text = "Nam" },
+                                                new SelectListItem { Value = "Nữ", Text = "Nữ" }
+                                            },
+                                            "-- Chọn --",
+                                            new { @class = "form-control" })
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Dân tộc</label>
+                                        @Html.TextBoxFor(m => m.Tenants[i].Ethnicity, new { @class = "form-control" })
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Địa chỉ thường trú</label>
+                                    @Html.TextBoxFor(m => m.Tenants[i].PermanentAddress, new { @class = "form-control" })
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Biển số xe</label>
+                                    @Html.TextBoxFor(m => m.Tenants[i].VehiclePlate, new { @class = "form-control" })
+                                </div>
                             </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Họ và tên <span class="required">*</span></label>
-                                    @Html.TextBoxFor(m => m.Tenants[i].FullName, new { @class = "form-control", @required = "required" })
-                                </div>
-
-                                <div class="form-group">
-                                    <label>CMND/CCCD <span class="required">*</span></label>
-                                    @Html.TextBoxFor(m => m.Tenants[i].IdentityCard, new { @class = "form-control", @required = "required" })
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Số điện thoại</label>
-                                    @Html.TextBoxFor(m => m.Tenants[i].PhoneNumber, new { @class = "form-control" })
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Ngày sinh</label>
-                                    @Html.TextBoxFor(m => m.Tenants[i].BirthDate, new { @class = "form-control", @type = "date" })
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Giới tính</label>
-                                    @Html.DropDownListFor(m => m.Tenants[i].Gender, new SelectList(new[] {
-                                        new { Value = "", Text = "-- Chọn --" },
-                                        new { Value = "Nam", Text = "Nam" },
-                                        new { Value = "Nữ", Text = "Nữ" }
-                                    }, "Value", "Text", Model.Tenants[i].Gender), new { @class = "form-control" })
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Dân tộc</label>
-                                    @Html.TextBoxFor(m => m.Tenants[i].Ethnicity, new { @class = "form-control" })
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Địa chỉ thường trú</label>
-                                @Html.TextBoxFor(m => m.Tenants[i].PermanentAddress, new { @class = "form-control" })
-                            </div>
-
-                            <div class="form-group">
-                                <label>Biển số xe</label>
-                                @Html.TextBoxFor(m => m.Tenants[i].VehiclePlate, new { @class = "form-control", @placeholder = "VD: 92A-123.45" })
-                            </div>
-                        </div>
+                        }
                     }
                 </div>
 
@@ -257,9 +310,18 @@
             <button type="submit" class="btn btn-primary">
                 <i class="fas fa-save"></i> Lưu thay đổi
             </button>
-            <a href="@Url.Action("Details", new { id = Model.Id })" class="btn btn-secondary">
-                <i class="fas fa-times"></i> Hủy
-            </a>
+            @if (Model.ContractType == "Company")
+            {
+                <a href="@Url.Action("Details", new { id = Model.Id })" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Hủy
+                </a>
+            }
+            else
+            {
+                <a href="@Url.Action("Details", "Rooms", new { id = Model.RoomId })" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Hủy
+                </a>
+            }
         </div>
     }
 </div>
@@ -281,17 +343,16 @@
                         <label>Chọn phòng:</label>
                         <select id="modalRoomSelect" class="form-control">
                             <option value="">-- Chọn phòng --</option>
-                            <!-- Rooms will be loaded via AJAX -->
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Giá thuê thỏa thuận:</label>
-                        <input type="text" id="modalRoomPrice" class="form-control currency-input" placeholder="Nhập giá thuê" />
+                        <input type="text" id="modalRoomPrice" class="form-control money" placeholder="Nhập giá thuê" />
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
-                    <button type="button" class="btn btn-primary" onclick="addRoomToContract()">Thêm phòng</button>
+                    <button type="button" class="btn btn-primary" onclick="addRoomToCompanyContract()">Thêm phòng</button>
                 </div>
             </div>
         </div>
@@ -299,48 +360,196 @@
 }
 
 @section Scripts {
-    <script src="~/Scripts/jquery.validate.min.js"></script>
-    <script src="~/Scripts/jquery.validate.unobtrusive.min.js"></script>
-    <script src="~/JS/contract-edit.js"></script>
-
     <script>
+        
         var contractType = '@Model.ContractType';
         var contractId = @Model.Id;
+        var roomIndex = @(Model.SelectedRooms?.Count ?? 0);
 
-        // Initialize form
         $(document).ready(function() {
-            // Format currency inputs
-            $('.currency-input').on('input', function() {
-                formatCurrency(this);
-            });
-
-            // Initialize date pickers
-            initializeDatePickers();
-
-            // Load available rooms for company contract
+            // Initialize form theo loại hợp đồng
             if (contractType === 'Company') {
-                loadAvailableRooms();
+                initializeCompanyContract();
+            } else {
+                initializeIndividualContract();
             }
+
+            // Calculate initial total price
+            updateTotalPrice();
         });
 
-        function formatCurrency(input) {
-            let value = input.value.replace(/[^\d]/g, '');
-            if (value) {
-                value = parseInt(value).toLocaleString('vi-VN');
-                input.value = value;
-            }
-        }
+        // ========== FUNCTIONS CHO HỢP ĐỒNG CÔNG TY ==========
+        function initializeCompanyContract() {
+            // Event: Mở modal thêm phòng
+            $('#btnAddRoom').on('click', function() {
+                loadAvailableRoomsForCompany();
+                $('#addRoomModal').modal('show');
+            });
 
-        function initializeDatePickers() {
-            // Set min date for end date based on start date
-            $('#StartDate').on('change', function() {
-                var startDate = $(this).val();
-                $('#EndDate').attr('min', startDate);
-                $('#MoveInDate').attr('min', startDate);
+            // Event: Xóa phòng
+            $(document).on('click', '.btn-remove-room', function() {
+                var roomId = $(this).data('room-id');
+                removeRoomFromContract(roomId);
+            });
+
+            // Event: Cập nhật giá khi thay đổi
+            $(document).on('change', '.room-price-input', function() {
+                updateTotalPrice();
             });
         }
 
-        // Functions for Individual Contract
+        // Load danh sách phòng available
+        function loadAvailableRoomsForCompany() {
+            $.ajax({
+                url: '/Contracts/GetAvailableRoomsForCompany',
+                type: 'GET',
+                data: { contractId: contractId },
+                success: function(response) {
+                    if (response.success) {
+                        var select = $('#modalRoomSelect');
+                        select.empty();
+                        select.append('<option value="">-- Chọn phòng --</option>');
+
+                        $.each(response.rooms, function(index, room) {
+                            var optionText = room.Name + ' - ' + room.FormattedPrice;
+                            if (room.IsCurrentlySelected) {
+                                return; // Skip rooms already in contract
+                            }
+                            select.append(
+                                $('<option></option>')
+                                    .attr('value', room.Id)
+                                    .attr('data-price', room.DefaultPrice)
+                                    .attr('data-name', room.Name)
+                                    .text(optionText)
+                            );
+                        });
+                    }
+                },
+                error: function() {
+                    showAlert('error', 'Không thể tải danh sách phòng');
+                }
+            });
+        }
+
+        // Thêm phòng vào hợp đồng công ty
+        function addRoomToCompanyContract() {
+            var roomId = $('#modalRoomSelect').val();
+            var roomName = $('#modalRoomSelect option:selected').data('name');
+            var defaultPrice = $('#modalRoomSelect option:selected').data('price');
+            var roomPrice = $('#modalRoomPrice').val() || defaultPrice;
+
+            if (!roomId) {
+                showAlert('warning', 'Vui lòng chọn phòng');
+                return;
+            }
+
+            // Kiểm tra phòng đã được thêm chưa
+            if ($('#room-list').find('[data-room-id="' + roomId + '"]').length > 0) {
+                showAlert('warning', 'Phòng này đã có trong hợp đồng');
+                return;
+            }
+
+            // Remove empty alert if exists
+            $('#room-list .alert-warning').remove();
+
+            // Thêm phòng vào danh sách
+            var roomHtml = `
+                <div class="room-item border p-3 mb-2" data-room-id="${roomId}">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <strong>${roomName}</strong>
+                            <input type="hidden" name="SelectedRooms[${roomIndex}].RoomId" value="${roomId}" />
+                            <input type="hidden" name="SelectedRooms[${roomIndex}].RoomName" value="${roomName}" />
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <input type="text"
+                                       class="form-control money room-price-input"
+                                       name="SelectedRooms[${roomIndex}].AgreedPrice"
+                                       data-room-id="${roomId}"
+                                       value="${roomPrice}" />
+                                <span class="input-group-addon">VNĐ</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-danger btn-sm btn-remove-room"
+                                    data-room-id="${roomId}">
+                                <i class="fa fa-trash"></i> Xóa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            $('#room-list').append(roomHtml);
+            roomIndex++;
+
+            // Close modal
+            $('#addRoomModal').modal('hide');
+            $('#modalRoomSelect').val('');
+            $('#modalRoomPrice').val('');
+
+            // Update total
+            updateTotalPrice();
+            showAlert('success', 'Đã thêm phòng vào hợp đồng');
+        }
+
+        // Xóa phòng khỏi hợp đồng
+        function removeRoomFromContract(roomId) {
+            if ($('#room-list .room-item').length <= 1) {
+                showAlert('warning', 'Hợp đồng công ty phải có ít nhất 1 phòng');
+                return;
+            }
+
+            if (confirm('Bạn có chắc muốn xóa phòng này khỏi hợp đồng?')) {
+                $('[data-room-id="' + roomId + '"]').remove();
+                reindexRooms();
+                updateTotalPrice();
+                showAlert('success', 'Đã xóa phòng khỏi hợp đồng');
+            }
+        }
+
+        // Re-index rooms sau khi xóa
+        function reindexRooms() {
+            $('#room-list .room-item').each(function(index) {
+                $(this).find('input').each(function() {
+                    var name = $(this).attr('name');
+                    if (name) {
+                        name = name.replace(/\[\d+\]/, '[' + index + ']');
+                        $(this).attr('name', name);
+                    }
+                });
+            });
+            roomIndex = $('#room-list .room-item').length;
+        }
+
+        // Cập nhật tổng giá trị
+        function updateTotalPrice() {
+            var total = 0;
+            $('.room-price-input').each(function() {
+                var value = $(this).val().replace(/[^\d]/g, '');
+                if (value) {
+                    total += parseInt(value);
+                }
+            });
+            $('#totalContractPrice').text(new Intl.NumberFormat('vi-VN').format(total) + ' VNĐ');
+        }
+
+        // ========== FUNCTIONS CHO HỢP ĐỒNG CÁ NHÂN ==========
+        function initializeIndividualContract() {
+            // Update price when room changes
+            $('#roomSelect').on('change', function() {
+                var selectedOption = $(this).find('option:selected');
+                var priceText = selectedOption.text();
+                var match = priceText.match(/(\d+(?:\.\d+)*)/);
+                if (match) {
+                    var price = match[1].replace(/\./g, '');
+                    $('#PriceAgreed').val(price);
+                }
+            });
+        }
+
+        // Thêm tenant
         function addTenant() {
             var index = $('#tenantsList .tenant-card').length;
             var tenantHtml = `
@@ -351,30 +560,25 @@
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
-
                     <div class="form-row">
                         <div class="form-group">
                             <label>Họ và tên <span class="required">*</span></label>
                             <input type="text" name="Tenants[${index}].FullName" class="form-control" required />
                         </div>
-
                         <div class="form-group">
                             <label>CMND/CCCD <span class="required">*</span></label>
                             <input type="text" name="Tenants[${index}].IdentityCard" class="form-control" required />
                         </div>
-
                         <div class="form-group">
                             <label>Số điện thoại</label>
                             <input type="text" name="Tenants[${index}].PhoneNumber" class="form-control" />
                         </div>
                     </div>
-
                     <div class="form-row">
                         <div class="form-group">
                             <label>Ngày sinh</label>
-                            <input type="date" name="Tenants[${index}].BirthDate" class="form-control" />
+                            <input type="text" name="Tenants[${index}].BirthDate" class="form-control datetime" />
                         </div>
-
                         <div class="form-group">
                             <label>Giới tính</label>
                             <select name="Tenants[${index}].Gender" class="form-control">
@@ -383,21 +587,18 @@
                                 <option value="Nữ">Nữ</option>
                             </select>
                         </div>
-
                         <div class="form-group">
                             <label>Dân tộc</label>
                             <input type="text" name="Tenants[${index}].Ethnicity" class="form-control" />
                         </div>
                     </div>
-
                     <div class="form-group">
                         <label>Địa chỉ thường trú</label>
                         <input type="text" name="Tenants[${index}].PermanentAddress" class="form-control" />
                     </div>
-
                     <div class="form-group">
                         <label>Biển số xe</label>
-                        <input type="text" name="Tenants[${index}].VehiclePlate" class="form-control" placeholder="VD: 92A-123.45" />
+                        <input type="text" name="Tenants[${index}].VehiclePlate" class="form-control" />
                     </div>
                 </div>
             `;
@@ -405,17 +606,23 @@
             $('#tenantsList').append(tenantHtml);
         }
 
-        function removeTenant(button) {
-            $(button).closest('.tenant-card').remove();
-            updateTenantIndexes();
+        // Xóa tenant
+        function removeTenant(btn) {
+            if ($('#tenantsList .tenant-card').length > 1) {
+                if (confirm('Bạn có chắc muốn xóa người thuê này?')) {
+                    $(btn).closest('.tenant-card').remove();
+                    reindexTenants();
+                }
+            } else {
+                showAlert('warning', 'Hợp đồng phải có ít nhất 1 người thuê');
+            }
         }
 
-        function updateTenantIndexes() {
+        // Re-index tenants
+        function reindexTenants() {
             $('#tenantsList .tenant-card').each(function(index) {
                 $(this).attr('data-index', index);
                 $(this).find('h5').text('Người thuê ' + (index + 1));
-
-                // Update all input names
                 $(this).find('input, select').each(function() {
                     var name = $(this).attr('name');
                     if (name) {
@@ -426,92 +633,30 @@
             });
         }
 
-        // Functions for Company Contract
-        function loadAvailableRooms() {
-            $.ajax({
-                url: '/Contracts/GetAvailableRooms',
-                type: 'GET',
-                data: { excludeContractId: contractId },
-                success: function(rooms) {
-                    var select = $('#modalRoomSelect');
-                    select.empty();
-                    select.append('<option value="">-- Chọn phòng --</option>');
-
-                    $.each(rooms, function(i, room) {
-                        // Check if room is already selected
-                        if (!$(`#companyRoomGrid .room-card[data-room-id="${room.Id}"]`).length) {
-                            select.append(`<option value="${room.Id}" data-price="${room.DefaultPrice}">${room.Name}</option>`);
-                        }
-                    });
-                },
-                error: function() {
-                    alert('Không thể tải danh sách phòng');
-                }
-            });
-        }
-
-        function showAddRoomModal() {
-            loadAvailableRooms();
-            $('#addRoomModal').modal('show');
-        }
-
-        function addRoomToContract() {
-            var roomId = $('#modalRoomSelect').val();
-            var roomName = $('#modalRoomSelect option:selected').text();
-            var price = $('#modalRoomPrice').val() || $('#modalRoomSelect option:selected').data('price');
-
-            if (!roomId) {
-                alert('Vui lòng chọn phòng');
-                return;
+        // Helper: Show alert
+        function showAlert(type, message) {
+            var alertClass = 'alert-info';
+            switch(type) {
+                case 'success': alertClass = 'alert-success'; break;
+                case 'error': alertClass = 'alert-danger'; break;
+                case 'warning': alertClass = 'alert-warning'; break;
             }
 
-            var index = $('#companyRoomGrid .room-card').length;
-            var roomHtml = `
-                <div class="room-card selected" data-room-id="${roomId}">
-                    <input type="hidden" name="SelectedRooms[${index}].RoomId" value="${roomId}" />
-                    <input type="hidden" name="SelectedRooms[${index}].RoomName" value="${roomName}" />
-
-                    <div class="room-card-header">
-                        <span class="room-number">${roomName}</span>
-                        <button type="button" class="btn-remove-room" onclick="removeRoom(this)">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="room-card-body">
-                        <label>Giá thuê thỏa thuận:</label>
-                        <input type="text" name="SelectedRooms[${index}].AgreedPrice" value="${price}" class="form-control currency-input" />
-                    </div>
+            var alertHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="close" data-dismiss="alert">
+                        <span>&times;</span>
+                    </button>
                 </div>
             `;
 
-            $('#companyRoomGrid').append(roomHtml);
-            $('#addRoomModal').modal('hide');
-
-            // Reset modal
-            $('#modalRoomSelect').val('');
-            $('#modalRoomPrice').val('');
-
-            // Apply currency format to new input
-            $('.currency-input').off('input').on('input', function() {
-                formatCurrency(this);
-            });
-        }
-
-        function removeRoom(button) {
-            $(button).closest('.room-card').remove();
-            updateRoomIndexes();
-        }
-
-        function updateRoomIndexes() {
-            $('#companyRoomGrid .room-card').each(function(index) {
-                $(this).find('input').each(function() {
-                    var name = $(this).attr('name');
-                    if (name) {
-                        name = name.replace(/\[\d+\]/, '[' + index + ']');
-                        $(this).attr('name', name);
-                    }
+            $('#alert-container').html(alertHtml);
+            setTimeout(function() {
+                $('.alert').fadeOut('slow', function() {
+                    $(this).remove();
                 });
-            });
+            }, 5000);
         }
     </script>
 }
