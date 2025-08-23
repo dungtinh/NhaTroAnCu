@@ -27,6 +27,7 @@ namespace NhaTroAnCu.Controllers
             return View(contracts);
         }
 
+
         // GET: Contracts/Details/5
         public ActionResult Details(int? id)
         {

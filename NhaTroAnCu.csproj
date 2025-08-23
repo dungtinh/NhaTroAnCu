@@ -254,6 +254,7 @@
     <Compile Include="Helpers\TenantPhotoHelper.cs" />
     <Compile Include="Helpers\DateTimeHelper.cs" />
     <Compile Include="Helpers\UtilityBillService.cs" />
+    <Compile Include="Models\CompanyTenantViewModel.cs" />
     <Compile Include="Models\ContractViewModel.cs" />
     <Compile Include="Models\IncomeExpenseViewModels.cs" />
     <Compile Include="Models\AccountViewModels.cs" />
@@ -393,6 +394,7 @@
     <Content Include="favicon.ico" />
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
+    <Content Include="js\company-tenant-manager.js" />
     <Content Include="js\site.js" />
     <Content Include="js\popper-fix.js" />
     <Content Include="js\tenant-management.js" />
