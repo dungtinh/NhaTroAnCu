@@ -336,6 +336,7 @@
     </Compile>
     <Compile Include="Models\TenantContractListItemViewModel.cs" />
     <Compile Include="Models\RoomViewModel.cs" />
+    <Compile Include="Models\TenantViewModel.cs" />
     <Compile Include="Models\UtilityBill.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
@@ -614,6 +615,7 @@
     <Content Include="Views\Contracts\Details.cshtml" />
     <Content Include="Views\Shared\_PaymentRecordingPartial.cshtml" />
     <Content Include="Views\Shared\_PaymentHistoryPartial.cshtml" />
+    <Content Include="Views\Shared\_TenantManagement.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Uploads\ContractScans\" />
