@@ -348,434 +348,149 @@
         </div>
     }
 </div>
-
 @section Scripts {
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Include tenant management script -->
+    <script src="~/js/tenant-management.js"></script>
+
     <script>
-    // Biến global
-    var tenantCount = 1;
-    var maxTenants = 4;
-        $(document).ready(function () {
-            // Xử lý checkbox phòng cho công ty với hiệu ứng mới
-            $('.company-room-checkbox').change(function () {
-                var item = $(this).closest('.room-selection-item');
-                var priceInput = item.find('.room-price-input');
-                var index = $(this).data('index');
+        // Set URL cho scan CCCD
+        window.scanCCCDUrl = '@Url.Action("ScanCCCD", "FPTReader")';
 
-                if ($(this).is(':checked')) {
-                    item.addClass('selected');
-                    priceInput.slideDown(300);
+        $(document).ready(function() {
+            // Khởi tạo TenantManager
+            TenantManager.init();
 
-                    // Ensure the hidden input for IsSelected is removed when checked
-                    $(this).next('input[type="hidden"][name$=".IsSelected"]').remove();
+            // Xử lý chọn loại hợp đồng
+            $('.type-card').click(function() {
+                $('.type-card').removeClass('selected');
+                $(this).addClass('selected');
+
+                var type = $(this).data('type');
+                $('#ContractType').val(type);
+
+                if (type === 'Individual') {
+                    $('#individualSection').removeClass('hidden');
+                    $('#companySection').addClass('hidden');
                 } else {
-                    item.removeClass('selected');
-                    priceInput.slideUp(300);
-
-                    // Add back the hidden input for false value
-                    if ($(this).next('input[type="hidden"][name$=".IsSelected"]').length === 0) {
-                        $('<input type="hidden" name="SelectedRooms[' + index + '].IsSelected" value="false" />').insertAfter(this);
-                    }
+                    $('#companySection').removeClass('hidden');
+                    $('#individualSection').addClass('hidden');
                 }
-
-                updateCompanySummary();
             });
 
-            // Update summary khi thay đổi giá
-            $('.room-agreed-price').on('input', function () {
-                updateCompanySummary();
-            });
-        });
+            // Validate form trước khi submit
+            $('form').on('submit', function (e) {
+                var contractType = $('#ContractType').val();
 
-        // Hàm cập nhật tổng kết cho công ty
-        function updateCompanySummary() {
-            var totalRooms = 0;
-            var totalRent = 0;
-
-            $('.company-room-checkbox:checked').each(function () {
-                totalRooms++;
-                var item = $(this).closest('.room-selection-item');
-                var price = parseFloat(item.find('.room-agreed-price').val()) || 0;
-                totalRent += price;
-            });
-
-            $('#totalRooms').text(totalRooms);
-            $('#totalRent').text(totalRent.toLocaleString('vi-VN') + 'đ');
-        }
-    $(document).ready(function() {
-        // Xử lý chọn loại hợp đồng
-        $('.type-card').click(function() {
-            $('.type-card').removeClass('selected');
-            $(this).addClass('selected');
-
-            var type = $(this).data('type');
-            $('#ContractType').val(type);
-
-            if (type === 'Individual') {
-                $('#individualSection').removeClass('hidden');
-                $('#companySection').addClass('hidden');
-            } else {
-                $('#companySection').removeClass('hidden');
-                $('#individualSection').addClass('hidden');
-            }
-        });
-
-        // Xử lý quét CCCD (delegate để hoạt động với elements động)
-        $(document).on('click', '.btn-scan-cccd', function() {
-            var tenantIndex = $(this).data('tenant-index');
-            scanCCCD(tenantIndex);
-        });
-    });
-        $('form').on('submit', function (e) {
-            var contractType = $('#ContractType').val();
-
-            if (contractType === 'Company') {
-                // Đảm bảo có ít nhất 1 phòng được chọn
-                var checkedRooms = $('.company-room-checkbox:checked').length;
-                if (checkedRooms === 0) {
+                if (!contractType) {
                     e.preventDefault();
                     Swal.fire({
                         icon: 'warning',
-                        title: 'Chưa chọn phòng',
-                        text: 'Vui lòng chọn ít nhất một phòng cho hợp đồng công ty!',
+                        title: 'Chưa chọn loại hợp đồng',
+                        text: 'Vui lòng chọn loại hợp đồng (Cá nhân hoặc Công ty)!',
                         confirmButtonColor: '#ffc107'
                     });
                     return false;
                 }
 
-                // Debug: Log form data
-                console.log('Submitting company contract with rooms:', checkedRooms);
-
-                // Ensure all data is properly set
-                $('.company-room-checkbox:checked').each(function () {
-                    var index = $(this).data('index');
-                    var roomId = $(this).data('room-id');
-                    var price = $(this).closest('.room-selection-item').find('.room-agreed-price').val();
-
-                    console.log('Room ' + index + ': ID=' + roomId + ', Price=' + price);
-                });
-            }
-        });
-    // Hàm thêm người thuê mới
-    function addNewTenant() {
-        if (tenantCount >= maxTenants) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Đạt giới hạn',
-                text: `Đã đạt giới hạn số người thuê (tối đa ${maxTenants} người/phòng)`,
-                confirmButtonColor: '#ffc107'
-            });
-            return;
-        }
-
-        var newTenantHtml = `
-            <div class="tenant-card" data-tenant-index="${tenantCount}">
-                <div class="tenant-card-header">
-                    <span class="tenant-number">Người thuê ${tenantCount + 1}</span>
-                    <button type="button" class="btn-remove-tenant" onclick="removeTenant(${tenantCount})">
-                        <i class="fas fa-trash"></i> Xóa
-                    </button>
-                </div>
-
-                <div class="scan-section">
-                    <h5 style="color: #2c3e50; margin-bottom: 15px;">
-                        <i class="fas fa-id-card"></i> Quét thông tin từ CCCD/CMND
-                    </h5>
-
-                    <div class="form-group">
-                        <label>Upload ảnh CCCD/CMND để tự động điền thông tin</label>
-                        <input type="file" class="cccd-file form-control" data-tenant-index="${tenantCount}" accept="image/*" />
-                        <small class="form-text text-muted">
-                            Hỗ trợ định dạng: JPG, PNG, GIF. Hệ thống sẽ tự động nhận diện và điền thông tin.
-                        </small>
-                    </div>
-
-                    <button type="button" class="btn btn-primary btn-scan-cccd" data-tenant-index="${tenantCount}">
-                        <i class="fas fa-qrcode"></i> Quét thông tin CCCD
-                    </button>
-
-                    <div class="scan-result hidden" data-tenant-index="${tenantCount}" style="margin-top: 15px;">
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Họ và tên <span class="text-danger">*</span></label>
-                        <input type="text" name="Tenants[${tenantCount}].FullName" class="form-control tenant-fullname" data-tenant-index="${tenantCount}" />
-                    </div>
-
-                    <div class="form-group">
-                        <label>Số CCCD/CMND <span class="text-danger">*</span></label>
-                        <input type="text" name="Tenants[${tenantCount}].IdentityCard" class="form-control tenant-identity" data-tenant-index="${tenantCount}" />
-                    </div>
-
-                    <div class="form-group">
-                        <label>Số điện thoại</label>
-                        <input type="text" name="Tenants[${tenantCount}].PhoneNumber" class="form-control tenant-phone" data-tenant-index="${tenantCount}" />
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Ngày sinh</label>
-                        <input type="date" name="Tenants[${tenantCount}].BirthDate" class="form-control tenant-birthdate" data-tenant-index="${tenantCount}" />
-                    </div>
-
-                    <div class="form-group">
-                        <label>Giới tính</label>
-                        <select name="Tenants[${tenantCount}].Gender" class="form-control tenant-gender" data-tenant-index="${tenantCount}">
-                            <option value="">-- Chọn --</option>
-                            <option value="Nam">Nam</option>
-                            <option value="Nữ">Nữ</option>
-                            <option value="Khác">Khác</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Dân tộc</label>
-                        <input type="text" name="Tenants[${tenantCount}].Ethnicity" class="form-control tenant-ethnicity" data-tenant-index="${tenantCount}" />
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Địa chỉ thường trú</label>
-                        <input type="text" name="Tenants[${tenantCount}].PermanentAddress" class="form-control tenant-address" data-tenant-index="${tenantCount}" style="width: 100%;" />
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Biển số xe</label>
-                        <input type="text" name="Tenants[${tenantCount}].VehiclePlate" class="form-control tenant-vehicle" data-tenant-index="${tenantCount}" />
-                    </div>
-
-                    <div class="form-group">
-                        <label>Ảnh CCCD/Hộ chiếu</label>
-                        <input type="file" name="TenantPhotos[${tenantCount}]" class="form-control" accept="image/*" />
-                    </div>
-                </div>
-            </div>
-        `;
-
-        $('#tenantListContainer').append(newTenantHtml);
-        tenantCount++;
-        updateRemoveButtons();
-    }
-
-    // Hàm xóa người thuê
-    function removeTenant(index) {
-        if (tenantCount <= 1) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Không thể xóa',
-                text: 'Phải có ít nhất 1 người thuê',
-                confirmButtonColor: '#ffc107'
-            });
-            return;
-        }
-
-        // Xóa tenant card
-        $(`.tenant-card[data-tenant-index="${index}"]`).remove();
-        tenantCount--;
-
-        // Cập nhật lại index và tên cho các tenant còn lại
-        reindexTenants();
-        updateRemoveButtons();
-    }
-
-    // Cập nhật lại index cho các tenant
-    function reindexTenants() {
-        $('.tenant-card').each(function(newIndex) {
-            var $card = $(this);
-            var oldIndex = $card.data('tenant-index');
-
-            // Cập nhật data-tenant-index
-            $card.attr('data-tenant-index', newIndex);
-
-            // Cập nhật số thứ tự hiển thị
-            $card.find('.tenant-number').text('Người thuê ' + (newIndex + 1));
-
-            // Cập nhật nút xóa
-            $card.find('.btn-remove-tenant').attr('onclick', `removeTenant(${newIndex})`);
-
-            // Cập nhật tất cả các input names và data attributes
-            $card.find('input, select').each(function() {
-                var $input = $(this);
-                var name = $input.attr('name');
-                if (name) {
-                    // Thay thế index trong name attribute
-                    var newName = name.replace(/\[\d+\]/, `[${newIndex}]`);
-                    $input.attr('name', newName);
-                }
-
-                // Cập nhật data-tenant-index
-                if ($input.data('tenant-index') !== undefined) {
-                    $input.attr('data-tenant-index', newIndex);
-                }
-            });
-
-            // Cập nhật các elements khác có data-tenant-index
-            $card.find('[data-tenant-index]').each(function() {
-                $(this).attr('data-tenant-index', newIndex);
-            });
-        });
-    }
-
-    // Cập nhật hiển thị nút xóa
-    function updateRemoveButtons() {
-        if (tenantCount <= 1) {
-            $('.btn-remove-tenant').hide();
-        } else {
-            $('.btn-remove-tenant').show();
-        }
-    }
-
-    // Hàm quét CCCD
-    function scanCCCD(tenantIndex) {
-        var fileInput = $(`.cccd-file[data-tenant-index="${tenantIndex}"]`)[0];
-
-        if (!fileInput.files || !fileInput.files[0]) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Chưa chọn file',
-                text: 'Vui lòng chọn file ảnh CCCD!',
-                confirmButtonColor: '#ffc107'
-            });
-            return;
-        }
-
-        var formData = new FormData();
-        formData.append('image', fileInput.files[0]);
-
-        var $btn = $(`.btn-scan-cccd[data-tenant-index="${tenantIndex}"]`);
-        var $result = $(`.scan-result[data-tenant-index="${tenantIndex}"]`);
-
-        // Hiển thị loading
-        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Đang quét...');
-        $result.removeClass('hidden success partial error').html('Đang xử lý ảnh...');
-
-        // Gọi API quét CCCD
-        $.ajax({
-            url: '@Url.Action("ScanCCCD", "FPTReader")',
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                $btn.prop('disabled', false).html('<i class="fas fa-qrcode"></i> Quét thông tin CCCD');
-
-                if (response.success) {
-                    // Điền thông tin vào form của tenant tương ứng
-                    if (response.data.name) {
-                        $(`.tenant-fullname[data-tenant-index="${tenantIndex}"]`).val(response.data.name);
+                if (contractType === 'Individual') {
+                    // Validate phòng
+                    if (!$('#SingleRoomId').val()) {
+                        e.preventDefault();
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Chưa chọn phòng',
+                            text: 'Vui lòng chọn phòng cho hợp đồng!',
+                            confirmButtonColor: '#ffc107'
+                        });
+                        return false;
                     }
-                    if (response.data.id) {
-                        $(`.tenant-identity[data-tenant-index="${tenantIndex}"]`).val(response.data.id);
-                    }
-                    if (response.data.dob) {
-                        // Convert định dạng ngày từ dd/MM/yyyy sang yyyy-MM-dd
-                        var parts = response.data.dob.split('/');
-                        if (parts.length === 3) {
-                            var formattedDate = parts[2] + '-' + parts[1].padStart(2, '0') + '-' + parts[0].padStart(2, '0');
-                            $(`.tenant-birthdate[data-tenant-index="${tenantIndex}"]`).val(formattedDate);
+
+                    // Validate ít nhất 1 tenant có thông tin
+                    var hasValidTenant = false;
+                    $('.tenant-card').each(function() {
+                        var fullName = $(this).find('.tenant-fullname').val();
+                        var identity = $(this).find('.tenant-identity').val();
+                        if (fullName && identity) {
+                            hasValidTenant = true;
+                            return false; // break
                         }
+                    });
+
+                    if (!hasValidTenant) {
+                        e.preventDefault();
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Thiếu thông tin người thuê',
+                            text: 'Vui lòng nhập ít nhất thông tin 1 người thuê (Họ tên và CCCD)!',
+                            confirmButtonColor: '#ffc107'
+                        });
+                        return false;
                     }
-                    if (response.data.sex) {
-                        $(`.tenant-gender[data-tenant-index="${tenantIndex}"]`).val(response.data.sex);
-                    }
-                    if (response.data.home) {
-                        $(`.tenant-address[data-tenant-index="${tenantIndex}"]`).val(response.data.home);
-                    }
-                    if (response.data.ethnicity) {
-                        $(`.tenant-ethnicity[data-tenant-index="${tenantIndex}"]`).val(response.data.ethnicity);
+                } else if (contractType === 'Company') {
+                    // Validate công ty
+                    if (!$('#Company_CompanyName').val() || !$('#Company_TaxCode').val()) {
+                        e.preventDefault();
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Thiếu thông tin công ty',
+                            text: 'Vui lòng nhập tên công ty và mã số thuế!',
+                            confirmButtonColor: '#ffc107'
+                        });
+                        return false;
                     }
 
-                    $result.addClass('success').html(
-                        '<i class="fas fa-check-circle"></i> Quét thành công! Thông tin đã được điền vào form.'
-                    );
-                } else if (response.data) {
-                    // Quét thành công một phần
-                    var fieldsFound = [];
-                    if (response.data.name) fieldsFound.push('Họ tên');
-                    if (response.data.id) fieldsFound.push('Số CCCD');
-                    if (response.data.dob) fieldsFound.push('Ngày sinh');
-                    if (response.data.home) fieldsFound.push('Địa chỉ');
-
-                    $result.addClass('partial').html(
-                        '<i class="fas fa-info-circle"></i> Đã nhận diện được: ' + fieldsFound.join(', ') +
-                        '. Vui lòng kiểm tra và bổ sung thông tin còn thiếu.'
-                    );
-                } else {
-                    $result.addClass('error').html(
-                        '<i class="fas fa-exclamation-triangle"></i> Không thể nhận diện thông tin. Vui lòng nhập thủ công.'
-                    );
+                    // Validate ít nhất 1 phòng được chọn
+                    var checkedRooms = $('.company-room-checkbox:checked').length;
+                    if (checkedRooms === 0) {
+                        e.preventDefault();
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Chưa chọn phòng',
+                            text: 'Vui lòng chọn ít nhất một phòng cho hợp đồng công ty!',
+                            confirmButtonColor: '#ffc107'
+                        });
+                        return false;
+                    }
                 }
-            },
-            error: function() {
-                $btn.prop('disabled', false).html('<i class="fas fa-qrcode"></i> Quét thông tin CCCD');
-                $result.addClass('error').html(
-                    '<i class="fas fa-exclamation-triangle"></i> Lỗi kết nối. Vui lòng thử lại sau.'
-                );
-            }
-        });
-    }
+            });
 
-    // CSS cho scan results
-    var style = document.createElement('style');
-    style.innerHTML = `
-        .scan-result.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-            padding: 10px;
-            border-radius: 5px;
-        }
+            // Xử lý chọn phòng cho công ty
+            $(document).on('change', '.company-room-checkbox', function() {
+                updateCompanySummary();
+            });
 
-        .scan-result.partial {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeeba;
-            padding: 10px;
-            border-radius: 5px;
-        }
+            $(document).on('input', '.room-agreed-price', function() {
+                updateCompanySummary();
+            });
 
-        .scan-result.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-            padding: 10px;
-            border-radius: 5px;
-        }
-    `;
-        document.head.appendChild(style);
-        
-        
-        // Auto-calculate end date when months change
-        $('#Months').on('change', function () {
-            var startDateStr = $('#StartDate').val();
-            var months = parseInt($(this).val());
+            // Hàm cập nhật tổng kết cho công ty
+            function updateCompanySummary() {
+                var totalRooms = 0;
+                var totalRent = 0;
 
-            if (startDateStr && months) {
-                var parts = startDateStr.split('/');
-                var startDate = new Date(parts[2], parts[1] - 1, parts[0]);
-                var endDate = new Date(startDate);
-                endDate.setMonth(endDate.getMonth() + months);
+                $('.company-room-checkbox:checked').each(function () {
+                    totalRooms++;
+                    var item = $(this).closest('.room-selection-item');
+                    var price = parseFloat(item.find('.room-agreed-price').val().replace(/\./g, '')) || 0;
+                    totalRent += price;
+                });
 
-                // Display end date info
-                var endDateStr = ('0' + endDate.getDate()).slice(-2) + '/' +
-                    ('0' + (endDate.getMonth() + 1)).slice(-2) + '/' +
-                    endDate.getFullYear();
-
-                // Show end date preview (optional)
-                if ($('#endDatePreview').length === 0) {
-                    $('<div id="endDatePreview" class="text-info small mt-1">Ngày kết thúc dự kiến: <strong>' + endDateStr + '</strong></div>')
-                        .insertAfter('#Months');
-                } else {
-                    $('#endDatePreview').html('Ngày kết thúc dự kiến: <strong>' + endDateStr + '</strong>');
-                }
+                $('#totalRooms').text(totalRooms);
+                $('#totalRent').text(totalRent.toLocaleString('vi-VN') + 'đ');
             }
         });
 
-    // Rest of your existing JavaScript code...
+        // Global function để thêm tenant (gọi từ button onclick)
+        function addTenant() {
+            TenantManager.addTenant();
+        }
+
+        // Global function để xóa tenant (gọi từ button onclick)
+        function removeTenant(index) {
+            TenantManager.removeTenant(index);
+        }
     </script>
 }
