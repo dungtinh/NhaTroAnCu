@@ -235,6 +235,7 @@
     <Compile Include="App_Start\IdentityConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="App_Start\Startup.Auth.cs" />
+    <Compile Include="Controllers\FPTReaderController.cs" />
     <Compile Include="Controllers\AccountController.cs" />
     <Compile Include="Controllers\CardReaderController.cs" />
     <Compile Include="Controllers\ContractsController.cs" />
@@ -249,6 +250,7 @@
     </Compile>
     <Compile Include="Helpers\CustomPdfPageEventHelper.cs" />
     <Compile Include="Helpers\IncomeExpenseService.cs" />
+    <Compile Include="Helpers\TenantContractHelper.cs" />
     <Compile Include="Helpers\TenantPhotoHelper.cs" />
     <Compile Include="Helpers\DateTimeHelper.cs" />
     <Compile Include="Helpers\UtilityBillService.cs" />
@@ -393,6 +395,7 @@
     <Content Include="Content\Site.css" />
     <Content Include="js\site.js" />
     <Content Include="js\popper-fix.js" />
+    <Content Include="js\tenant-management.js" />
     <Content Include="Models\NhaTroAnCuModel.Context.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <DependentUpon>NhaTroAnCuModel.edmx</DependentUpon>
