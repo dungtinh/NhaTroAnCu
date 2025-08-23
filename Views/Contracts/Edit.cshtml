@@ -126,9 +126,9 @@
             <div class="form-section">
                 <div class="section-title">
                     <i class="fas fa-building"></i> Quản Lý Phòng Của Công Ty
-                    <button type="button" class="btn btn-sm btn-success float-right" onclick="openAddRoomModal()">
-                        <i class="fas fa-plus"></i> Thêm phòng
-                    </button>
+                    <a class="btn btn-sm btn-success float-right" href="/ContractRooms/?id=@Model.Id">
+                        <i class="fas fa-plus"></i> Quản lý phòng
+                    </a>
                 </div>
 
                 <div id="companyRoomsContainer">
@@ -138,15 +138,10 @@
                             <table class="table table-hover" id="roomsTable">
                                 <thead>
                                     <tr>
-                                        <th width="5%">
-                                            <input type="checkbox" id="selectAllRooms" />
-                                        </th>
-                                        <th width="20%">Phòng</th>
-                                        <th width="15%">Giá mặc định</th>
-                                        <th width="20%">Giá thỏa thuận</th>
-                                        <th width="15%">Số người thuê</th>
-                                        <th width="15%">Trạng thái</th>
-                                        <th width="10%">Thao tác</th>
+                                        <th>Phòng</th>
+                                        <th>Giá mặc định</th>
+                                        <th>Giá thỏa thuận</th>
+                                        <th>Số người thuê</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -157,12 +152,6 @@
                                                         ViewBag.RoomTenantCounts.ContainsKey(room.RoomId)
                                                         ? ViewBag.RoomTenantCounts[room.RoomId] : 0;
                                         <tr class="room-row" data-room-id="@room.RoomId" data-index="@i">
-                                            <td>
-                                                <input type="checkbox" class="room-checkbox" value="@room.RoomId" />
-                                                @Html.HiddenFor(m => m.SelectedRooms[i].RoomId)
-                                                @Html.HiddenFor(m => m.SelectedRooms[i].RoomName)
-                                                @Html.HiddenFor(m => m.SelectedRooms[i].DefaultPrice)
-                                            </td>
                                             <td>
                                                 <strong>@room.RoomName</strong>
                                             </td>
@@ -177,53 +166,22 @@
                                                 <span class="badge badge-info tenant-count-badge">
                                                     <i class="fas fa-users"></i> @tenantCount người
                                                 </span>
-                                                @if (tenantCount < 4)
-                                                {
-                                                    <button type="button" class="btn btn-sm btn-link"
-                                                            onclick="addTenantToRoom(@room.RoomId, '@room.RoomName')">
-                                                        <i class="fas fa-user-plus"></i>
-                                                    </button>
-                                                }
-                                            </td>
-                                            <td>
-                                                @if (tenantCount > 0)
-                                                {
-                                                    <span class="badge badge-success">Đang sử dụng</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="badge badge-warning">Trống</span>
-                                                }
-                                            </td>
-                                            <td>
-                                                <div class="btn-group btn-group-sm">
-                                                    <button type="button" class="btn btn-danger"
-                                                            onclick="removeRoom(@room.RoomId, '@room.RoomName', @tenantCount)"
-                                                            title="Xóa phòng">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </div>
                                             </td>
                                         </tr>
                                     }
                                 </tbody>
                                 <tfoot>
                                     <tr>
-                                        <th colspan="3">Tổng cộng:</th>
+                                        <th>Tổng cộng:</th>
                                         <th>
                                             <span id="totalRent">0</span> VNĐ
                                         </th>
-                                        <th colspan="3">
+                                        <th colspan="2">
                                             <span id="totalRooms">@Model.SelectedRooms.Count</span> phòng
                                         </th>
                                     </tr>
                                 </tfoot>
                             </table>
-                        </div>
-
-                        <!-- Hidden inputs để track rooms khi submit -->
-                        <div id="hiddenRoomInputs" style="display:none;">
-                            <!-- Sẽ được generate bởi JavaScript khi thêm/xóa phòng -->
                         </div>
                     }
                     else
@@ -231,45 +189,13 @@
                         <div class="alert alert-warning">
                             <i class="fas fa-exclamation-triangle"></i>
                             Hợp đồng chưa có phòng nào.
-                            <a href="javascript:void(0)" onclick="openAddRoomModal()">Thêm phòng ngay</a>
+                            <a href="/ContractRooms/?id=@Model.Id">Thêm phòng ngay</a>
                         </div>
                     }
                 </div>
             </div>
         }
 
-        <!-- Modal thêm phòng -->
-        <div class="modal fade" id="addRoomModal" tabindex="-1" role="dialog">
-            <div class="modal-dialog modal-lg" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">
-                            <i class="fas fa-plus-circle"></i> Thêm Phòng Vào Hợp Đồng
-                        </h5>
-                        <button type="button" class="close" data-dismiss="modal">
-                            <span>&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label>Tìm kiếm phòng:</label>
-                            <input type="text" id="searchRoom" class="form-control"
-                                   placeholder="Nhập tên phòng để tìm kiếm...">
-                        </div>
-
-                        <div class="available-rooms-list" style="max-height: 400px; overflow-y: auto;">
-                            <!-- Sẽ được load bằng AJAX -->
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
-                        <button type="button" class="btn btn-primary" onclick="confirmAddRooms()">
-                            <i class="fas fa-plus"></i> Thêm phòng đã chọn
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- File scan hợp đồng -->
         <div class="form-section">
@@ -643,8 +569,9 @@
 </style>
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="~/js/tenant-management.js"></script>    
-    <script>        
+    <script src="~/js/tenant-management.js"></script>
+    <script>
+
 
         // Biến tracking submit
         var isFormSubmitting = false;
