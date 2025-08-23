@@ -643,28 +643,8 @@
 </style>
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="~/js/tenant-management.js"></script>
-    <script src="~/js/company-tenant-manager.js"></script>
-    <script>
-        $(document).ready(function() {
-            // Initialize Company Tenant Manager nếu là hợp đồng công ty
-            if ('@Model.ContractType' === 'Company') {
-                CompanyTenantManager.init({
-                    contractId: @Model.Id,
-                    isEditMode: true,
-                    scanCCCDUrl: '@Url.Action("ScanCCCD", "FPTReader")',
-                    maxTenantsPerRoom: 4
-                });
-            }
-        });
-
-        // Global function để mở modal (được gọi từ button onclick trong table)
-        function addTenantToRoom(roomId, roomName) {
-            var roomIndex = $(`.room-row[data-room-id="${roomId}"]`).data('index');
-            CompanyTenantManager.openModal(roomId, roomName, roomIndex);
-        }
-        // Set URL cho scan CCCD
-        window.scanCCCDUrl = '@Url.Action("ScanCCCD", "FPTReader")';
+    <script src="~/js/tenant-management.js"></script>    
+    <script>        
 
         // Biến tracking submit
         var isFormSubmitting = false;
