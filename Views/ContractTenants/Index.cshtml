@@ -5,6 +5,22 @@
 }
 
 <style>
+    .btn-export {
+        background: #dc3545; /* Màu đỏ cho PDF */
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .btn-export:hover {
+            background: #c82333; /* Màu đỏ đậm hơn khi hover */
+        }
     .tenant-report-container {
         padding: 20px;
     }
@@ -352,8 +368,11 @@
                     <i class="fas fa-search"></i> Tìm kiếm
                 </button>
 
-                <button type="button" class="btn-export" onclick="exportReport()">
+                @*<button type="button" class="btn-export" onclick="exportReport()">
                     <i class="fas fa-file-excel"></i> Xuất Excel
+                </button>*@
+                <button type="button" class="btn-export" onclick="exportReport()">
+                    <i class="fas fa-file-pdf"></i> Xuất PDF
                 </button>
 
                 <button type="button" class="btn-reset" onclick="resetFilter()">
@@ -469,25 +488,9 @@
         }
     </div>
 </div>
+@section Scripts {
 
-<script>
-        // Khởi tạo datepicker và autonumeric nếu cần
-        $(document).ready(function() {
-            // Datepicker config from layout
-            $('.datetime').datepicker({
-                format: 'dd/mm/yyyy',
-                autoclose: true,
-                todayHighlight: true
-            });
-
-            // AutoNumeric config from layout
-            $('.money').autoNumeric('init', {
-                aSep: '.',
-                aDec: ',',
-                mDec: '0'
-            });
-        });
-
+    <script>
         function resetFilter() {
             window.location.href = '@Url.Action("Index", "ContractTenants")';
         }
@@ -497,4 +500,5 @@
             var exportUrl = '@Url.Action("Export", "ContractTenants")?' + params.toString();
             window.location.href = exportUrl;
         }
-</script>
+    </script>
+}

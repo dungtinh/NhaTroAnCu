@@ -326,6 +326,7 @@
     </Compile>
     <Compile Include="Models\PaymentReportViewModel.cs" />
     <Compile Include="Models\ReportSummaryViewModel.cs" />
+    <Compile Include="Models\ReportViewModels.cs" />
     <Compile Include="Models\Room.cs">
       <DependentUpon>NhaTroAnCuModel.tt</DependentUpon>
     </Compile>
