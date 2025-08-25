@@ -236,14 +236,13 @@
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="App_Start\Startup.Auth.cs" />
     <Compile Include="Controllers\ContractRoomsController.cs" />
+    <Compile Include="Controllers\ContractTenantsController.cs" />
     <Compile Include="Controllers\FPTReaderController.cs" />
     <Compile Include="Controllers\AccountController.cs" />
-    <Compile Include="Controllers\CardReaderController.cs" />
     <Compile Include="Controllers\ContractsController.cs" />
     <Compile Include="Controllers\IncomeExpenseController.cs" />
     <Compile Include="Controllers\ManageController.cs" />
     <Compile Include="Controllers\RoomsController.cs" />
-    <Compile Include="Controllers\TenantContractsController.cs" />
     <Compile Include="Controllers\TenantsController.cs" />
     <Compile Include="Controllers\UtilityBillsController.cs" />
     <Compile Include="Global.asax.cs">
@@ -255,6 +254,7 @@
     <Compile Include="Helpers\TenantPhotoHelper.cs" />
     <Compile Include="Helpers\DateTimeHelper.cs" />
     <Compile Include="Helpers\UtilityBillService.cs" />
+    <Compile Include="Models\ContractTenantViewModel.cs" />
     <Compile Include="Models\CompanyTenantViewModel.cs" />
     <Compile Include="Models\ContractRoomsViewModel.cs" />
     <Compile Include="Models\ContractViewModel.cs" />
@@ -397,7 +397,6 @@
     <Content Include="favicon.ico" />
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
-    <Content Include="js\company-tenant-manager.js" />
     <Content Include="js\site.js" />
     <Content Include="js\popper-fix.js" />
     <Content Include="js\tenant-management.js" />
@@ -620,6 +619,12 @@
     <Content Include="Views\Shared\_TenantManagement.cshtml" />
     <Content Include="Views\ContractRooms\Index.cshtml" />
     <Content Include="Views\Contracts\Extend.cshtml" />
+    <Content Include="Views\ContractTenants\Create.cshtml" />
+    <Content Include="Views\ContractTenants\Delete.cshtml" />
+    <Content Include="Views\ContractTenants\Details.cshtml" />
+    <Content Include="Views\ContractTenants\Edit.cshtml" />
+    <Content Include="Views\ContractTenants\Index.cshtml" />
+    <Content Include="Views\ContractTenants\TenantManager.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Uploads\ContractScans\" />
