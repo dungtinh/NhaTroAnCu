@@ -171,20 +171,24 @@
         <div class="rooms-grid">
             @foreach (var contractRoom in Model.ContractRooms)
             {
-                <div class="room-card">
-                    <div class="room-number">
-                        <i class="fas fa-home"></i> @contractRoom.Room.Name
-                    </div>
-                    <div class="room-price">
-                        @contractRoom.PriceAgreed.ToString("N0")đ
-                    </div>
-                    @if (!string.IsNullOrEmpty(contractRoom.Notes))
-                    {
-                        <div style="margin-top: 8px; font-size: 0.85rem; color: #6c757d;">
-                            @contractRoom.Notes
+                <a href="/Rooms/details/@contractRoom.RoomId" style="text-decoration: none;">
+                    <div class="room-card">
+
+                        <div class="room-number">
+                            <i class="fas fa-home"></i> @contractRoom.Room.Name
                         </div>
-                    }
-                </div>
+
+                        <div class="room-price">
+                            @contractRoom.PriceAgreed.ToString("N0")đ
+                        </div>
+                        @if (!string.IsNullOrEmpty(contractRoom.Notes))
+                        {
+                            <div style="margin-top: 8px; font-size: 0.85rem; color: #6c757d;">
+                                @contractRoom.Notes
+                            </div>
+                        }
+                    </div>
+                </a>
             }
         </div>
     </div>

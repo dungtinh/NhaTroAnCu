@@ -40,11 +40,21 @@
             <i class="fas fa-door-open"></i>
             Chi tiết phòng @Model.Name
         </h2>
-        <a href="@Url.Action("Index", "Rooms")" class="btn-back">
-            <i class="fas fa-arrow-left"></i> Quay lại
-        </a>
+        @if (activeContract == null)
+        {
+            <a href="@Url.Action("Create", "Contracts", new { roomId = Model.Id })"
+               class="btn btn-primary">
+                <i class="fas fa-plus"></i> Tạo hợp đồng mới
+            </a>
+        }
+        else
+        {
+            <a href="@Url.Action("Details", "Contracts", new { id = activeContract.Id })"
+               class="btn btn-sm btn-info badge badge-light">
+                <i class="fas fa-eye"></i> Xem hợp đồng
+            </a>
+        }
     </div>
-
     <div class="row">
         <!-- LEFT COLUMN -->
         <div class="col-md-4">

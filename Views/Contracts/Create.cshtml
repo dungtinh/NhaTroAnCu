@@ -89,110 +89,6 @@
 
         <!-- Section cho khách hàng cá nhân -->
         <div id="individualSection" class="form-section hidden">
-            <div class="section-title">
-                <i class="fas fa-user"></i> Thông Tin Người Thuê
-            </div>
-
-            <!-- Container cho danh sách người thuê -->
-            <div id="tenantListContainer" class="tenant-list-container">
-                <!-- Người thuê đầu tiên (mặc định) -->
-                <div class="tenant-card" data-tenant-index="0">
-                    <div class="tenant-card-header">
-                        <span class="tenant-number">Người thuê 1</span>
-                        <button type="button" class="btn-remove-tenant" onclick="removeTenant(0)" style="display:none;">
-                            <i class="fas fa-trash"></i> Xóa
-                        </button>
-                    </div>
-
-                    <!-- Phần upload và quét CCCD -->
-                    <div class="scan-section">
-                        <h5 style="color: #2c3e50; margin-bottom: 15px;">
-                            <i class="fas fa-id-card"></i> Quét thông tin từ CCCD/CMND
-                        </h5>
-
-                        <div class="form-group">
-                            <label>Upload ảnh CCCD/CMND để tự động điền thông tin</label>
-                            <input type="file" class="cccd-file form-control" data-tenant-index="0" accept="image/*" />
-                            <small class="form-text text-muted">
-                                Hỗ trợ định dạng: JPG, PNG, GIF. Hệ thống sẽ tự động nhận diện và điền thông tin.
-                            </small>
-                        </div>
-
-                        <button type="button" class="btn btn-primary btn-scan-cccd" data-tenant-index="0">
-                            <i class="fas fa-qrcode"></i> Quét thông tin CCCD
-                        </button>
-
-                        <div class="scan-result hidden" data-tenant-index="0" style="margin-top: 15px;">
-                            <!-- Kết quả quét sẽ hiển thị ở đây -->
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Họ và tên <span class="text-danger">*</span></label>
-                            <input type="text" name="Tenants[0].FullName" class="form-control tenant-fullname" data-tenant-index="0" />
-                        </div>
-
-                        <div class="form-group">
-                            <label>Số CCCD/CMND <span class="text-danger">*</span></label>
-                            <input type="text" name="Tenants[0].IdentityCard" class="form-control tenant-identity" data-tenant-index="0" />
-                        </div>
-
-                        <div class="form-group">
-                            <label>Số điện thoại</label>
-                            <input type="text" name="Tenants[0].PhoneNumber" class="form-control tenant-phone" data-tenant-index="0" />
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Ngày sinh</label>
-                            <input type="date" name="Tenants[0].BirthDate" class="form-control tenant-birthdate" data-tenant-index="0" />
-                        </div>
-
-                        <div class="form-group">
-                            <label>Giới tính</label>
-                            <select name="Tenants[0].Gender" class="form-control tenant-gender" data-tenant-index="0">
-                                <option value="">-- Chọn --</option>
-                                <option value="Nam">Nam</option>
-                                <option value="Nữ">Nữ</option>
-                                <option value="Khác">Khác</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Dân tộc</label>
-                            <input type="text" name="Tenants[0].Ethnicity" class="form-control tenant-ethnicity" data-tenant-index="0" />
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Địa chỉ thường trú</label>
-                            <input type="text" name="Tenants[0].PermanentAddress" class="form-control tenant-address" data-tenant-index="0" style="width: 100%;" />
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Biển số xe</label>
-                            <input type="text" name="Tenants[0].VehiclePlate" class="form-control tenant-vehicle" data-tenant-index="0" />
-                        </div>
-
-                        <div class="form-group">
-                            <label>Ảnh CCCD/Hộ chiếu</label>
-                            <input type="file" name="TenantPhotos[0]" class="form-control" accept="image/*" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Nút thêm người thuê -->
-            <button type="button" class="btn-add-tenant" onclick="addNewTenant()">
-                <i class="fas fa-plus"></i> Thêm người thuê
-            </button>
-            <small class="form-text text-muted">Tối đa 4 người/phòng</small>
-
             <!-- Chọn phòng cho hợp đồng cá nhân -->
             <div class="section-title" style="margin-top: 30px;">
                 <i class="fas fa-door-open"></i> Chọn Phòng
@@ -203,12 +99,12 @@
                 @Html.DropDownListFor(m => m.SingleRoomId,
                     new SelectList(ViewBag.AvailableRooms ?? new List<SelectListItem>(), "RoomId", "RoomName"),
                     "-- Chọn phòng --",
-                    new { @class = "form-control", @id = "singleRoomSelect" })
+                    new { @class = "form-control" })
             </div>
 
             <div class="form-group">
                 <label>Giá thuê (đ/tháng)</label>
-                @Html.TextBoxFor(m => m.SingleRoomPrice, new { @class = "form-control", @type = "number", @id = "singleRoomPrice" })
+                @Html.TextBoxFor(m => m.SingleRoomPrice, new { @class = "form-control money", @id = "singleRoomPrice" })
                 <small class="form-text text-muted">Để trống sẽ lấy giá mặc định của phòng</small>
             </div>
         </div>
@@ -349,22 +245,15 @@
     }
 </div>
 @section Scripts {
-    
+
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <!-- Include tenant management script -->
-    <script src="~/js/tenant-management.js"></script>
-
     <script>
-        // Set URL cho scan CCCD
-        window.scanCCCDUrl = '@Url.Action("ScanCCCD", "FPTReader")';
 
-        $(document).ready(function() {
-            // Khởi tạo TenantManager
-            TenantManager.init();
+        $(document).ready(function () {
 
             // Xử lý chọn loại hợp đồng
-            $('.type-card').click(function() {
+            $('.type-card').click(function () {
                 $('.type-card').removeClass('selected');
                 $(this).addClass('selected');
 
@@ -407,28 +296,6 @@
                         });
                         return false;
                     }
-
-                    // Validate ít nhất 1 tenant có thông tin
-                    var hasValidTenant = false;
-                    $('.tenant-card').each(function() {
-                        var fullName = $(this).find('.tenant-fullname').val();
-                        var identity = $(this).find('.tenant-identity').val();
-                        if (fullName && identity) {
-                            hasValidTenant = true;
-                            return false; // break
-                        }
-                    });
-
-                    if (!hasValidTenant) {
-                        e.preventDefault();
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Thiếu thông tin người thuê',
-                            text: 'Vui lòng nhập ít nhất thông tin 1 người thuê (Họ tên và CCCD)!',
-                            confirmButtonColor: '#ffc107'
-                        });
-                        return false;
-                    }
                 } else if (contractType === 'Company') {
                     // Validate công ty
                     if (!$('#Company_CompanyName').val() || !$('#Company_TaxCode').val()) {
@@ -458,11 +325,11 @@
             });
 
             // Xử lý chọn phòng cho công ty
-            $(document).on('change', '.company-room-checkbox', function() {
+            $(document).on('change', '.company-room-checkbox', function () {
                 updateCompanySummary();
             });
 
-            $(document).on('input', '.room-agreed-price', function() {
+            $(document).on('input', '.room-agreed-price', function () {
                 updateCompanySummary();
             });
 
@@ -482,15 +349,5 @@
                 $('#totalRent').text(totalRent.toLocaleString('vi-VN') + 'đ');
             }
         });
-
-        // Global function để thêm tenant (gọi từ button onclick)
-        function addTenant() {
-            TenantManager.addTenant();
-        }
-
-        // Global function để xóa tenant (gọi từ button onclick)
-        function removeTenant(index) {
-            TenantManager.removeTenant(index);
-        }
     </script>
 }
