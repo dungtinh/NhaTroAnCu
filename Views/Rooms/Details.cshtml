@@ -133,6 +133,13 @@
                 <div class="card-header bg-gradient-blue">
                     <i class="fas fa-file-contract"></i>
                     <span>Thông tin hợp đồng</span>
+                    @if (activeContract != null)
+                    {
+                        <a href="@Url.Action("Details", "Contracts", new { id = activeContract.Id })"
+                           class="btn btn-sm btn-info badge badge-light">
+                            <i class="fas fa-eye"></i> Chi tiết
+                        </a>
+                    }
                 </div>
                 <div class="card-body">
                     @if (activeContract != null)
@@ -196,33 +203,6 @@
                                 <span class="detail-label">Giá nước:</span>
                                 <span class="detail-value">@activeContract.WaterPrice.ToString("N0")đ/m³</span>
                             </div>
-                        </div>
-
-                        <!-- Các nút hành động -->
-                        <div class="contract-actions">
-                            <a href="@Url.Action("Details", "Contracts", new { id = activeContract.Id })"
-                               class="btn btn-sm btn-info">
-                                <i class="fas fa-eye"></i> Chi tiết
-                            </a>
-                            <a href="@Url.Action("Edit", "Contracts", new { id = activeContract.Id })"
-                               class="btn btn-sm btn-warning">
-                                <i class="fas fa-edit"></i> Sửa
-                            </a>
-                            <a href="@Url.Action("Export", "Contracts", new { id = activeContract.Id })"
-                               class="btn btn-sm btn-success">
-                                <i class="fas fa-download"></i> Xuất HĐ
-                            </a>
-                            <button type="button" class="btn btn-sm btn-primary"
-                                    onclick="uploadContract(@activeContract.Id)">
-                                <i class="fas fa-upload"></i> Upload scan
-                            </button>
-                            @if (!isExpired)
-                            {
-                                <button type="button" class="btn btn-sm btn-danger"
-                                        onclick="endContract(@activeContract.Id)">
-                                    <i class="fas fa-times-circle"></i> Kết thúc
-                                </button>
-                            }
                         </div>
                     }
                     else

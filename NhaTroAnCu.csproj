@@ -619,6 +619,7 @@
     <Content Include="Views\Shared\_PaymentHistoryPartial.cshtml" />
     <Content Include="Views\Shared\_TenantManagement.cshtml" />
     <Content Include="Views\ContractRooms\Index.cshtml" />
+    <Content Include="Views\Contracts\Extend.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Uploads\ContractScans\" />

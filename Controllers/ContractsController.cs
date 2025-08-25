@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Web;
 using System.Web.Mvc;
+using Microsoft.AspNet.Identity;
 using NhaTroAnCu.Helpers;
 using NhaTroAnCu.Models;
 
@@ -14,6 +15,243 @@ namespace NhaTroAnCu.Controllers
     public class ContractsController : Controller
     {
         private NhaTroAnCuEntities db = new NhaTroAnCuEntities();
+
+        // GET: Contracts/Extend/5
+        [HttpGet]
+        public ActionResult Extend(int? id)
+        {
+            if (id == null)
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+            }
+
+            var contract = db.Contracts
+                .Include(c => c.ContractRooms.Select(cr => cr.Room))
+                .Include(c => c.ContractTenants.Select(ct => ct.Tenant))
+                .Include(c => c.Company)
+                .Include(c => c.ContractExtensionHistories)
+                .FirstOrDefault(c => c.Id == id);
+
+            if (contract == null)
+            {
+                return HttpNotFound();
+            }
+
+            // Kiểm tra contract đã kết thúc chưa
+            if (contract.Status == "Ended")
+            {
+                TempData["Error"] = "Không thể gia hạn hợp đồng đã kết thúc.";
+                return RedirectToAction("Details", new { id = id });
+            }
+
+            ViewBag.ContractId = id;
+            ViewBag.CurrentEndDate = contract.EndDate;
+
+            return View(contract);
+        }
+
+        // POST: Contracts/Extend/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Extend(int id, DateTime newEndDate, string extendNote)
+        {
+            var contract = db.Contracts
+                .Include(c => c.ContractExtensionHistories)
+                .FirstOrDefault(c => c.Id == id);
+
+            if (contract == null)
+            {
+                return HttpNotFound();
+            }
+
+            // Validation
+            if (newEndDate <= contract.EndDate)
+            {
+                TempData["Error"] = "Ngày gia hạn mới phải sau ngày kết thúc hiện tại.";
+                return View(contract);
+            }
+
+            using (var transaction = db.Database.BeginTransaction())
+            {
+                try
+                {
+                    // Lưu lịch sử gia hạn
+                    var extensionHistory = new ContractExtensionHistory
+                    {
+                        ContractId = contract.Id,
+                        OldEndDate = contract.EndDate,
+                        NewEndDate = newEndDate,
+                        Note = extendNote,
+                        ExtendedAt = DateTime.Now,
+                    };
+
+                    db.ContractExtensionHistories.Add(extensionHistory);
+
+                    // Cập nhật ngày kết thúc mới cho hợp đồng
+                    contract.EndDate = newEndDate;
+
+                    // Thêm ghi chú vào Note của contract
+                    var noteEntry = $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Gia hạn từ {contract.EndDate:dd/MM/yyyy} đến {newEndDate:dd/MM/yyyy}";
+                    if (!string.IsNullOrEmpty(extendNote))
+                    {
+                        noteEntry += $" - {extendNote}";
+                    }
+                    contract.Note = (contract.Note ?? "") + noteEntry;
+
+                    // Lưu thay đổi
+                    db.SaveChanges();
+
+                    // Commit transaction
+                    transaction.Commit();
+
+                    TempData["Success"] = $"Đã gia hạn hợp đồng đến ngày {newEndDate:dd/MM/yyyy} thành công.";
+
+                    return RedirectToAction("Details", "Contracts", new { id = contract.Id });
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    TempData["Error"] = "Có lỗi xảy ra khi gia hạn hợp đồng. Vui lòng thử lại.";
+                    return View(contract);
+                }
+            }
+        }
+
+        // Action hỗ trợ: Lấy lịch sử gia hạn
+        [HttpGet]
+        public JsonResult GetExtensionHistory(int id)
+        {
+            var history = db.ContractExtensionHistories
+                .Where(h => h.ContractId == id)
+                .OrderByDescending(h => h.ExtendedAt)
+                .ToList();
+
+            return Json(history, JsonRequestBehavior.AllowGet);
+        }
+
+
+        // GET: Contracts/End/5
+        [HttpGet]
+        public ActionResult End(int? id)
+        {
+            if (id == null)
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+            }
+
+            var contract = db.Contracts
+                .Include(c => c.ContractRooms.Select(cr => cr.Room))
+                .Include(c => c.ContractTenants.Select(ct => ct.Tenant))
+                .Include(c => c.IncomeExpenses.Select(ci => ci.IncomeExpenseCategory))
+                .Include(c => c.Company)
+                .FirstOrDefault(c => c.Id == id);
+
+            if (contract == null)
+            {
+                return HttpNotFound();
+            }
+
+            // Kiểm tra contract đã kết thúc chưa
+            if (contract.Status == "Ended")
+            {
+                TempData["Error"] = "Hợp đồng này đã được kết thúc trước đó.";
+                return RedirectToAction("Details", new { id = id });
+            }
+
+            ViewBag.ContractId = id;
+            return View(contract);
+        }
+
+        // POST: Contracts/End/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult End(int id, DateTime? endDate, decimal? refundAmount, string refundNote)
+        {
+            var contract = db.Contracts
+                .Include(c => c.ContractRooms.Select(cr => cr.Room))
+                .FirstOrDefault(c => c.Id == id);
+
+            if (contract == null)
+            {
+                return HttpNotFound();
+            }
+
+            using (var transaction = db.Database.BeginTransaction())
+            {
+                try
+                {
+                    // Cập nhật trạng thái hợp đồng
+                    contract.Status = "Ended";
+                    contract.EndDate = endDate ?? DateTime.Now;
+                    // Cập nhật trạng thái tất cả các phòng trong hợp đồng
+                    foreach (var contractRoom in contract.ContractRooms)
+                    {
+                        contractRoom.Room.IsOccupied = false;
+                    }
+
+                    // Ghi nhận trả cọc nếu có
+                    if (refundAmount.HasValue && refundAmount.Value > 0)
+                    {
+                        // Tìm hoặc tạo category "Trả tiền cọc"
+                        var expenseCategory = db.IncomeExpenseCategories
+                            .FirstOrDefault(c => c.Name == "Trả tiền cọc" && c.IsSystem);
+
+                        if (expenseCategory == null)
+                        {
+                            expenseCategory = new IncomeExpenseCategory
+                            {
+                                Name = "Trả tiền cọc",
+                                Type = "Expense",
+                                IsSystem = true,
+                                IsActive = true,
+                                CreatedAt = DateTime.Now,
+                            };
+                            db.IncomeExpenseCategories.Add(expenseCategory);
+                            db.SaveChanges();
+                        }
+
+                        // Tạo phiếu chi trả cọc
+                        var incomeExpense = new IncomeExpense
+                        {
+                            CategoryId = expenseCategory.Id,
+                            ContractId = id,
+                            Amount = refundAmount.Value,
+                            TransactionDate = endDate?.Date ?? DateTime.Now.Date,
+                            Description = !string.IsNullOrEmpty(refundNote)
+                                ? refundNote
+                                : $"Trả tiền cọc khi kết thúc hợp đồng {contract.Id}",
+                            ReferenceNumber = $"REFUND-{contract.Id}-{DateTime.Now:yyyyMMddHHmmss}",
+                            CreatedBy = User.Identity.GetUserId(),
+                            CreatedAt = DateTime.Now
+                        };
+
+                        db.IncomeExpenses.Add(incomeExpense);
+                    }
+
+                    // Lưu tất cả thay đổi
+                    db.SaveChanges();
+
+                    // Commit transaction
+                    transaction.Commit();
+
+                    TempData["Success"] = $"Đã kết thúc hợp đồng {contract.Id} thành công.";
+
+                    // Redirect về phòng đầu tiên trong hợp đồng hoặc danh sách hợp đồng
+
+                    return RedirectToAction("Details", "Contracts", new { id = contract.Id });
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+
+                    // Log error nếu có hệ thống logging
+                    // Logger.Error($"Error ending contract {id}: {ex.Message}", ex);
+
+                    TempData["Error"] = "Có lỗi xảy ra khi kết thúc hợp đồng. Vui lòng thử lại.";
+                    return RedirectToAction("Details", new { id = id });
+                }
+            }
+        }
 
         // GET: Contracts
         public ActionResult Index()
