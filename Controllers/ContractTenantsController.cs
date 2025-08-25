@@ -280,10 +280,125 @@ namespace NhaTroAnCu.Controllers
 
 
         // GET: ContractTenants
-        public ActionResult Index()
+        public ActionResult Index(string searchName, string searchCard, string searchRoom,
+             string filterStatus, string filterCompany, string filterContractType)
         {
-            var contractTenants = db.ContractTenants.Include(c => c.Contract).Include(c => c.Room).Include(c => c.Tenant);
-            return View(contractTenants.ToList());
+            var query = db.ContractTenants
+                .Include(ct => ct.Tenant)
+                .Include(ct => ct.Room)
+                .Include(ct => ct.Contract)
+                .Include(ct => ct.Contract.Company)
+                .AsQueryable();
+
+            // Lọc theo trạng thái hợp đồng
+            if (!string.IsNullOrEmpty(filterStatus))
+            {
+                query = query.Where(ct => ct.Contract.Status == filterStatus);
+            }
+            else
+            {
+                // Mặc định chỉ hiển thị hợp đồng Active
+                query = query.Where(ct => ct.Contract.Status == "Active");
+            }
+
+            // Lọc theo loại hợp đồng
+            if (!string.IsNullOrEmpty(filterContractType))
+            {
+                query = query.Where(ct => ct.Contract.ContractType == filterContractType);
+            }
+
+            // Lọc theo công ty (cho hợp đồng công ty)
+            if (!string.IsNullOrEmpty(filterCompany))
+            {
+                int companyId = int.Parse(filterCompany);
+                query = query.Where(ct => ct.Contract.CompanyId == companyId);
+            }
+
+            // Tìm kiếm
+            if (!string.IsNullOrEmpty(searchName))
+            {
+                query = query.Where(ct => ct.Tenant.FullName.Contains(searchName));
+            }
+            if (!string.IsNullOrEmpty(searchCard))
+            {
+                query = query.Where(ct => ct.Tenant.IdentityCard.Contains(searchCard));
+            }
+            if (!string.IsNullOrEmpty(searchRoom))
+            {
+                query = query.Where(ct => ct.Room.Name.Contains(searchRoom));
+            }
+
+            var result = query
+                .OrderBy(ct => ct.Room.Name)
+                .ThenBy(ct => ct.Tenant.FullName)
+                .Select(ct => new TenantReportViewModel
+                {
+                    Id = ct.Id,
+                    TenantId = ct.TenantId,
+                    TenantName = ct.Tenant.FullName,
+                    IdentityCard = ct.Tenant.IdentityCard,
+                    PhoneNumber = ct.Tenant.PhoneNumber,
+                    BirthDate = ct.Tenant.BirthDate,
+                    Gender = ct.Tenant.Gender,
+                    Ethnicity = ct.Tenant.Ethnicity,
+                    PermanentAddress = ct.Tenant.PermanentAddress,
+                    VehiclePlate = ct.Tenant.VehiclePlate,
+                    Photo = ct.Tenant.Photo,
+
+                    RoomId = ct.RoomId,
+                    RoomName = ct.Room.Name,
+
+                    ContractId = ct.ContractId,
+                    ContractType = ct.Contract.ContractType,
+                    ContractStatus = ct.Contract.Status,
+                    StartDate = ct.Contract.StartDate,
+                    EndDate = ct.Contract.EndDate,
+                    MoveInDate = ct.Contract.MoveInDate,
+
+                    CompanyId = ct.Contract.CompanyId,
+                    CompanyName = ct.Contract.Company != null ? ct.Contract.Company.CompanyName : null,
+
+                })
+                .ToList();
+
+            // Chuẩn bị dữ liệu cho filters
+            ViewBag.Companies = db.Companies
+                .OrderBy(c => c.CompanyName)
+                .Select(c => new SelectListItem
+                {
+                    Value = c.Id.ToString(),
+                    Text = c.CompanyName
+                })
+                .ToList();
+
+            ViewBag.ContractTypes = new List<SelectListItem>
+            {
+                new SelectListItem { Value = "Individual", Text = "Cá nhân/Hộ gia đình" },
+                new SelectListItem { Value = "Company", Text = "Công ty" }
+            };
+
+            ViewBag.Statuses = new List<SelectListItem>
+            {
+                new SelectListItem { Value = "Active", Text = "Đang ở" },
+                new SelectListItem { Value = "Expired", Text = "Hết hạn" },
+                new SelectListItem { Value = "Terminated", Text = "Đã kết thúc" }
+            };
+
+            // Truyền các giá trị filter để maintain state
+            ViewBag.SearchName = searchName;
+            ViewBag.SearchCard = searchCard;
+            ViewBag.SearchRoom = searchRoom;
+            ViewBag.FilterStatus = filterStatus;
+            ViewBag.FilterCompany = filterCompany;
+            ViewBag.FilterContractType = filterContractType;
+
+            // Thống kê
+            ViewBag.TotalTenants = result.Count;
+            ViewBag.TotalRooms = result.Select(r => r.RoomId).Distinct().Count();
+            ViewBag.TotalCompanies = result.Where(r => r.CompanyId.HasValue)
+                .Select(r => r.CompanyId).Distinct().Count();
+
+            return View(result);
         }
 
         // GET: ContractTenants/Details/5
@@ -400,6 +515,11 @@ namespace NhaTroAnCu.Controllers
                 db.Dispose();
             }
             base.Dispose(disposing);
+        }
+        public ActionResult Export(string filterStatus, string filterCompany, string filterContractType)
+        {
+            
+            return RedirectToAction("Index");
         }
     }
 }

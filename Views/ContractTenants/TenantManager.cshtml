@@ -208,7 +208,7 @@
                                 <div class="form-group">
                                     <label>Họ và tên <span class="text-danger">*</span></label>
                                     <input type="text" name="Tenants[@index].FullName" value="@tenant.FullName"
-                                           class="form-control tenant-name" data-tenant-index="@index" required />
+                                           class="form-control tenant-fullname" data-tenant-index="@index" required />
                                 </div>
 
                                 <div class="form-group">
@@ -236,9 +236,9 @@
                                     <label>Giới tính</label>
                                     <select name="Tenants[@index].Gender" class="form-control tenant-gender" data-tenant-index="@index">
                                         <option value="">-- Chọn --</option>
-                                        <option value="Nam" @(tenant.Gender == "Nam" ? "selected" : "")>Nam</option>
-                                        <option value="Nữ" @(tenant.Gender == "Nữ" ? "selected" : "")>Nữ</option>
-                                        <option value="Khác" @(tenant.Gender == "Khác" ? "selected" : "")>Khác</option>
+                                        <option value="NAM" @(tenant.Gender == "NAM" ? "selected" : "")>Nam</option>
+                                        <option value="NỮ" @(tenant.Gender == "NỮ" ? "selected" : "")>Nữ</option>
+                                        <option value="KHÁC" @(tenant.Gender == "KHÁC" ? "selected" : "")>Khác</option>
                                     </select>
                                 </div>
 
