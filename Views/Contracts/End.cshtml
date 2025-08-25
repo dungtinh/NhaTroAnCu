@@ -1,40 +1,275 @@
-﻿
+﻿@model NhaTroAnCu.Models.Contract
 @{
     ViewBag.Title = "Kết thúc hợp đồng";
-    var contract = ViewBag.Contract as NhaTroAnCu.Models.Contract;
-}
+    Layout = "~/Views/Shared/_Layout.cshtml";
 
-<div class="container">
+}
+@{
+    // Tính tổng tiền đã thu từ hợp đồng
+    decimal totalPaid = Model.IncomeExpenses?
+        .Where(ie => ie.IncomeExpenseCategory.Type == "Income")
+        .Sum(ie => ie.Amount) ?? 0;
+
+    // Tính tổng tiền phải thu (từ các phiếu báo tiền)
+    decimal totalDue = Model.UtilityBills?
+        .Sum(ub => ub.TotalAmount) ?? 0;
+
+    // Tiền cọc thực tế = Tổng đã thu - Tổng phải thu
+    decimal actualDeposit = totalPaid - totalDue;
+    // Tiền nợ
+    decimal loanDeposit = totalDue - totalPaid;
+}
+<div class="container mt-4">
     <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
+        <div class="col-md-8">
+            <div class="card shadow">
                 <div class="card-header bg-danger text-white">
-                    <h4><i class="fas fa-file-contract"></i> Kết thúc hợp đồng</h4>
+                    <h4 class="mb-0">
+                        <i class="fas fa-file-contract"></i> Kết thúc hợp đồng #@Model.Id
+                    </h4>
                 </div>
+
                 <div class="card-body">
+                    <!-- Cảnh báo -->
                     <div class="alert alert-warning">
                         <i class="fas fa-exclamation-triangle"></i>
-                        Bạn đang kết thúc hợp đồng phòng
+                        <strong>Lưu ý:</strong> Bạn đang thực hiện kết thúc hợp đồng. Hành động này không thể hoàn tác!
                     </div>
 
-                    @using (Html.BeginForm("EndConfirm", "Contracts", FormMethod.Post))
+                    <!-- Thông tin hợp đồng -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Thông tin hợp đồng</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>
+                                <strong>Loại hợp đồng:</strong>
+                                @if (Model.ContractType == "Individual")
+                                {
+                                    <span class="badge badge-primary">Cá nhân</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-info">Công ty</span>
+                                }
+                            </p>
+                            <p><strong>Ngày bắt đầu:</strong> @Model.StartDate.ToString("dd/MM/yyyy")</p>
+                            <p>
+                                <strong>Ngày kết thúc dự kiến:</strong>
+                                @Model.EndDate.ToString("dd/MM/yyyy")
+                            </p>
+
+                        </div>
+                    </div>
+
+                    <!-- Thông tin tài chính -->
+                    <div class="card mb-3 border-info">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="fas fa-calculator"></i> Thông tin tài chính</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p>
+                                        <strong>Tổng tiền đã thu:</strong>
+                                        <span class="text-success">@String.Format("{0:N0}", totalPaid) VNĐ</span>
+                                    </p>
+                                    <p>
+                                        <strong>Tổng tiền phải thu:</strong>
+                                        <span class="text-warning">@String.Format("{0:N0}", totalDue) VNĐ</span>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p>
+                                        <strong>Số dư hiện tại:</strong>
+                                        <span class="@(actualDeposit >= 0 ? "text-success" : "text-danger") font-weight-bold h5">
+                                            @String.Format("{0:N0}", actualDeposit) VNĐ
+                                        </span>
+                                    </p>
+                                    <p>
+                                        <strong>Số tiền còn nợ:</strong>
+                                        <span class="@(loanDeposit >= 0 ? "text-danger" : "text-mute") font-weight-bold h5">
+                                            @String.Format("{0:N0}", loanDeposit) VNĐ
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                            @if (actualDeposit < 0)
+                            {
+                                <div class="alert alert-danger mt-2 mb-0">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    Khách thuê còn nợ <strong>@String.Format("{0:N0}", Math.Abs(actualDeposit)) VNĐ</strong>.
+                                    Vui lòng thu nợ trước khi kết thúc hợp đồng.
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Danh sách phòng -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Danh sách phòng trong hợp đồng</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Phòng</th>
+                                            <th>Giá thuê</th>
+                                            <th>Trạng thái</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var contractRoom in Model.ContractRooms)
+                                        {
+                                            <tr>
+                                                <td>@contractRoom.Room.RoomNumber</td>
+                                                <td>@String.Format("{0:N0}", contractRoom.PriceAgreed) VNĐ</td>
+                                                <td>
+                                                    @if (contractRoom.Room.IsOccupied)
+                                                    {
+                                                        <span class="badge bg-warning">Đang thuê</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary">Trống</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Danh sách khách thuê (nếu có) -->
+                    @if (Model.ContractTenants != null && Model.ContractTenants.Any())
                     {
-                        @Html.Hidden("id", contract.Id)
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">Danh sách khách thuê</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Họ tên</th>
+                                                <th>Số điện thoại</th>
+                                                <th>CCCD/CMND</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var contractTenant in Model.ContractTenants)
+                                            {
+                                                <tr>
+                                                    <td>@contractTenant.Tenant.FullName</td>
+                                                    <td>@contractTenant.Tenant.PhoneNumber</td>
+                                                    <td>@contractTenant.Tenant.IdentityCard</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    }
 
+                    <!-- Form kết thúc hợp đồng -->
+                    @using (Html.BeginForm("End", "Contracts", FormMethod.Post, new { @class = "needs-validation", novalidate = "" }))
+                    {
+                        @Html.AntiForgeryToken()
+                        @Html.Hidden("id", Model.Id)
 
-                        <div class="form-group">
-                            <label>Ghi chú</label>
-                            <textarea name="refundNote" class="form-control" rows="3"
-                                      placeholder="Lý do giữ lại tiền cọc (nếu có)..."></textarea>
+                        <div class="card border-danger">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0 text-danger">Thông tin kết thúc hợp đồng</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label for="endDate">
+                                            Ngày kết thúc <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text"
+                                               class="form-control datetime"
+                                               id="endDate"
+                                               name="endDate"
+                                               value="@DateTime.Now.ToString("dd/MM/yyyy")"
+                                               required>
+                                        <div class="invalid-feedback">
+                                            Vui lòng chọn ngày kết thúc
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group col-md-6">
+                                        <label for="refundAmount">
+                                            Số tiền hoàn trả cọc
+                                        </label>
+                                        @{
+                                            // Tính lại số dư để đề xuất số tiền hoàn trả
+                                            decimal suggestedRefund = actualDeposit > 0 ? actualDeposit : 0;
+                                        }
+                                        <input type="text"
+                                               class="form-control money"
+                                               id="refundAmount"
+                                               name="refundAmount"
+                                               placeholder="Nhập số tiền hoàn trả"
+                                               value="@suggestedRefund">
+                                        <small class="form-text text-muted">
+                                            @if (actualDeposit > 0)
+                                            {
+                                                <span>Số dư hiện tại: @String.Format("{0:N0}", actualDeposit) VNĐ</span>
+                                            }
+                                            else if (actualDeposit < 0)
+                                            {
+                                                <span class="text-danger">Khách còn nợ: @String.Format("{0:N0}", Math.Abs(actualDeposit)) VNĐ</span>
+                                            }
+                                            else
+                                            {
+                                                <span>Không có số dư</span>
+                                            }
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="refundNote">Ghi chú</label>
+                                    <textarea class="form-control"
+                                              id="refundNote"
+                                              name="refundNote"
+                                              rows="3"
+                                              placeholder="Lý do kết thúc hợp đồng, ghi chú về tiền cọc..."></textarea>
+                                </div>
+
+                                <!-- Checkbox xác nhận -->
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           id="confirmEnd"
+                                           required>
+                                    <label class="form-check-label text-danger" for="confirmEnd">
+                                        Tôi xác nhận muốn kết thúc hợp đồng này và hiểu rằng hành động này không thể hoàn tác
+                                    </label>
+                                    <div class="invalid-feedback">
+                                        Vui lòng xác nhận trước khi kết thúc hợp đồng
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="form-group">
-                            <button type="submit" class="btn btn-danger">
-                                <i class="fas fa-check"></i> Xác nhận kết thúc
+                        <!-- Buttons -->
+                        <div class="form-group mt-4">
+                            <button type="submit"
+                                    class="btn btn-danger"
+                                    id="btnEndContract">
+                                <i class="fas fa-stop-circle"></i> Xác nhận kết thúc hợp đồng
                             </button>
-                            <a href="@Url.Action("Details", "Rooms", new { id = contract.ContractRooms.First().RoomId })"
+                            <a href="@Url.Action("Details", "Contracts", new { id = Model.Id })"
                                class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Hủy
+                                <i class="fas fa-times"></i> Hủy bỏ
                             </a>
                         </div>
                     }
@@ -43,3 +278,54 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Bootstrap form validation
+            (function () {
+                'use strict';
+                window.addEventListener('load', function () {
+                    var forms = document.getElementsByClassName('needs-validation');
+                    var validation = Array.prototype.filter.call(forms, function (form) {
+                        form.addEventListener('submit', function (event) {
+                            if (form.checkValidity() === false) {
+                                event.preventDefault();
+                                event.stopPropagation();
+                            }
+                            form.classList.add('was-validated');
+                        }, false);
+                    });
+                }, false);
+            })();
+
+            // Disable submit button khi chưa check confirm
+            $('#confirmEnd').change(function () {
+                if ($(this).is(':checked')) {
+                    $('#btnEndContract').prop('disabled', false);
+                } else {
+                    $('#btnEndContract').prop('disabled', true);
+                }
+            });
+
+            // Initial state
+            $('#btnEndContract').prop('disabled', true);
+
+            // Confirm dialog khi submit
+            $('form').on('submit', function (e) {
+                if (!confirm('Bạn có chắc chắn muốn kết thúc hợp đồng này? Hành động này không thể hoàn tác!')) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+
+            // Format tiền tự động khi nhập
+            $('#refundAmount').on('blur', function () {
+                var value = $(this).val();
+                if (value && !isNaN(value.replace(/,/g, ''))) {
+                    // AutoNumeric sẽ tự động format
+                }
+            });
+        });
+    </script>
+}

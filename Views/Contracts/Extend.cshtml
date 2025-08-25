@@ -1,0 +1,344 @@
+﻿@model NhaTroAnCu.Models.Contract
+@{
+    ViewBag.Title = "Gia hạn hợp đồng";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-calendar-plus"></i> Gia hạn hợp đồng #@Model.Id
+                    </h4>
+                </div>
+
+                <div class="card-body">
+                    <!-- Thông tin hợp đồng hiện tại -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Thông tin hợp đồng</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p>
+                                        <strong>Loại hợp đồng:</strong>
+                                        @if (Model.ContractType == "Individual")
+                                        {
+                                            <span class="badge badge-primary">Cá nhân</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-info">Công ty</span>
+                                        }
+                                    </p>
+                                    <p>
+                                        <strong>Ngày bắt đầu:</strong>
+                                        <span class="text-info">@Model.StartDate.ToString("dd/MM/yyyy")</span>
+                                    </p>
+                                    <p>
+                                        <strong>Ngày kết thúc hiện tại:</strong>
+                                        <span class="text-danger font-weight-bold">
+                                            @Model.EndDate.ToString("dd/MM/yyyy")
+                                        </span>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p>
+                                        <strong>Giá thuê thỏa thuận:</strong>
+                                        <span class="text-primary">
+                                            @String.Format("{0:N0}", Model.PriceAgreed) VNĐ
+                                        </span>
+                                    </p>
+                                    <p>
+                                        <strong>Trạng thái:</strong>
+                                        <span class="badge badge-success">@Model.Status</span>
+                                    </p>
+                                    <p>
+                                        <strong>Thời hạn còn lại:</strong>
+                                        @{
+                                            var daysLeft = (Model.EndDate - DateTime.Now).Days;
+                                        }
+                                        @if (daysLeft > 0)
+                                        {
+                                            <span class="text-success">@daysLeft ngày</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-danger">Đã hết hạn @Math.Abs(daysLeft) ngày</span>
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lịch sử gia hạn (nếu có) -->
+                    @if (Model.ContractExtensionHistories != null && Model.ContractExtensionHistories.Any())
+                    {
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">Lịch sử gia hạn</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Ngày gia hạn</th>
+                                                <th>Từ ngày</th>
+                                                <th>Đến ngày</th>
+                                                <th>Ghi chú</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var history in Model.ContractExtensionHistories.OrderByDescending(h => h.ExtendedAt).Take(5))
+                                            {
+                                                <tr>
+                                                    <td>@history.ExtendedAt.ToString("dd/MM/yyyy")</td>
+                                                    <td>@history.OldEndDate.Value.ToString("dd/MM/yyyy")</td>
+                                                    <td>@history.NewEndDate.Value.ToString("dd/MM/yyyy")</td>
+                                                    <td>@history.Note</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Form gia hạn -->
+                    @using (Html.BeginForm("Extend", "Contracts", FormMethod.Post, new { @class = "needs-validation", novalidate = "" }))
+                    {
+                        @Html.AntiForgeryToken()
+                        @Html.Hidden("id", Model.Id)
+
+                        <div class="card border-primary">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0 text-primary">
+                                    <i class="fas fa-edit"></i> Thông tin gia hạn
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <!-- Chọn nhanh thời gian gia hạn -->
+                                <div class="form-group">
+                                    <label>Gia hạn nhanh</label>
+                                    <div class="btn-group d-flex flex-wrap" role="group">
+                                        <button type="button" class="btn btn-outline-primary extend-quick" data-months="1">
+                                            <i class="fas fa-calendar-day"></i> 1 tháng
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary extend-quick" data-months="3">
+                                            <i class="fas fa-calendar-week"></i> 3 tháng
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary extend-quick" data-months="6">
+                                            <i class="fas fa-calendar-alt"></i> 6 tháng
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary extend-quick" data-months="12">
+                                            <i class="fas fa-calendar"></i> 1 năm
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary extend-quick" data-months="24">
+                                            <i class="fas fa-calendar-plus"></i> 2 năm
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label for="newEndDate">
+                                            Ngày kết thúc mới <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text"
+                                               class="form-control datetime"
+                                               id="newEndDate"
+                                               name="newEndDate"
+                                               required>
+                                        <div class="invalid-feedback">
+                                            Vui lòng chọn ngày kết thúc mới
+                                        </div>
+                                        <small class="form-text text-muted">
+                                            Phải sau ngày: @Model.EndDate.ToString("dd/MM/yyyy")
+                                        </small>
+                                    </div>
+
+                                    <div class="form-group col-md-6">
+                                        <label>Thời gian gia hạn</label>
+                                        <div class="form-control-plaintext">
+                                            <span id="extensionPeriod" class="h5 text-primary font-weight-bold">
+                                                Chưa xác định
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="extendNote">Ghi chú gia hạn</label>
+                                    <textarea class="form-control"
+                                              id="extendNote"
+                                              name="extendNote"
+                                              rows="3"
+                                              placeholder="Lý do gia hạn, thỏa thuận với khách..."></textarea>
+                                </div>
+
+                                <!-- Hiển thị thông tin gia hạn -->
+                                <div class="alert alert-info" id="extensionInfo" style="display: none;">
+                                    <h6 class="alert-heading">
+                                        <i class="fas fa-info-circle"></i> Thông tin gia hạn:
+                                    </h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <strong>Ngày kết thúc cũ:</strong><br>
+                                            @Model.EndDate.ToString("dd/MM/yyyy")
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>Ngày kết thúc mới:</strong><br>
+                                            <span id="newEndDateDisplay" class="text-primary font-weight-bold">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="form-group mt-4">
+                            <button type="submit"
+                                    class="btn btn-primary"
+                                    id="btnExtend">
+                                <i class="fas fa-check"></i> Xác nhận gia hạn
+                            </button>
+                            <a href="@Url.Action("Details", "Contracts", new { id = Model.Id })"
+                               class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Hủy bỏ
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            var currentEndDate = '@Model.EndDate.ToString("yyyy-MM-dd")';
+
+            // Bootstrap form validation
+            (function() {
+                'use strict';
+                window.addEventListener('load', function() {
+                    var forms = document.getElementsByClassName('needs-validation');
+                    var validation = Array.prototype.filter.call(forms, function(form) {
+                        form.addEventListener('submit', function(event) {
+                            if (form.checkValidity() === false) {
+                                event.preventDefault();
+                                event.stopPropagation();
+                            }
+                            form.classList.add('was-validated');
+                        }, false);
+                    });
+                }, false);
+            })();
+
+            // Xử lý nút gia hạn nhanh
+            $('.extend-quick').click(function() {
+                $('.extend-quick').removeClass('active btn-primary').addClass('btn-outline-primary');
+                $(this).removeClass('btn-outline-primary').addClass('btn-primary active');
+
+                var months = $(this).data('months');
+                var baseDate = new Date(currentEndDate);
+                baseDate.setMonth(baseDate.getMonth() + months);
+
+                var day = baseDate.getDate();
+                var month = baseDate.getMonth() + 1;
+                var year = baseDate.getFullYear();
+
+                var formattedDate = (day < 10 ? '0' : '') + day + '/' +
+                                  (month < 10 ? '0' : '') + month + '/' + year;
+
+                $('#newEndDate').val(formattedDate);
+                updateExtensionPeriod();
+            });
+
+            // Cập nhật thời gian gia hạn
+            function updateExtensionPeriod() {
+                var newEndDateStr = $('#newEndDate').val();
+                if (!newEndDateStr) {
+                    $('#extensionPeriod').text('Chưa xác định');
+                    $('#extensionInfo').hide();
+                    return;
+                }
+
+                // Parse dd/MM/yyyy
+                var parts = newEndDateStr.split('/');
+                if (parts.length !== 3) return;
+
+                var newEndDate = new Date(parts[2], parts[1] - 1, parts[0]);
+                var oldEndDate = new Date(currentEndDate);
+
+                if (newEndDate <= oldEndDate) {
+                    $('#extensionPeriod').html('<span class="text-danger">Ngày không hợp lệ!</span>');
+                    $('#btnExtend').prop('disabled', true);
+                    return;
+                }
+
+                $('#btnExtend').prop('disabled', false);
+
+                var diffTime = Math.abs(newEndDate - oldEndDate);
+                var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                var diffMonths = Math.floor(diffDays / 30);
+                var remainDays = diffDays % 30;
+
+                var periodText = '';
+                if (diffMonths > 0) {
+                    periodText = diffMonths + ' tháng';
+                    if (remainDays > 0) {
+                        periodText += ' ' + remainDays + ' ngày';
+                    }
+                } else {
+                    periodText = diffDays + ' ngày';
+                }
+
+                $('#extensionPeriod').html('<i class="fas fa-clock"></i> ' + periodText);
+                $('#newEndDateDisplay').text(newEndDateStr);
+                $('#extensionInfo').show();
+            }
+
+            // Event listeners
+            $('#newEndDate').on('change blur', function() {
+                updateExtensionPeriod();
+            });
+
+            // Validation và confirm khi submit
+            $('form').on('submit', function(e) {
+                var newEndDateStr = $('#newEndDate').val();
+                if (!newEndDateStr) {
+                    e.preventDefault();
+                    alert('Vui lòng chọn ngày kết thúc mới!');
+                    return false;
+                }
+
+                // Parse và validate date
+                var parts = newEndDateStr.split('/');
+                if (parts.length !== 3) {
+                    e.preventDefault();
+                    alert('Ngày không hợp lệ!');
+                    return false;
+                }
+
+                var newEndDate = new Date(parts[2], parts[1] - 1, parts[0]);
+                var oldEndDate = new Date(currentEndDate);
+
+                if (newEndDate <= oldEndDate) {
+                    e.preventDefault();
+                    alert('Ngày kết thúc mới phải sau ngày ' + '@Model.EndDate.ToString("dd/MM/yyyy")' + '!');
+                    return false;
+                }
+
+                return confirm('Xác nhận gia hạn hợp đồng đến ngày ' + newEndDateStr + '?');
+            });
+        });
+    </script>
+}
