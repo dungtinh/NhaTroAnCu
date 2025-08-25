@@ -1,52 +1,500 @@
-﻿@model IEnumerable<NhaTroAnCu.Models.ContractTenant>
-
+﻿@model List<NhaTroAnCu.Models.TenantReportViewModel>
 @{
-    ViewBag.Title = "Index";
+    ViewBag.Title = "Báo cáo danh sách khách thuê";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h2>Index</h2>
+<style>
+    .tenant-report-container {
+        padding: 20px;
+    }
 
-<p>
-    @Html.ActionLink("Create New", "Create")
-</p>
-<table class="table">
-    <tr>
-        <th>
-            @Html.DisplayNameFor(model => model.CreatedAt)
-        </th>
-        <th>
-            @Html.DisplayNameFor(model => model.Contract.Status)
-        </th>
-        <th>
-            @Html.DisplayNameFor(model => model.Room.Name)
-        </th>
-        <th>
-            @Html.DisplayNameFor(model => model.Tenant.FullName)
-        </th>
-        <th></th>
-    </tr>
+    .report-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+    }
 
-@foreach (var item in Model) {
-    <tr>
-        <td>
-            @Html.DisplayFor(modelItem => item.CreatedAt)
-        </td>
-        <td>
-            @Html.DisplayFor(modelItem => item.Contract.Status)
-        </td>
-        <td>
-            @Html.DisplayFor(modelItem => item.Room.Name)
-        </td>
-        <td>
-            @Html.DisplayFor(modelItem => item.Tenant.FullName)
-        </td>
-        <td>
-            @Html.ActionLink("Edit", "Edit", new { id=item.Id }) |
-            @Html.ActionLink("Details", "Details", new { id=item.Id }) |
-            @Html.ActionLink("Delete", "Delete", new { id=item.Id })
-        </td>
-    </tr>
-}
+    .report-title {
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
 
-</table>
+    .report-stats {
+        display: flex;
+        gap: 30px;
+        margin-top: 20px;
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+    }
+
+    .stat-label {
+        opacity: 0.9;
+    }
+
+    .filter-section {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+
+    .filter-row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: end;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+
+        .filter-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .filter-group input,
+        .filter-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+    .btn-search {
+        background: #667eea;
+        color: white;
+        padding: 10px 25px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .btn-search:hover {
+            background: #5a67d8;
+        }
+
+    .btn-export {
+        background: #48bb78;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .btn-export:hover {
+            background: #38a169;
+        }
+
+    .btn-reset {
+        background: #718096;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+        .btn-reset:hover {
+            background: #4a5568;
+        }
+
+    .report-table {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .table {
+        width: 100%;
+        margin: 0;
+    }
+
+        .table thead {
+            background: #f7fafc;
+        }
+
+        .table th {
+            padding: 15px;
+            font-weight: 600;
+            color: #2d3748;
+            border-bottom: 2px solid #e2e8f0;
+            white-space: nowrap;
+        }
+
+        .table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .table tr:hover {
+            background: #f7fafc;
+        }
+
+    .tenant-photo {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .no-photo {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #718096;
+    }
+
+    .room-badge {
+        background: #edf2f7;
+        padding: 4px 10px;
+        border-radius: 15px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .contract-type-badge {
+        padding: 4px 10px;
+        border-radius: 15px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .type-individual {
+        background: #bee3f8;
+        color: #2c5282;
+    }
+
+    .type-company {
+        background: #d6f5d6;
+        color: #276749;
+    }
+
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: 15px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .status-active {
+        background: #c6f6d5;
+        color: #22543d;
+    }
+
+    .status-expired {
+        background: #fed7d7;
+        color: #742a2a;
+    }
+
+    .status-terminated {
+        background: #e2e8f0;
+        color: #4a5568;
+    }
+
+    .primary-tenant {
+        color: #f6ad55;
+        font-size: 16px;
+    }
+
+    .company-name {
+        font-size: 13px;
+        color: #718096;
+        font-style: italic;
+    }
+
+    .no-data {
+        text-align: center;
+        padding: 60px 20px;
+        color: #718096;
+    }
+
+        .no-data i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+</style>
+
+<div class="tenant-report-container">
+    <!-- Header -->
+    <div class="report-header">
+        <div class="report-title">
+            <i class="fas fa-users"></i> Báo cáo danh sách khách thuê
+        </div>
+        <div class="report-stats">
+            <div class="stat-item">
+                <i class="fas fa-user"></i>
+                <div>
+                    <div class="stat-value">@ViewBag.TotalTenants</div>
+                    <div class="stat-label">Tổng số người</div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-door-open"></i>
+                <div>
+                    <div class="stat-value">@ViewBag.TotalRooms</div>
+                    <div class="stat-label">Phòng có người</div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-building"></i>
+                <div>
+                    <div class="stat-value">@ViewBag.TotalCompanies</div>
+                    <div class="stat-label">Công ty</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <form method="get" action="@Url.Action("Index", "ContractTenants")">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Tìm theo tên</label>
+                    <input type="text" name="searchName" value="@ViewBag.SearchName"
+                           placeholder="Nhập họ tên..." />
+                </div>
+
+                <div class="filter-group">
+                    <label>Tìm theo CCCD</label>
+                    <input type="text" name="searchCard" value="@ViewBag.SearchCard"
+                           placeholder="Nhập số CCCD..." />
+                </div>
+
+                <div class="filter-group">
+                    <label>Tìm theo phòng</label>
+                    <input type="text" name="searchRoom" value="@ViewBag.SearchRoom"
+                           placeholder="Nhập tên phòng..." />
+                </div>
+
+                <div class="filter-group">
+                    <label>Loại hợp đồng</label>
+                    <select name="filterContractType">
+                        <option value="">-- Tất cả --</option>
+                        @foreach (var type in (List<SelectListItem>)ViewBag.ContractTypes)
+                        {
+                            <option value="@type.Value" @(type.Value == ViewBag.FilterContractType ? "selected" : "")>
+                                @type.Text
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Công ty</label>
+                    <select name="filterCompany">
+                        <option value="">-- Tất cả --</option>
+                        @foreach (var company in (List<SelectListItem>)ViewBag.Companies)
+                        {
+                            <option value="@company.Value" @(company.Value == ViewBag.FilterCompany ? "selected" : "")>
+                                @company.Text
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Trạng thái</label>
+                    <select name="filterStatus">
+                        <option value="">-- Mặc định (Đang ở) --</option>
+                        @foreach (var status in (List<SelectListItem>)ViewBag.Statuses)
+                        {
+                            <option value="@status.Value" @(status.Value == ViewBag.FilterStatus ? "selected" : "")>
+                                @status.Text
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-search">
+                    <i class="fas fa-search"></i> Tìm kiếm
+                </button>
+
+                <button type="button" class="btn-export" onclick="exportReport()">
+                    <i class="fas fa-file-excel"></i> Xuất Excel
+                </button>
+
+                <button type="button" class="btn-reset" onclick="resetFilter()">
+                    <i class="fas fa-redo"></i> Đặt lại
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Report Table -->
+    <div class="report-table">
+        @if (Model.Any())
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th width="50">Ảnh</th>
+                        <th>Họ tên</th>
+                        <th>CCCD</th>
+                        <th>Điện thoại</th>
+                        <th>Ngày sinh</th>
+                        <th>Giới tính</th>
+                        <th>Phòng</th>
+                        <th>Loại HĐ</th>
+                        <th>Công ty</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày vào</th>
+                        <th width="50"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>
+                                @if (!string.IsNullOrEmpty(item.Photo))
+                                {
+                                    <img src="@item.Photo" class="tenant-photo" alt="@item.TenantName" />
+                                }
+                                else
+                                {
+                                    <div class="no-photo">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                }
+                            </td>
+                            <td>
+                                <strong>@item.TenantName</strong>
+                                @if (item.IsPrimary)
+                                {
+                                    <i class="fas fa-star primary-tenant" title="Người thuê chính"></i>
+                                }
+                            </td>
+                            <td>@item.IdentityCard</td>
+                            <td>@item.PhoneNumber</td>
+                            <td>@(item.BirthDate?.ToString("dd/MM/yyyy"))</td>
+                            <td>@item.Gender</td>
+                            <td>
+                                <span class="room-badge">@item.RoomName</span>
+                            </td>
+                            <td>
+                                @if (item.ContractType == "Individual")
+                                {
+                                    <span class="contract-type-badge type-individual">Cá nhân</span>
+                                }
+                                else
+                                {
+                                    <span class="contract-type-badge type-company">Công ty</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(item.CompanyName))
+                                {
+                                    <span class="company-name">@item.CompanyName</span>
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </td>
+                            <td>
+                                @if (item.ContractStatus == "Active")
+                                {
+                                    <span class="status-badge status-active">Đang ở</span>
+                                }
+                                else if (item.ContractStatus == "Expired")
+                                {
+                                    <span class="status-badge status-expired">Hết hạn</span>
+                                }
+                                else
+                                {
+                                    <span class="status-badge status-terminated">Đã kết thúc</span>
+                                }
+                            </td>
+                            <td>@(item.MoveInDate?.ToString("dd/MM/yyyy"))</td>
+                            <td>
+                                <a href="@Url.Action("Details", "Rooms", new { id = item.RoomId })"
+                                   class="btn btn-sm btn-link" title="Xem phòng">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="no-data">
+                <i class="fas fa-inbox"></i>
+                <div>Không có dữ liệu</div>
+            </div>
+        }
+    </div>
+</div>
+
+<script>
+        // Khởi tạo datepicker và autonumeric nếu cần
+        $(document).ready(function() {
+            // Datepicker config from layout
+            $('.datetime').datepicker({
+                format: 'dd/mm/yyyy',
+                autoclose: true,
+                todayHighlight: true
+            });
+
+            // AutoNumeric config from layout
+            $('.money').autoNumeric('init', {
+                aSep: '.',
+                aDec: ',',
+                mDec: '0'
+            });
+        });
+
+        function resetFilter() {
+            window.location.href = '@Url.Action("Index", "ContractTenants")';
+        }
+
+        function exportReport() {
+            var params = new URLSearchParams(window.location.search);
+            var exportUrl = '@Url.Action("Export", "ContractTenants")?' + params.toString();
+            window.location.href = exportUrl;
+        }
+</script>
