@@ -45,7 +45,7 @@ namespace NhaTroAnCu.Models
         public string Ethnicity { get; set; }
         public string VehiclePlate { get; set; }
         public string Photo { get; set; }
-        public DateTime JoinDate { get; set; } // ContractTenant.CreatedAt
+        public DateTime CreatedAt { get; set; } // ContractTenant.CreatedAt
 
         // Computed properties
         public int Age => BirthDate.HasValue ?

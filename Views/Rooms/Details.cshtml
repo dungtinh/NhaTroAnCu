@@ -225,9 +225,12 @@
                 <div class="card-header bg-gradient-green">
                     <i class="fas fa-users"></i>
                     <span>Thông tin khách thuê</span>
-                    @if (tenants.Any())
+                    @if (activeContract != null)
                     {
-                        <span class="badge badge-light">@tenants.Count người</span>
+                        <a href="@Url.Action("TenantManager", "ContractTenants", new { contractId = activeContract.Id, roomId = Model.Id })"
+                           class="btn btn-sm btn-info badge badge-light">
+                            <i class="fas fa-user-plus"></i> Quản lý
+                        </a>
                     }
                 </div>
                 <div class="card-body">
@@ -265,41 +268,12 @@
                                 </div>
                             }
                         </div>
-
-                        <!-- Các nút hành động -->
-                        <div class="tenant-actions">
-                            @if (activeContract != null && activeContract.Status == "Active")
-                            {
-                                <button type="button" class="btn btn-sm btn-primary"
-                                        onclick="addTenant(@Model.Id, @activeContract.Id)">
-                                    <i class="fas fa-user-plus"></i> Thêm người
-                                </button>
-                            }
-                            <button type="button" class="btn btn-sm btn-info"
-                                    onclick="editTenants(@Model.Id)">
-                                <i class="fas fa-user-edit"></i> Sửa thông tin
-                            </button>
-                            @if (tenants.Count > 1)
-                            {
-                                <button type="button" class="btn btn-sm btn-danger"
-                                        onclick="removeTenant(@Model.Id)">
-                                    <i class="fas fa-user-minus"></i> Xóa người
-                                </button>
-                            }
-                        </div>
                     }
                     else
                     {
                         <div class="no-data">
                             <i class="fas fa-users fa-3x"></i>
                             <p>Chưa có thông tin khách thuê</p>
-                            @if (activeContract != null && activeContract.Status == "Active")
-                            {
-                                <button type="button" class="btn btn-primary"
-                                        onclick="addTenant(@Model.Id, @activeContract.Id)">
-                                    <i class="fas fa-user-plus"></i> Thêm khách thuê
-                                </button>
-                            }
                         </div>
                     }
                 </div>

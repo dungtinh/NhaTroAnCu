@@ -449,7 +449,7 @@ namespace NhaTroAnCu.Controllers
                     Ethnicity = ct.Tenant.Ethnicity,
                     VehiclePlate = ct.Tenant.VehiclePlate,
                     Photo = ct.Tenant.Photo,
-                    JoinDate = ct.CreatedAt
+                    CreatedAt = ct.CreatedAt
                 }).ToList();
             }
 
