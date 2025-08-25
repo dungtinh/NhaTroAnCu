@@ -597,12 +597,6 @@ namespace NhaTroAnCu.Controllers
             db.ContractRooms.Add(contractRoom);
             db.SaveChanges();
 
-            // Process tenants
-            if (model.Tenants != null && model.Tenants.Any())
-            {
-                ProcessIndividualTenants(contract, model.Tenants, room.Id);
-            }
-
             room.IsOccupied = true;
             db.SaveChanges();
 
@@ -752,89 +746,6 @@ namespace NhaTroAnCu.Controllers
                 // Update total price
                 contract.PriceAgreed = contract.ContractRooms.Sum(cr => cr.PriceAgreed);
             }
-        }
-
-        private void ProcessIndividualTenants(Contract contract, List<Tenant> tenants, int roomId)
-        {
-            foreach (var tenantModel in tenants)
-            {
-                if (string.IsNullOrEmpty(tenantModel.FullName) ||
-                    string.IsNullOrEmpty(tenantModel.IdentityCard))
-                {
-                    continue;
-                }
-
-                var existingTenant = db.Tenants
-                    .FirstOrDefault(t => t.IdentityCard == tenantModel.IdentityCard);
-
-                Tenant tenant;
-                if (existingTenant != null)
-                {
-                    tenant = existingTenant;
-                    UpdateTenantInfo(tenant, tenantModel);
-                }
-                else
-                {
-                    tenant = new Tenant
-                    {
-                        FullName = tenantModel.FullName,
-                        IdentityCard = tenantModel.IdentityCard,
-                        PhoneNumber = tenantModel.PhoneNumber,
-                        BirthDate = tenantModel.BirthDate,
-                        Gender = tenantModel.Gender,
-                        PermanentAddress = tenantModel.PermanentAddress,
-                        Ethnicity = tenantModel.Ethnicity,
-                        VehiclePlate = tenantModel.VehiclePlate
-                    };
-
-                    ProcessTenantPhoto(tenant, tenants.IndexOf(tenantModel));
-                    db.Tenants.Add(tenant);
-                }
-
-                db.SaveChanges();
-
-                var contractTenant = new ContractTenant
-                {
-                    ContractId = contract.Id,
-                    TenantId = tenant.Id,
-                    RoomId = roomId,
-                    CreatedAt = DateTime.Now
-                };
-                db.ContractTenants.Add(contractTenant);
-            }
-
-            db.SaveChanges();
-        }
-
-        private void ProcessTenantPhoto(Tenant tenant, int index)
-        {
-            var photoKey = $"TenantPhotos[{index}]";
-            if (Request.Files[photoKey] != null)
-            {
-                var photoFile = Request.Files[photoKey];
-                if (photoFile.ContentLength > 0)
-                {
-                    try
-                    {
-                        tenant.Photo = TenantPhotoHelper.SaveTenantPhoto(photoFile, tenant.IdentityCard);
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Error uploading photo: {ex.Message}");
-                    }
-                }
-            }
-        }
-
-        private void UpdateTenantInfo(Tenant tenant, Tenant model)
-        {
-            tenant.FullName = model.FullName;
-            tenant.PhoneNumber = model.PhoneNumber;
-            tenant.BirthDate = model.BirthDate;
-            tenant.Gender = model.Gender;
-            tenant.PermanentAddress = model.PermanentAddress;
-            tenant.Ethnicity = model.Ethnicity;
-            tenant.VehiclePlate = model.VehiclePlate;
         }
 
         private Company CreateNewCompany(Company model)

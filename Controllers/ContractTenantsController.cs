@@ -145,7 +145,7 @@ namespace NhaTroAnCu.Controllers
 
                     transaction.Commit();
                     TempData["Success"] = "Đã cập nhật thông tin người thuê thành công!";
-                    return RedirectToAction("Details", "Contracts", new { id = model.ContractId });
+                    return RedirectToAction("Details", "Rooms", new { id = model.RoomId });
                 }
                 catch (Exception ex)
                 {
