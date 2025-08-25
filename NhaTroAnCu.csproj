@@ -243,7 +243,6 @@
     <Compile Include="Controllers\IncomeExpenseController.cs" />
     <Compile Include="Controllers\ManageController.cs" />
     <Compile Include="Controllers\RoomsController.cs" />
-    <Compile Include="Controllers\TenantsController.cs" />
     <Compile Include="Controllers\UtilityBillsController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
@@ -598,12 +597,10 @@
     <Content Include="Views\Rooms\Details.cshtml" />
     <Content Include="Views\Contracts\Create.cshtml" />
     <Content Include="Views\Payments\Report.cshtml" />
-    <Content Include="Views\Tenants\Create.cshtml" />
     <Content Include="Views\Contracts\History.cshtml" />
     <Content Include="Views\Rooms\Create.cshtml" />
     <Content Include="Views\Rooms\Edit.cshtml" />
     <Content Include="Views\Rooms\Delete.cshtml" />
-    <Content Include="Views\TenantContracts\Index.cshtml" />
     <Content Include="Views\Contracts\Edit.cshtml" />
     <Content Include="Views\Shared\_CreateOrEditUtilityBillPartial.cshtml" />
     <Content Include="Views\IncomeExpense\Index.cshtml" />
@@ -629,7 +626,6 @@
   <ItemGroup>
     <Folder Include="Uploads\ContractScans\" />
     <Folder Include="Uploads\TenantPhotos\" />
-    <Folder Include="Views\CardReader\" />
     <Folder Include="Views\UtilityBills\" />
   </ItemGroup>
   <ItemGroup>
