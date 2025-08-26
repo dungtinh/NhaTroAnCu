@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -12,6 +13,7 @@ using Aspose.Words;
 using Microsoft.AspNet.Identity;
 using NhaTroAnCu.Helpers;
 using NhaTroAnCu.Models;
+using Contract = NhaTroAnCu.Models.Contract;
 
 namespace NhaTroAnCu.Controllers
 {
@@ -426,24 +428,25 @@ namespace NhaTroAnCu.Controllers
 
             if (contract.ContractType == "Company")
             {
-                model.SelectedRooms = contract.ContractRooms.Select(cr => new RoomSelectionModel
+
+                var occupiedRoomIds = db.ContractRooms
+                    .Where(cr => cr.Contract.Status == "Active" && cr.ContractId != id)
+                    .Select(cr => cr.RoomId)
+                    .ToList();
+
+                var availableRooms = db.Rooms
+                    .Where(r => !occupiedRoomIds.Contains(r.Id))
+                    .ToList();
+
+                model.SelectedRooms = availableRooms.Select(r => new RoomSelectionModel
                 {
-                    RoomId = cr.RoomId,
-                    RoomName = cr.Room.Name,
-                    DefaultPrice = cr.Room.DefaultPrice,
-                    AgreedPrice = cr.PriceAgreed,
-                    IsSelected = true,
-                    Notes = cr.Notes
+                    RoomId = r.Id,
+                    RoomName = r.Name,
+                    DefaultPrice = r.DefaultPrice,
+                    AgreedPrice = contract.ContractRooms.FirstOrDefault(cr => cr.RoomId == r.Id)?.PriceAgreed ?? r.DefaultPrice,
+                    IsSelected = contract.ContractRooms.Any(cr => cr.RoomId == r.Id),
+                    Notes = contract.ContractRooms.FirstOrDefault(cr => cr.RoomId == r.Id)?.Notes
                 }).ToList();
-
-                // Load tenant counts cho mỗi phòng
-                var roomTenantCounts = db.ContractTenants
-                    .Where(ct => ct.ContractId == contract.Id)
-                    .GroupBy(ct => ct.RoomId)
-                    .Select(g => new { RoomId = g.Key, Count = g.Count() })
-                    .ToDictionary(x => x.RoomId, x => x.Count);
-
-                ViewBag.RoomTenantCounts = roomTenantCounts;
 
                 if (contract.Company != null)
                 {
@@ -731,8 +734,7 @@ namespace NhaTroAnCu.Controllers
             if (model.SelectedRooms != null)
             {
                 var currentRoomIds = contract.ContractRooms.Select(cr => cr.RoomId).ToList();
-                var newRoomIds = model.SelectedRooms.Select(r => r.RoomId).ToList();
-
+                var newRoomIds = model.SelectedRooms.Where(x => x.IsSelected).Select(r => r.RoomId).ToList();
                 // Remove rooms
                 var roomsToRemove = contract.ContractRooms
                     .Where(cr => !newRoomIds.Contains(cr.RoomId))

@@ -66,8 +66,7 @@ namespace NhaTroAnCu.Models
     {
         [Required(ErrorMessage = "Vui lòng nhập tên công ty")]
         public string CompanyName { get; set; }
-
-        [Required(ErrorMessage = "Vui lòng nhập mã số thuế")]
+        
         public string TaxCode { get; set; }
 
         public string Address { get; set; }

@@ -66,7 +66,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Họ và tên <span class="text-danger">*</span></label>
-                            @Html.TextBoxFor(m => m.Tenants[i].FullName, new { @class = "form-control tenant-fullname", data_tenant_index = i })
+                            @Html.TextBoxFor(m => m.Tenants[i].FullName, new { @class = "form-control tenant-name", data_tenant_index = i })
                             @Html.ValidationMessageFor(m => m.Tenants[i].FullName, "", new { @class = "text-danger" })
                         </div>
 
@@ -95,9 +95,9 @@
                             <label>Giới tính</label>
                             @Html.DropDownListFor(m => m.Tenants[i].Gender, new SelectList(new[] {
                                 new { Value = "", Text = "-- Chọn --" },
-                                new { Value = "Nam", Text = "Nam" },
-                                new { Value = "Nữ", Text = "Nữ" },
-                                new { Value = "Khác", Text = "Khác" }
+                                new { Value = "NAM", Text = "Nam" },
+                                new { Value = "NỮ", Text = "Nữ" },
+                                new { Value = "KHÁC", Text = "Khác" }
                             }, "Value", "Text", Model.Tenants[i].Gender), new { @class = "form-control tenant-gender", data_tenant_index = i })
                         </div>
 

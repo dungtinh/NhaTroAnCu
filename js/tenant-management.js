@@ -55,7 +55,7 @@ var TenantManager = (function () {
                 <div class="form-row">
                     <div class="form-group">
                         <label>Họ và tên <span class="text-danger">*</span></label>
-                        <input type="text" name="Tenants[${index}].FullName" class="form-control tenant-fullname" data-tenant-index="${index}" required />
+                        <input type="text" name="Tenants[${index}].FullName" class="form-control tenant-name" data-tenant-index="${index}" required />
                         <span class="field-validation-valid text-danger" data-valmsg-for="Tenants[${index}].FullName" data-valmsg-replace="true"></span>
                     </div>
 
@@ -81,9 +81,9 @@ var TenantManager = (function () {
                         <label>Giới tính</label>
                         <select name="Tenants[${index}].Gender" class="form-control tenant-gender" data-tenant-index="${index}">
                             <option value="">-- Chọn --</option>
-                            <option value="Nam">Nam</option>
-                            <option value="Nữ">Nữ</option>
-                            <option value="Khác">Khác</option>
+                            <option value="NAM">Nam</option>
+                            <option value="NỮ">Nữ</option>
+                            <option value="KHÁC">Khác</option>
                         </select>
                     </div>
 
@@ -164,7 +164,7 @@ var TenantManager = (function () {
         }, 500);
 
         // Focus vào field đầu tiên
-        newCard.find('.tenant-fullname').focus();
+        newCard.find('.tenant-name').focus();
     }
 
     // Xóa tenant
@@ -364,7 +364,7 @@ var TenantManager = (function () {
     // Điền dữ liệu từ kết quả quét vào form
     function fillTenantData(index, data) {
         if (data.name) {
-            $(`.tenant-fullname[data-tenant-index="${index}"]`).val(data.name);
+            $(`.tenant-name[data-tenant-index="${index}"]`).val(data.name);
         }
         if (data.id) {
             $(`.tenant-identity[data-tenant-index="${index}"]`).val(data.id);
