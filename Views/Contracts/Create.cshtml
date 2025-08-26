@@ -148,89 +148,164 @@
                 <label>Địa chỉ công ty</label>
                 @Html.TextBoxFor(m => m.Company.Address, new { @class = "form-control" })
             </div>
-            <div class="room-section-title">
-                <i class="fas fa-door-open"></i>
-                Chọn Phòng Cho Công Ty
-                @if (ViewBag.AvailableRooms != null)
-                {
-                    var roomCount = ((dynamic)ViewBag.AvailableRooms).Count;
-                    <span class="room-count-badge">@roomCount phòng trống</span>
-                }
-            </div>
-
-            <div class="room-selection-list">
-                @if (ViewBag.AvailableRooms != null)
-                {
-                    var roomsList = ViewBag.AvailableRooms as List<RoomSelectionModel>;
-                    for (int i = 0; i < roomsList.Count; i++)
+            <div class="room-section-container">
+                <div class="room-section-title">
+                    <i class="fas fa-door-open"></i>
+                    <span>Chọn Phòng Cho Công Ty</span>
+                    @if (ViewBag.AvailableRooms != null)
                     {
-                        var room = roomsList[i];
-                        <div class="room-selection-item" data-room-id="@room.RoomId" data-index="@i">
-                            <div class="form-check">
+                        var roomCount = ((dynamic)ViewBag.AvailableRooms).Count;
+                        <span class="room-count-badge">
+                            <i class="fas fa-home"></i> @roomCount phòng có sẵn
+                        </span>
+                    }
+                </div>
+
+                <!-- Search và filter bar -->
+                <div class="room-filter-bar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="roomSearchInput" placeholder="Tìm kiếm phòng..." class="form-control">
+                    </div>
+                    <div class="filter-buttons">
+                        <button type="button" class="btn-filter active" data-filter="all">
+                            Tất cả
+                        </button>
+                        <button type="button" class="btn-filter" data-filter="selected">
+                            Đã chọn <span class="selected-count">0</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Danh sách phòng với grid layout -->
+                <div class="room-selection-grid">
+                    @if (ViewBag.AvailableRooms != null)
+                    {
+                        var roomsList = ViewBag.AvailableRooms as List<RoomSelectionModel>;
+                        for (int i = 0; i < roomsList.Count; i++)
+                        {
+                            var room = roomsList[i];
+                            <div class="room-card" data-room-id="@room.RoomId" data-index="@i" data-room-name="@room.RoomName.ToLower()">
                                 <!-- Hidden inputs để giữ data -->
                                 <input type="hidden" name="SelectedRooms[@i].RoomId" value="@room.RoomId" />
                                 <input type="hidden" name="SelectedRooms[@i].RoomName" value="@room.RoomName" />
                                 <input type="hidden" name="SelectedRooms[@i].DefaultPrice" value="@room.DefaultPrice" />
 
-                                <!-- Checkbox với name đúng format -->
-                                <input type="checkbox"
-                                       class="company-room-checkbox"
-                                       id="company_room_@i"
-                                       name="SelectedRooms[@i].IsSelected"
-                                       value="true"
-                                       data-room-id="@room.RoomId"
-                                       data-index="@i"
-                                       data-price="@room.DefaultPrice" />
+                                <!-- Room card header -->
+                                <div class="room-card-header">
+                                    <div class="room-checkbox-wrapper">
+                                        <input type="checkbox"
+                                               class="company-room-checkbox"
+                                               id="company_room_@i"
+                                               name="SelectedRooms[@i].IsSelected"
+                                               value="true"
+                                               data-room-id="@room.RoomId"
+                                               data-index="@i"
+                                               data-price="@room.DefaultPrice" />
+                                        <input type="hidden" name="SelectedRooms[@i].IsSelected" value="false" />
+                                    </div>
+                                    <label for="company_room_@i" class="room-name-label">
+                                        <i class="fas fa-door-closed room-icon"></i>
+                                        <strong>@room.RoomName</strong>
+                                    </label>
+                                    <div class="room-status-badge">Trống</div>
+                                </div>
 
-                                <!-- Hidden input for false value -->
-                                <input type="hidden"
-                                       name="SelectedRooms[@i].IsSelected"
-                                       value="false" />
+                                <!-- Room details -->
+                                <div class="room-card-body">
+                                    <div class="room-info-row">
+                                        <span class="info-label">Giá mặc định:</span>
+                                        <span class="info-value default-price">@room.DefaultPrice.ToString("N0")đ</span>
+                                    </div>
 
-                                <label class="room-check-label" for="company_room_@i">
-                                    <strong>@room.RoomName</strong>
-                                    <span class="room-price-badge">@room.DefaultPrice.ToString("N0")đ/tháng</span>
-                                </label>
+                                    <!-- Expandable section khi chọn phòng -->
+                                    <div class="room-details-section" style="display: none;">
+                                        <div class="price-input-group">
+                                            <label class="input-label">
+                                                <i class="fas fa-tag"></i> Giá thỏa thuận
+                                            </label>                                           
+
+                                            <div class="custom-price-section">
+                                                <div class="input-with-unit">
+                                                    <input type="text"
+                                                           class="form-control room-agreed-price money"
+                                                           name="SelectedRooms[@i].AgreedPrice"
+                                                           value="@room.DefaultPrice"
+                                                           data-index="@i"
+                                                           data-default-price="@room.DefaultPrice"
+                                                           placeholder="Nhập giá thỏa thuận" />
+                                                    <span class="unit">đ/tháng</span>
+                                                </div>                                                
+                                            </div>
+                                        </div>
+
+                                        <div class="notes-input-group">
+                                            <label class="input-label">
+                                                <i class="fas fa-sticky-note"></i> Ghi chú
+                                            </label>
+                                            <textarea class="form-control"
+                                                      name="SelectedRooms[@i].Notes"
+                                                      rows="2"
+                                                      placeholder="Nhập ghi chú về phòng này..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-
-                            <div class="room-price-input" style="display: none;">
-                                <label>Giá thỏa thuận (đ/tháng)</label>
-                                <input class="form-control room-agreed-price money"
-                                       name="SelectedRooms[@i].AgreedPrice"
-                                       value="@room.DefaultPrice"
-                                       data-index="@i"
-                                       placeholder="Nhập giá thỏa thuận" />
-
-                                <!-- Notes field -->
-                                <input type="text"
-                                       class="form-control mt-2"
-                                       name="SelectedRooms[@i].Notes"
-                                       placeholder="Ghi chú (tùy chọn)" />
-                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+                            <i class="fas fa-home-lg-alt"></i>
+                            <h4>Không có phòng trống</h4>
+                            <p>Hiện tại không có phòng nào có sẵn để cho thuê</p>
                         </div>
                     }
-                }
-                else
-                {
-                    <p class="text-muted" style="text-align: center; padding: 40px; color: #6c757d; font-style: italic;">
-                        <i class="fas fa-home" style="font-size: 48px; color: #dee2e6; display: block; margin-bottom: 15px;"></i>
-                        Không có phòng trống
-                    </p>
-                }
+                </div>
+
+                <!-- Summary section -->
+                <div class="company-summary-section">
+                    <div class="summary-card">
+                        <h5><i class="fas fa-chart-bar"></i> Tổng quan lựa chọn</h5>
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <div class="summary-icon">
+                                    <i class="fas fa-door-open"></i>
+                                </div>
+                                <div class="summary-content">
+                                    <span class="summary-label">Số phòng đã chọn</span>
+                                    <span class="summary-value" id="totalRooms">0</span>
+                                </div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-icon">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                </div>
+                                <div class="summary-content">
+                                    <span class="summary-label">Tổng tiền thuê/tháng</span>
+                                    <span class="summary-value" id="totalRent">0đ</span>
+                                </div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-icon">
+                                    <i class="fas fa-percentage"></i>
+                                </div>
+                                <div class="summary-content">
+                                    <span class="summary-label">Giảm giá trung bình</span>
+                                    <span class="summary-value" id="avgDiscount">0%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Selected rooms list -->
+                        <div class="selected-rooms-list" id="selectedRoomsList" style="display: none;">
+                            <h6><i class="fas fa-list-ul"></i> Danh sách phòng đã chọn:</h6>
+                            <div class="selected-rooms-container"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Tổng kết cho công ty -->
-            <div class="company-summary-box">
-                <h5><i class="fas fa-calculator"></i> Tổng kết</h5>
-                <div class="summary-row">
-                    <span>Số phòng đã chọn:</span>
-                    <span id="totalRooms">0</span>
-                </div>
-                <div class="summary-row">
-                    <span>Tổng tiền thuê/tháng:</span>
-                    <span id="totalRent">0đ</span>
-                </div>
-            </div>
         </div>
 
         <!-- Submit buttons -->
@@ -334,30 +409,229 @@
                 }
             });
 
-            // Xử lý chọn phòng cho công ty
             $(document).on('change', '.company-room-checkbox', function () {
+                var roomCard = $(this).closest('.room-card');
+                var detailsSection = roomCard.find('.room-details-section');
+
+                if ($(this).is(':checked')) {
+                    roomCard.addClass('selected');
+                    detailsSection.slideDown(300);
+
+                    // Set giá mặc định khi chọn phòng
+                    var defaultCheckbox = roomCard.find('.use-default-checkbox');
+                    if (defaultCheckbox.is(':checked')) {
+                        var defaultPrice = $(this).data('price');
+                        roomCard.find('.room-agreed-price').val(defaultPrice);
+                    }
+                } else {
+                    roomCard.removeClass('selected');
+                    detailsSection.slideUp(300);
+                }
+
                 updateCompanySummary();
+                updateSelectedRoomsList();
             });
 
+            // Xử lý checkbox sử dụng giá mặc định
+            $(document).on('change', '.use-default-checkbox', function () {
+                var roomCard = $(this).closest('.room-card');
+                var customPriceSection = roomCard.find('.custom-price-section');
+                var priceInput = roomCard.find('.room-agreed-price');
+                var defaultPrice = roomCard.find('.company-room-checkbox').data('price');
+
+                if ($(this).is(':checked')) {
+                    // Sử dụng giá mặc định
+                    customPriceSection.slideUp(200);
+                    priceInput.val(defaultPrice);
+
+                    // Update label với tick xanh
+                    $(this).siblings('.use-default-label').find('i')
+                        .removeClass('fa-circle')
+                        .addClass('fa-check-circle');
+                } else {
+                    // Nhập giá tùy chỉnh
+                    customPriceSection.slideDown(200);
+
+                    // Update label
+                    $(this).siblings('.use-default-label').find('i')
+                        .removeClass('fa-check-circle')
+                        .addClass('fa-circle');
+                }
+
+                updateCompanySummary();
+                updatePriceComparison(roomCard);
+            });
+
+            // Xử lý tìm kiếm phòng
+            $('#roomSearchInput').on('input', function () {
+                var searchTerm = $(this).val().toLowerCase();
+
+                $('.room-card').each(function () {
+                    var roomName = $(this).data('room-name');
+                    if (roomName.includes(searchTerm)) {
+                        $(this).show();
+                    } else {
+                        $(this).hide();
+                    }
+                });
+            });
+
+            // Xử lý filter buttons
+            $('.btn-filter').on('click', function () {
+                $('.btn-filter').removeClass('active');
+                $(this).addClass('active');
+
+                var filter = $(this).data('filter');
+
+                if (filter === 'all') {
+                    $('.room-card').show();
+                } else if (filter === 'selected') {
+                    $('.room-card').hide();
+                    $('.room-card.selected').show();
+                }
+            });
+
+            // Xử lý price suggestion buttons
+            $(document).on('click', '.price-btn', function () {
+                var roomCard = $(this).closest('.room-card');
+                var priceInput = roomCard.find('.room-agreed-price');
+                var defaultPrice = parseFloat(priceInput.data('default-price'));
+
+                if ($(this).hasClass('reset-price')) {
+                    priceInput.val(defaultPrice);
+                } else {
+                    var percent = parseFloat($(this).data('percent'));
+                    var newPrice = defaultPrice * (1 + percent / 100);
+                    priceInput.val(Math.round(newPrice));
+                }
+
+                formatMoneyInput(priceInput);
+                updateCompanySummary();
+                updatePriceComparison(roomCard);
+            });
+
+            // Format money input
             $(document).on('input', '.room-agreed-price', function () {
+                formatMoneyInput($(this));
                 updateCompanySummary();
+
+                var roomCard = $(this).closest('.room-card');
+                updatePriceComparison(roomCard);
             });
 
-            // Hàm cập nhật tổng kết cho công ty
+            function formatMoneyInput(input) {
+                var value = input.val().replace(/\D/g, '');
+                if (value) {
+                    value = parseInt(value).toLocaleString('vi-VN');
+                    input.val(value);
+                }
+            }
+
+            // Update price comparison
+            function updatePriceComparison(roomCard) {
+                var priceInput = roomCard.find('.room-agreed-price');
+                var defaultPrice = parseFloat(priceInput.data('default-price'));
+                var currentPrice = parseFloat(priceInput.val().replace(/\D/g, '')) || defaultPrice;
+                var index = priceInput.data('index');
+
+                var diff = currentPrice - defaultPrice;
+                var percent = defaultPrice > 0 ? (diff / defaultPrice * 100) : 0;
+
+                var comparisonValue = roomCard.find('.comparison-value[data-index="' + index + '"]');
+
+                if (diff === 0) {
+                    comparisonValue.text('0đ (0%)');
+                    comparisonValue.removeClass('discount increase');
+                } else if (diff < 0) {
+                    comparisonValue.text('-' + Math.abs(diff).toLocaleString('vi-VN') + 'đ (' + percent.toFixed(1) + '%)');
+                    comparisonValue.addClass('discount').removeClass('increase');
+                } else {
+                    comparisonValue.text('+' + diff.toLocaleString('vi-VN') + 'đ (+' + percent.toFixed(1) + '%)');
+                    comparisonValue.addClass('increase').removeClass('discount');
+                }
+            }
+
+            // Update summary
             function updateCompanySummary() {
                 var totalRooms = 0;
                 var totalRent = 0;
+                var totalDefault = 0;
 
                 $('.company-room-checkbox:checked').each(function () {
                     totalRooms++;
-                    var item = $(this).closest('.room-selection-item');
-                    var price = parseFloat(item.find('.room-agreed-price').val().replace(/\./g, '')) || 0;
-                    totalRent += price;
+                    var roomCard = $(this).closest('.room-card');
+                    var priceInput = roomCard.find('.room-agreed-price');
+                    var useDefault = roomCard.find('.use-default-checkbox').is(':checked');
+
+                    var defaultPrice = parseFloat($(this).data('price')) || 0;
+                    var agreedPrice = useDefault ? defaultPrice :
+                        (parseFloat(priceInput.val().replace(/\D/g, '')) || defaultPrice);
+
+                    totalRent += agreedPrice;
+                    totalDefault += defaultPrice;
                 });
+
+                var avgDiscount = totalDefault > 0 ?
+                    Math.round((totalDefault - totalRent) / totalDefault * 100) : 0;
 
                 $('#totalRooms').text(totalRooms);
                 $('#totalRent').text(totalRent.toLocaleString('vi-VN') + 'đ');
+
+                // Hiển thị discount hoặc increase
+                if (avgDiscount > 0) {
+                    $('#avgDiscount').text('-' + Math.abs(avgDiscount) + '%').css('color', '#28a745');
+                } else if (avgDiscount < 0) {
+                    $('#avgDiscount').text('+' + Math.abs(avgDiscount) + '%').css('color', '#dc3545');
+                } else {
+                    $('#avgDiscount').text('0%').css('color', '#495057');
+                }
+
+                // Update selected count in filter button
+                $('.btn-filter[data-filter="selected"] .selected-count').text(totalRooms);
+
+                // Show/hide selected rooms list
+                if (totalRooms > 0) {
+                    $('#selectedRoomsList').show();
+                } else {
+                    $('#selectedRoomsList').hide();
+                }
             }
+
+            // Update selected rooms list
+            function updateSelectedRoomsList() {
+                var container = $('.selected-rooms-container');
+                container.empty();
+
+                $('.company-room-checkbox:checked').each(function () {
+                    var roomCard = $(this).closest('.room-card');
+                    var roomName = roomCard.find('.room-name-label strong').text();
+                    var roomId = $(this).data('room-id');
+                    var useDefault = roomCard.find('.use-default-checkbox').is(':checked');
+                    var priceInput = roomCard.find('.room-agreed-price');
+                    var price = useDefault ? $(this).data('price') :
+                        (parseFloat(priceInput.val().replace(/\D/g, '')) || $(this).data('price'));
+
+                    var priceText = price.toLocaleString('vi-VN') + 'đ';
+                    var priceLabel = useDefault ? ' (Giá mặc định)' : '';
+
+                    var tag = $('<div class="selected-room-tag">' +
+                        '<span>' + roomName + ' - ' + priceText + priceLabel + '</span>' +
+                        '<button type="button" class="remove-btn" data-room-id="' + roomId + '">×</button>' +
+                        '</div>');
+
+                    container.append(tag);
+                });
+            }
+
+            // Handle remove room from selected list
+            $(document).on('click', '.selected-room-tag .remove-btn', function () {
+                var roomId = $(this).data('room-id');
+                var checkbox = $('.company-room-checkbox[data-room-id="' + roomId + '"]');
+                checkbox.prop('checked', false).trigger('change');
+            });
+
+            // Initialize on load
+            updateCompanySummary();
         });
     </script>
 }
