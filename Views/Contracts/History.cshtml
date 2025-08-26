@@ -14,12 +14,12 @@
             <input type="text" name="searchAddress" placeholder="Địa chỉ" value="@Model.SearchAddress" class="form-control w-100" />
         </div>
         <div class="col-md-2 mb-1">
-            <input type="text" name="fromDate" id="fromDate" class="form-control datepicker w-100"
+            <input type="text" name="fromDate" id="fromDate" class="form-control datetime w-100"
                    value="@(Model.FromDate.HasValue ? Model.FromDate.Value.ToString("dd/MM/yyyy") : "")"
                    placeholder="Từ ngày" autocomplete="off" />
         </div>
         <div class="col-md-2 mb-1">
-            <input type="text" name="toDate" id="toDate" class="form-control datepicker w-100"
+            <input type="text" name="toDate" id="toDate" class="form-control datetime w-100"
                    value="@(Model.ToDate.HasValue ? Model.ToDate.Value.ToString("dd/MM/yyyy") : "")"
                    placeholder="Đến ngày" autocomplete="off" />
         </div>

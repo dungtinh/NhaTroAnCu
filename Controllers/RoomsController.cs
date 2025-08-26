@@ -6,6 +6,7 @@ using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using DocumentFormat.OpenXml.Wordprocessing;
+using Microsoft.Ajax.Utilities;
 using Microsoft.AspNet.Identity;
 using NhaTroAnCu.Helpers;
 using NhaTroAnCu.Models;
@@ -135,12 +136,24 @@ namespace NhaTroAnCu.Controllers
                             // Có bill cho tháng này
                             decimal mustPay = bill.TotalAmount;
 
-                            decimal paid = db.PaymentHistories
-                                .Where(p => p.RoomId == room.Id
-                                    && p.ContractId == activeContract.Id
-                                    && p.Month == selectedMonth
-                                    && p.Year == selectedYear)
-                                .Sum(p => (decimal?)p.TotalAmount) ?? 0;
+                            // Sử dụng IncomeExpenses thay vì PaymentHistories
+                            // Lấy category "Thu tiền phòng" để lọc các khoản thu tiền phòng
+                            var roomPaymentCategory = db.IncomeExpenseCategories
+                                .FirstOrDefault(c => c.Name == "Thu tiền phòng" && c.Type == "Income");
+
+                            decimal paid = 0;
+
+                            if (roomPaymentCategory != null)
+                            {
+                                // Tính tổng số tiền đã thanh toán cho tháng này
+                                // Dựa vào TransactionDate hoặc có thể lưu Month/Year trong Description
+                                paid = db.IncomeExpenses
+                                    .Where(ie => ie.ContractId == activeContract.Id
+                                        && ie.CategoryId == roomPaymentCategory.Id
+                                        && ie.TransactionDate.Month == selectedMonth
+                                        && ie.TransactionDate.Year == selectedYear)
+                                    .Sum(ie => (decimal?)ie.Amount) ?? 0;
+                            }
 
                             if (paid >= mustPay)
                             {
@@ -902,5 +915,268 @@ namespace NhaTroAnCu.Controllers
             table.AddCell(new iTextSharp.text.pdf.PdfPCell(new iTextSharp.text.Phrase(label, font)) { Border = 0, PaddingBottom = 5 });
             table.AddCell(new iTextSharp.text.pdf.PdfPCell(new iTextSharp.text.Phrase(value, font)) { Border = 0, PaddingBottom = 5, HorizontalAlignment = iTextSharp.text.Element.ALIGN_RIGHT });
         }
+
+        // Thêm vào RoomsController.cs
+
+        public ActionResult History(int id)
+        {
+            var room = db.Rooms.Find(id);
+            if (room == null) return HttpNotFound();
+
+            var viewModel = new RoomHistoryViewModel
+            {
+                Room = room,
+                Contracts = GetRoomContracts(id),
+                Tenants = GetRoomTenants(id),
+                Payments = GetRoomPayments(id),
+                CurrentContract = GetCurrentContract(id),
+                TotalContracts = 0,
+                TotalTenants = 0,
+                TotalRevenue = 0,
+                TotalMonthsRented = 0,
+                OccupancyRate = 0,
+                AverageMonthlyRevenue = 0,
+                AverageContractDuration = 0,
+                TotalDebt = 0,
+                PaymentCompleteRate = 0,
+                AveragePaymentDelay = 0
+            };
+
+            // Calculate statistics
+            CalculateRoomStatistics(viewModel, id);
+
+            return View(viewModel);
+        }
+
+        private List<ContractHistoryItem> GetRoomContracts(int roomId)
+        {
+            var contracts = db.ContractRooms
+                .Where(cr => cr.RoomId == roomId)
+                .Select(cr => cr.Contract)
+                .OrderByDescending(c => c.StartDate)
+                .ToList();
+
+            var result = new List<ContractHistoryItem>();
+
+            foreach (var contract in contracts)
+            {
+                var item = new ContractHistoryItem
+                {
+                    Id = contract.Id,
+                    StartDate = contract.StartDate,
+                    EndDate = contract.EndDate,
+                    Status = contract.Status,
+                    MonthlyRent = contract.PriceAgreed,
+                    ContractType = contract.ContractType,
+                    Tenants = new List<TenantInfo>()
+                };
+
+                // Get tenants for this contract
+                var tenants = db.ContractTenants
+                    .Where(ct => ct.ContractId == contract.Id && ct.RoomId == roomId)
+                    .Select(ct => ct.Tenant)
+                    .ToList();
+
+                foreach (var tenant in tenants)
+                {
+                    item.Tenants.Add(new TenantInfo
+                    {
+                        Id = tenant.Id,
+                        FullName = tenant.FullName,
+                        IdentityCard = tenant.IdentityCard
+                    });
+                }
+
+                // Calculate payment statistics
+                var bills = db.UtilityBills
+                    .Where(b => b.ContractId == contract.Id)
+                    .ToList();
+
+                var payments = db.IncomeExpenses
+                    .Where(ie => ie.ContractId == contract.Id &&
+                                ie.IncomeExpenseCategory.Name == "Thu tiền phòng")
+                    .ToList();
+
+                item.TotalPaid = payments.Sum(p => p.Amount);
+                item.TotalDebt = bills.Sum(b => b.TotalAmount) - item.TotalPaid;
+                item.PaymentRate = bills.Any() ?
+                    (int)((item.TotalPaid / bills.Sum(b => b.TotalAmount)) * 100) : 100;
+
+                result.Add(item);
+            }
+
+            return result;
+        }
+
+        private List<TenantHistoryItem> GetRoomTenants(int roomId)
+        {
+            var tenants = db.ContractTenants
+                .Where(ct => ct.RoomId == roomId)
+                .Select(ct => new
+                {
+                    Tenant = ct.Tenant,
+                    Contract = ct.Contract
+                })
+                .ToList();
+
+            var result = new List<TenantHistoryItem>();
+
+            foreach (var item in tenants)
+            {
+                var tenantHistory = new TenantHistoryItem
+                {
+                    Id = item.Tenant.Id,
+                    FullName = item.Tenant.FullName,
+                    IdentityCard = item.Tenant.IdentityCard,
+                    PhoneNumber = item.Tenant.PhoneNumber,
+                    Gender = item.Tenant.Gender,
+                    MoveInDate = item.Contract.StartDate,
+                    MoveOutDate = item.Contract.Status == "Ended" ?
+                        (DateTime?)item.Contract.EndDate : null,
+                    IsCurrent = item.Contract.Status == "Active"
+                };
+
+                result.Add(tenantHistory);
+            }
+
+            return result.DistinctBy(t => t.Id).ToList();
+        }
+
+        private List<PaymentHistoryItem> GetRoomPayments(int roomId)
+        {
+            var contracts = db.ContractRooms
+                .Where(cr => cr.RoomId == roomId)
+                .Select(cr => cr.ContractId)
+                .ToList();
+
+            var result = new List<PaymentHistoryItem>();
+
+            foreach (var contractId in contracts)
+            {
+                var bills = db.UtilityBills
+                    .Where(b => b.ContractId == contractId)
+                    .ToList();
+
+                foreach (var bill in bills)
+                {
+                    var payments = db.IncomeExpenses
+                        .Where(ie => ie.ContractId == contractId &&
+                                    ie.TransactionDate.Month == bill.Month &&
+                                    ie.TransactionDate.Year == bill.Year &&
+                                    ie.IncomeExpenseCategory.Name == "Thu tiền phòng")
+                        .ToList();
+
+                    var paidAmount = payments.Sum(p => p.Amount);
+                    var remaining = bill.TotalAmount - paidAmount;
+
+                    result.Add(new PaymentHistoryItem
+                    {
+                        ContractId = contractId,
+                        Month = bill.Month,
+                        Year = bill.Year,
+                        BillAmount = bill.TotalAmount,
+                        PaidAmount = paidAmount,
+                        Remaining = remaining,
+                        Status = remaining <= 0 ? "Paid" :
+                                paidAmount > 0 ? "Partial" : "Unpaid",
+                        PaymentDate = payments.FirstOrDefault()?.TransactionDate
+                    });
+                }
+            }
+
+            return result;
+        }
+
+        private ContractHistoryItem GetCurrentContract(int roomId)
+        {
+            var contract = db.ContractRooms
+                .Where(cr => cr.RoomId == roomId)
+                .Select(cr => cr.Contract)
+                .FirstOrDefault(c => c.Status == "Active");
+
+            if (contract == null) return null;
+
+            var tenants = db.ContractTenants
+                .Where(ct => ct.ContractId == contract.Id && ct.RoomId == roomId)
+                .Select(ct => ct.Tenant.FullName)
+                .ToList();
+
+            return new ContractHistoryItem
+            {
+                Id = contract.Id,
+                StartDate = contract.StartDate,
+                EndDate = contract.EndDate,
+                Status = contract.Status,
+                MonthlyRent = contract.PriceAgreed,
+                TenantNames = string.Join(", ", tenants)
+            };
+        }
+
+        private void CalculateRoomStatistics(RoomHistoryViewModel model, int roomId)
+        {
+            // Total contracts
+            model.TotalContracts = model.Contracts.Count;
+
+            // Total tenants
+            model.TotalTenants = model.Tenants.Count;
+
+            // Total revenue
+            model.TotalRevenue = model.Payments.Sum(p => p.PaidAmount);
+
+            // Total months rented
+            foreach (var contract in model.Contracts)
+            {
+                var months = ((contract.EndDate - contract.StartDate).TotalDays / 30);
+                model.TotalMonthsRented += (int)months;
+            }
+
+            // Occupancy rate (last 12 months)
+            var oneYearAgo = DateTime.Now.AddYears(-1);
+            var totalDays = (DateTime.Now - oneYearAgo).TotalDays;
+            var occupiedDays = 0.0;
+
+            foreach (var contract in model.Contracts)
+            {
+                var start = contract.StartDate < oneYearAgo ? oneYearAgo : contract.StartDate;
+                var end = contract.EndDate > DateTime.Now ? DateTime.Now : contract.EndDate;
+
+                if (start < end)
+                {
+                    occupiedDays += (end - start).TotalDays;
+                }
+            }
+
+            model.OccupancyRate = (int)((occupiedDays / totalDays) * 100);
+
+            // Average monthly revenue
+            if (model.TotalMonthsRented > 0)
+            {
+                model.AverageMonthlyRevenue = model.TotalRevenue / model.TotalMonthsRented;
+            }
+
+            // Average contract duration
+            if (model.Contracts.Any())
+            {
+                model.AverageContractDuration = model.TotalMonthsRented / model.Contracts.Count;
+            }
+
+            // Total debt
+            model.TotalDebt = model.Payments.Sum(p => p.Remaining);
+
+            // Payment complete rate
+            var totalBilled = model.Payments.Sum(p => p.BillAmount);
+            if (totalBilled > 0)
+            {
+                model.PaymentCompleteRate = (int)((model.TotalRevenue / totalBilled) * 100);
+            }
+
+            // Average payment delay (simplified)
+            model.AveragePaymentDelay = 5; // This would need more complex calculation
+        }
+
+        
+
+       
+
     }
 }

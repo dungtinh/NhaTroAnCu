@@ -21,21 +21,7 @@
             leftArrow: '<i class="fas fa-chevron-left"></i>',
             rightArrow: '<i class="fas fa-chevron-right"></i>'
         }
-    });
-
-    // Set default dates với format đúng
-    var today = new Date();
-    var dd = ('0' + today.getDate()).slice(-2);
-    var mm = ('0' + (today.getMonth() + 1)).slice(-2);
-    var yyyy = today.getFullYear();
-    var formattedToday = dd + '/' + mm + '/' + yyyy;
-
-    // Set default values cho các input rỗng
-    $('.datetime').each(function () {
-        if (!$(this).val() || $(this).val() === '') {
-            $(this).datepicker('setDate', today);
-        }
-    });
+    });    
 
     // Xử lý khi user chọn ngày
     $('.datetime').on('changeDate', function (e) {

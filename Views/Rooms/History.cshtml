@@ -1,0 +1,477 @@
+﻿@model NhaTroAnCu.Models.RoomHistoryViewModel
+@{
+    ViewBag.Title = "Lịch sử phòng " + Model.Room.Name;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<link href="~/CSS/room-report.css" rel="stylesheet" />
+
+<div class="history-container">
+    <!-- Back Button -->
+    <a href="@Url.Action("Index", "Rooms")" class="btn-back">
+        <i class="fas fa-arrow-left"></i>
+        Quay lại danh sách phòng
+    </a>
+
+    <!-- Header -->
+    <div class="history-header">
+        <div class="header-content">
+            <div class="header-info">
+                <h1>
+                    <i class="fas fa-history"></i>
+                    Lịch Sử Phòng @Model.Room.Name
+                </h1>
+                <div>
+                    <span class="room-tag">
+                        <i class="fas fa-layer-group"></i> Tầng @Model.Room.Floor
+                    </span>
+                    <span class="room-tag">
+                        <i class="fas fa-ruler-combined"></i> Dãy @Model.Room.Area
+                    </span>
+                    @if (Model.Room.IsOccupied)
+                    {
+                        <span class="room-tag">
+                            <i class="fas fa-user-check"></i> Đang cho thuê
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="room-tag">
+                            <i class="fas fa-door-open"></i> Phòng trống
+                        </span>
+                    }
+                </div>
+            </div>
+            <div class="header-stats">
+                <div class="stat-item">
+                    <span class="stat-value">@Model.TotalContracts</span>
+                    <span class="stat-label">Hợp đồng</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">@Model.TotalTenants</span>
+                    <span class="stat-label">Người thuê</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">@Model.TotalRevenue.ToString("N0")</span>
+                    <span class="stat-label">Tổng thu (VNĐ)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+        <button class="nav-tab active" onclick="showTab('overview')">
+            <i class="fas fa-chart-line"></i>
+            Tổng quan
+        </button>
+        <button class="nav-tab" onclick="showTab('contracts')">
+            <i class="fas fa-file-contract"></i>
+            Hợp đồng
+            <span class="badge-count">@Model.Contracts.Count</span>
+        </button>
+        <button class="nav-tab" onclick="showTab('tenants')">
+            <i class="fas fa-users"></i>
+            Người thuê
+            <span class="badge-count">@Model.Tenants.Count</span>
+        </button>
+        <button class="nav-tab" onclick="showTab('payments')">
+            <i class="fas fa-money-bill-wave"></i>
+            Thanh toán
+            <span class="badge-count">@Model.Payments.Count</span>
+        </button>
+    </div>
+
+    <!-- Tab Content: Overview -->
+    <div id="overview" class="tab-content active">
+        <div class="stats-grid">
+            <div class="stat-card blue">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <h3>@Model.TotalMonthsRented</h3>
+                <p>Tổng tháng đã cho thuê</p>
+            </div>
+            <div class="stat-card green">
+                <div class="stat-icon">
+                    <i class="fas fa-percentage"></i>
+                </div>
+                <h3>@Model.OccupancyRate%</h3>
+                <p>Tỷ lệ lấp đầy</p>
+            </div>
+            <div class="stat-card purple">
+                <div class="stat-icon">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <h3>@Model.AverageMonthlyRevenue.ToString("N0")</h3>
+                <p>Thu nhập trung bình/tháng (VNĐ)</p>
+            </div>
+            <div class="stat-card orange">
+                <div class="stat-icon">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+                <h3>@Model.AverageContractDuration</h3>
+                <p>Thời gian HĐ trung bình (tháng)</p>
+            </div>
+        </div>
+
+        @if (Model.CurrentContract != null)
+        {
+            <div class="timeline-card" style="background: linear-gradient(135deg, #dcfce7, #bbf7d0);">
+                <h3 style="color: #16a34a; margin-bottom: 20px;">
+                    <i class="fas fa-check-circle"></i> Hợp đồng hiện tại
+                </h3>
+                <div class="payment-grid">
+                    <div class="payment-stat">
+                        <div class="payment-label">Khách thuê</div>
+                        <div class="payment-amount">@Model.CurrentContract.TenantNames</div>
+                    </div>
+                    <div class="payment-stat">
+                        <div class="payment-label">Bắt đầu</div>
+                        <div class="payment-amount">@Model.CurrentContract.StartDate.ToString("dd/MM/yyyy")</div>
+                    </div>
+                    <div class="payment-stat">
+                        <div class="payment-label">Kết thúc</div>
+                        <div class="payment-amount">@Model.CurrentContract.EndDate.ToString("dd/MM/yyyy")</div>
+                    </div>
+                    <div class="payment-stat">
+                        <div class="payment-label">Giá thuê</div>
+                        <div class="payment-amount">@Model.CurrentContract.MonthlyRent.ToString("N0") ₫</div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Tab Content: Contracts -->
+    <div id="contracts" class="tab-content">
+        @if (Model.Contracts.Any())
+        {
+            <div class="timeline">
+                @foreach (var contract in Model.Contracts.OrderByDescending(c => c.StartDate))
+                {
+                    <div class="timeline-item">
+                        <div class="timeline-dot @(contract.Status == "Active" ? "active" : "ended")"></div>
+                        <div class="timeline-card">
+                            <div class="timeline-header">
+                                <div class="contract-info">
+                                    <h3>
+                                        <i class="fas fa-file-signature"></i>
+                                        Hợp đồng #@contract.Id
+                                    </h3>
+                                    <div class="contract-dates">
+                                        <i class="fas fa-calendar"></i>
+                                        @contract.StartDate.ToString("dd/MM/yyyy") - @contract.EndDate.ToString("dd/MM/yyyy")
+                                        (@((contract.EndDate - contract.StartDate).TotalDays / 30) tháng)
+                                    </div>
+                                </div>
+                                <span class="contract-status @(contract.Status == "Active" ? "status-active" : "status-ended")">
+                                    @(contract.Status == "Active" ? "Đang hiệu lực" : "Đã kết thúc")
+                                </span>
+                            </div>
+
+                            <div class="tenant-list">
+                                @foreach (var tenant in contract.Tenants)
+                                {
+                                    <div class="tenant-card">
+                                        <div class="tenant-avatar">
+                                            @tenant.FullName.Substring(0, 1).ToUpper()
+                                        </div>
+                                        <div class="tenant-info">
+                                            <div class="tenant-name">@tenant.FullName</div>
+                                            <div class="tenant-id">CCCD: @tenant.IdentityCard</div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="payment-summary">
+                                <div class="payment-grid">
+                                    <div class="payment-stat">
+                                        <div class="payment-amount">@contract.MonthlyRent.ToString("N0") ₫</div>
+                                        <div class="payment-label">Giá thuê/tháng</div>
+                                    </div>
+                                    <div class="payment-stat">
+                                        <div class="payment-amount">@contract.TotalPaid.ToString("N0") ₫</div>
+                                        <div class="payment-label">Đã thanh toán</div>
+                                    </div>
+                                    <div class="payment-stat">
+                                        <div class="payment-amount">@contract.TotalDebt.ToString("N0") ₫</div>
+                                        <div class="payment-label">Còn nợ</div>
+                                    </div>
+                                    <div class="payment-stat">
+                                        <div class="payment-amount">@contract.PaymentRate%</div>
+                                        <div class="payment-label">Tỷ lệ thanh toán</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fas fa-folder-open empty-icon"></i>
+                <h3>Chưa có hợp đồng nào</h3>
+                <p>Phòng này chưa từng được cho thuê</p>
+            </div>
+        }
+    </div>
+
+    <!-- Tab Content: Tenants -->
+    <div id="tenants" class="tab-content">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Tìm kiếm người thuê</label>
+                <input type="text" class="form-control" placeholder="Nhập tên hoặc CCCD..." id="searchTenant">
+            </div>
+            <div class="filter-group">
+                <label>Trạng thái</label>
+                <select class="form-control" id="filterStatus">
+                    <option value="">Tất cả</option>
+                    <option value="current">Đang thuê</option>
+                    <option value="past">Đã chuyển đi</option>
+                </select>
+            </div>
+            <button class="btn-filter" onclick="filterTenants()">
+                <i class="fas fa-search"></i> Tìm kiếm
+            </button>
+        </div>
+
+        @if (Model.Tenants.Any())
+        {
+            <div class="payment-table">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Người thuê</th>
+                            <th>CCCD</th>
+                            <th>Số điện thoại</th>
+                            <th>Thời gian thuê</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var tenant in Model.Tenants)
+                        {
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <div class="tenant-avatar" style="width: 35px; height: 35px; font-size: 1rem;">
+                                            @tenant.FullName.Substring(0, 1).ToUpper()
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: 600;">@tenant.FullName</div>
+                                            <div style="font-size: 0.85rem; color: #6b7280;">@tenant.Gender</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>@tenant.IdentityCard</td>
+                                <td>@tenant.PhoneNumber</td>
+                                <td>
+                                    @tenant.MoveInDate.ToString("dd/MM/yyyy") -
+                                    @(tenant.MoveOutDate?.ToString("dd/MM/yyyy") ?? "Hiện tại")
+                                </td>
+                                <td>
+                                    @if (tenant.IsCurrent)
+                                    {
+                                        <span class="payment-status status-paid">Đang thuê</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="payment-status status-unpaid">Đã chuyển</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fas fa-users empty-icon"></i>
+                <h3>Chưa có người thuê</h3>
+                <p>Phòng này chưa có ai thuê</p>
+            </div>
+        }
+    </div>
+
+    <!-- Tab Content: Payments -->
+    <div id="payments" class="tab-content">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Từ tháng</label>
+                <input type="month" class="form-control" id="fromMonth">
+            </div>
+            <div class="filter-group">
+                <label>Đến tháng</label>
+                <input type="month" class="form-control" id="toMonth">
+            </div>
+            <div class="filter-group">
+                <label>Trạng thái</label>
+                <select class="form-control" id="paymentStatus">
+                    <option value="">Tất cả</option>
+                    <option value="paid">Đã thanh toán</option>
+                    <option value="partial">Thanh toán một phần</option>
+                    <option value="unpaid">Chưa thanh toán</option>
+                </select>
+            </div>
+            <button class="btn-filter" onclick="filterPayments()">
+                <i class="fas fa-filter"></i> Lọc
+            </button>
+        </div>
+
+        @if (Model.Payments.Any())
+        {
+            <div class="payment-table">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Tháng/Năm</th>
+                            <th>Hợp đồng</th>
+                            <th>Phải thu</th>
+                            <th>Đã thu</th>
+                            <th>Còn lại</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày thu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var payment in Model.Payments.OrderByDescending(p => p.Year).ThenByDescending(p => p.Month))
+                        {
+                            <tr>
+                                <td>
+                                    <span class="payment-month">
+                                        @payment.Month/@payment.Year
+                                    </span>
+                                </td>
+                                <td>#@payment.ContractId</td>
+                                <td>@payment.BillAmount.ToString("N0") ₫</td>
+                                <td style="color: #16a34a; font-weight: 600;">
+                                    @payment.PaidAmount.ToString("N0") ₫
+                                </td>
+                                <td style="color: @(payment.Remaining > 0 ? "#dc2626" : "#6b7280");">
+                                    @payment.Remaining.ToString("N0") ₫
+                                </td>
+                                <td>
+                                    @if (payment.Status == "Paid")
+                                    {
+                                        <span class="payment-status status-paid">
+                                            <i class="fas fa-check"></i> Đã thanh toán
+                                        </span>
+                                    }
+                                    else if (payment.Status == "Partial")
+                                    {
+                                        <span class="payment-status status-partial">
+                                            <i class="fas fa-exclamation-triangle"></i> Một phần
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="payment-status status-unpaid">
+                                            <i class="fas fa-times"></i> Chưa thu
+                                        </span>
+                                    }
+                                </td>
+                                <td>@(payment.PaymentDate?.ToString("dd/MM/yyyy"))</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="payment-summary" style="margin-top: 30px;">
+                <h3 style="margin-bottom: 20px; color: #1f2937;">
+                    <i class="fas fa-chart-bar"></i> Thống kê thanh toán
+                </h3>
+                <div class="payment-grid">
+                    <div class="payment-stat">
+                        <div class="payment-amount" style="color: #10b981;">
+                            @Model.TotalRevenue.ToString("N0") ₫
+                        </div>
+                        <div class="payment-label">Tổng đã thu</div>
+                    </div>
+                    <div class="payment-stat">
+                        <div class="payment-amount" style="color: #f59e0b;">
+                            @Model.TotalDebt.ToString("N0") ₫
+                        </div>
+                        <div class="payment-label">Tổng còn nợ</div>
+                    </div>
+                    <div class="payment-stat">
+                        <div class="payment-amount">
+                            @Model.PaymentCompleteRate%
+                        </div>
+                        <div class="payment-label">Tỷ lệ hoàn thành</div>
+                    </div>
+                    <div class="payment-stat">
+                        <div class="payment-amount">
+                            @Model.AveragePaymentDelay ngày
+                        </div>
+                        <div class="payment-label">Trễ TB</div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fas fa-file-invoice-dollar empty-icon"></i>
+                <h3>Chưa có lịch sử thanh toán</h3>
+                <p>Phòng này chưa có giao dịch thanh toán nào</p>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+
+
+
+    <script>
+        // Tab Navigation
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Remove active class from all nav tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+
+            // Add active class to clicked nav tab
+            event.target.closest('.nav-tab').classList.add('active');
+        }
+
+        // Filter functions
+        function filterTenants() {
+            const searchValue = document.getElementById('searchTenant').value.toLowerCase();
+            const statusValue = document.getElementById('filterStatus').value;
+
+            // Implementation for filtering
+            console.log('Filtering tenants:', searchValue, statusValue);
+        }
+
+        function filterPayments() {
+            const fromMonth = document.getElementById('fromMonth').value;
+            const toMonth = document.getElementById('toMonth').value;
+            const status = document.getElementById('paymentStatus').value;
+
+            // Implementation for filtering
+            console.log('Filtering payments:', fromMonth, toMonth, status);
+        }
+
+        // Initialize tooltips
+        document.addEventListener('DOMContentLoaded', function () {
+            // Add any initialization code here
+        });
+    </script>
+}

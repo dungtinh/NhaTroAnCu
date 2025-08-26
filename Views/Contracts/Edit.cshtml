@@ -580,6 +580,20 @@
             // Khởi tạo TenantManager
             TenantManager.init();
 
+            // Set default dates với format đúng
+            var today = new Date();
+            var dd = ('0' + today.getDate()).slice(-2);
+            var mm = ('0' + (today.getMonth() + 1)).slice(-2);
+            var yyyy = today.getFullYear();
+            var formattedToday = dd + '/' + mm + '/' + yyyy;
+
+            // Set default values cho các input rỗng
+            $('.datetime').each(function () {
+                if (!$(this).val() || $(this).val() === '') {
+                    $(this).datepicker('setDate', today);
+                }
+            });
+
             // XỬ LÝ SUBMIT FORM - SỬA LẠI HOÀN TOÀN
             $('form.contract-form').off('submit').on('submit', function(e) {
                 // Nếu đang submit rồi thì cho qua
