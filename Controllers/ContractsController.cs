@@ -327,6 +327,25 @@ namespace NhaTroAnCu.Controllers
         {
             if (!ModelState.IsValid)
             {
+                var errorList = new List<string>();
+
+                foreach (var modelError in ModelState)
+                {
+                    string fieldName = modelError.Key;
+                    var errors = modelError.Value.Errors;
+
+                    if (errors.Count > 0)
+                    {
+                        foreach (var error in errors)
+                        {
+                            string errorMsg = $"Field: [{fieldName}] - Error: {error.ErrorMessage}";
+                            errorList.Add(errorMsg);
+
+                            // Debug output
+                            System.Diagnostics.Debug.WriteLine(errorMsg);
+                        }
+                    }
+                }
                 LoadCreateViewData();
                 return View(model);
             }
