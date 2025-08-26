@@ -114,6 +114,18 @@
                         @Html.TextBoxFor(m => m.PriceAgreed, new { @class = "form-control money" })
                         @Html.ValidationMessageFor(m => m.PriceAgreed, "", new { @class = "text-danger" })
                     </div>
+                    <!-- Thêm đoạn code này vào phần Thông Tin Phòng cho Individual Contract -->
+                    <!-- Đặt sau phần PriceAgreed (khoảng dòng 130 trong file Edit.cshtml) -->
+
+                    <div class="form-group">
+                        @Html.LabelFor(m => m.SelectedRooms[0].Notes)
+                        @Html.TextBoxFor(m => m.SelectedRooms[0].Notes, new
+                        {
+                            @class = "form-control",
+                            @placeholder = "Nhập ghi chú..."
+                        })
+                        @Html.ValidationMessageFor(m => m.SelectedRooms[0].Notes, "", new { @class = "text-danger" })
+                    </div>
                 </div>
             </div>
 
@@ -348,257 +360,6 @@
     }
 </div>
 
-<div class="modal fade" id="manageTenantModal" tabindex="-1" role="dialog" aria-labelledby="manageTenantModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="manageTenantModalLabel">
-                    <i class="fas fa-users"></i> Quản Lý Khách Thuê -
-                    <span id="modalRoomName">Phòng</span>
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-
-            <div class="modal-body">
-                <!-- Hidden fields -->
-                <input type="hidden" id="modalRoomId" />
-                <input type="hidden" id="modalRoomIndex" />
-
-                <!-- Room info bar -->
-                <div class="room-info-bar bg-light p-3 rounded mb-3">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <strong>Phòng:</strong>
-                            <span id="modalRoomNameInfo"></span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Giá thuê:</strong>
-                            <span id="modalRoomPrice" class="text-primary font-weight-bold"></span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Số người hiện tại:</strong>
-                            <span class="badge badge-info" id="modalTenantCount">0/4</span>
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Trạng thái:</strong>
-                            <span class="badge badge-success" id="modalRoomStatus">Còn chỗ</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tabs navigation -->
-                <ul class="nav nav-tabs" id="tenantTabs" role="tablist">
-                    <li class="nav-item">
-                        <a class="nav-link active" id="current-tab" data-toggle="tab" href="#currentTenants" role="tab">
-                            <i class="fas fa-users"></i> Khách thuê hiện tại
-                            <span class="badge badge-primary ml-1" id="currentTenantBadge">0</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="add-tab" data-toggle="tab" href="#addNewTenant" role="tab">
-                            <i class="fas fa-user-plus"></i> Thêm khách thuê mới
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="transfer-tab" data-toggle="tab" href="#transferTenant" role="tab">
-                            <i class="fas fa-exchange-alt"></i> Chuyển từ phòng khác
-                        </a>
-                    </li>
-                </ul>
-
-                <!-- Tab content -->
-                <div class="tab-content mt-3" id="tenantTabContent">
-                    <!-- Tab 1: Current tenants -->
-                    <div class="tab-pane fade show active" id="currentTenants" role="tabpanel">
-                        <div id="currentTenantsList">
-                            <!-- Dynamic tenant cards will be inserted here -->
-                        </div>
-
-                        <div class="alert alert-info mt-3" id="noTenantsAlert" style="display:none;">
-                            <i class="fas fa-info-circle"></i>
-                            Phòng này chưa có khách thuê nào.
-                            <a href="#" onclick="$('a[href=\'#addNewTenant\']').tab('show'); return false;">
-                                Thêm khách thuê ngay
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Tab 2: Add new tenant -->
-                    <div class="tab-pane fade" id="addNewTenant" role="tabpanel">
-                        <form id="addTenantForm" novalidate>
-                            <!-- Quick actions -->
-                            <div class="quick-actions mb-3 p-3 bg-light rounded">
-                                <button type="button" class="btn btn-primary mr-2" onclick="CompanyTenantManager.quickAddTenant()">
-                                    <i class="fas fa-bolt"></i> Thêm nhanh
-                                </button>
-                                <label class="btn btn-info mb-0">
-                                    <i class="fas fa-qrcode"></i> Quét CCCD
-                                    <input type="file" id="cccdScanFile" accept="image/*" style="display:none;">
-                                </label>
-                            </div>
-
-                            <h6 id="addTenantFormTitle">Thêm khách thuê mới</h6>
-
-                            <!-- Form fields -->
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label>Họ và tên <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="newTenantName" required
-                                               placeholder="Nhập họ và tên">
-                                        <div class="invalid-feedback">Vui lòng nhập họ tên</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label>Số CCCD/CMND <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="newTenantIdentity" required
-                                               placeholder="Nhập số CCCD/CMND" maxlength="12">
-                                        <div class="invalid-feedback">Vui lòng nhập số CCCD/CMND</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>Số điện thoại</label>
-                                        <input type="tel" class="form-control" id="newTenantPhone"
-                                               placeholder="Nhập số điện thoại">
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>Ngày sinh</label>
-                                        <input type="text" class="form-control datetime" id="newTenantBirthDate"
-                                               placeholder="dd/mm/yyyy">
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>Giới tính</label>
-                                        <select class="form-control" id="newTenantGender">
-                                            <option value="">-- Chọn --</option>
-                                            <option value="Nam">Nam</option>
-                                            <option value="Nữ">Nữ</option>
-                                            <option value="Khác">Khác</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>Dân tộc</label>
-                                        <input type="text" class="form-control" id="newTenantEthnicity"
-                                               placeholder="Ví dụ: Kinh">
-                                    </div>
-                                </div>
-                                <div class="col-md-8">
-                                    <div class="form-group">
-                                        <label>Địa chỉ thường trú</label>
-                                        <input type="text" class="form-control" id="newTenantAddress"
-                                               placeholder="Nhập địa chỉ thường trú">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>Biển số xe</label>
-                                        <input type="text" class="form-control" id="newTenantVehicle"
-                                               placeholder="Ví dụ: 59A-12345">
-                                    </div>
-                                </div>
-                                <div class="col-md-8">
-                                    <div class="form-group">
-                                        <label>Upload ảnh chân dung</label>
-                                        <div class="custom-file">
-                                            <input type="file" class="custom-file-input" id="newTenantPhoto" accept="image/*">
-                                            <label class="custom-file-label" for="newTenantPhoto">Chọn ảnh...</label>
-                                        </div>
-                                        <small class="text-muted">Ảnh sẽ được lưu làm ảnh đại diện của khách thuê</small>
-                                        <div class="mt-2">
-                                            <img id="newTenantPhotoPreview" src="" alt="Preview"
-                                                 style="max-width: 150px; display: none;" class="img-thumbnail">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <button type="submit" class="btn btn-primary" id="addTenantSubmitBtn">
-                                    <i class="fas fa-plus"></i> Thêm khách thuê
-                                </button>
-                                <button type="button" class="btn btn-secondary" onclick="CompanyTenantManager.resetModalForm()">
-                                    <i class="fas fa-undo"></i> Làm mới
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- Tab 3: Transfer tenant -->
-                    <div class="tab-pane fade" id="transferTenant" role="tabpanel">
-                        <div class="form-group">
-                            <label>Chọn phòng nguồn:</label>
-                            <select class="form-control" id="sourceRoomSelect">
-                                <option value="">-- Chọn phòng có khách thuê --</option>
-                            </select>
-                        </div>
-
-                        <div id="sourceRoomTenants" style="display:none;">
-                            <div class="form-group">
-                                <label>Tìm kiếm khách thuê:</label>
-                                <input type="text" class="form-control" id="searchTransferTenant"
-                                       placeholder="Nhập tên hoặc CCCD để tìm...">
-                            </div>
-
-                            <h6 class="mt-3">
-                                Chọn khách thuê để chuyển:
-                                <div class="float-right">
-                                    <label class="mb-0">
-                                        <input type="checkbox" id="selectAllTransfer"> Chọn tất cả
-                                    </label>
-                                </div>
-                            </h6>
-
-                            <div id="transferTenantsList" style="max-height: 300px; overflow-y: auto;">
-                                <!-- Dynamic content -->
-                            </div>
-
-                            <button type="button" class="btn btn-warning mt-3" onclick="CompanyTenantManager.confirmTransfer()">
-                                <i class="fas fa-exchange-alt"></i> Xác nhận chuyển
-                            </button>
-                        </div>
-
-                        <div class="alert alert-warning mt-3">
-                            <i class="fas fa-info-circle"></i>
-                            <strong>Lưu ý:</strong>
-                            <ul class="mb-0 mt-2">
-                                <li>Khách thuê sẽ được chuyển sang phòng này</li>
-                                <li>Thông tin khách thuê sẽ được giữ nguyên</li>
-                                <li>Khách thuê sẽ bị xóa khỏi phòng cũ</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times"></i> Đóng
-                </button>
-                <button type="button" class="btn btn-success" onclick="CompanyTenantManager.saveRoomTenants()">
-                    <i class="fas fa-save"></i> Lưu thay đổi
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 <style>
 /* Modal styles */
 #manageTenantModal .modal-dialog {
@@ -695,7 +456,7 @@
         var isFormSubmitting = false;
 
         $(document).ready(function() {
-            
+
             // Set default dates với format đúng
             var today = new Date();
             var dd = ('0' + today.getDate()).slice(-2);
@@ -725,7 +486,7 @@
                 var contractType = '@Model.ContractType';
                 var isValid = true;
                 var errorMessage = '';
-                
+
                 // 2. VALIDATE HỢP ĐỒNG CÁ NHÂN
                 if (contractType === 'Individual') {
                     // Check phòng
@@ -737,7 +498,7 @@
                     else if (!$('#PriceAgreed').val() || parseFloat($('#PriceAgreed').val()) <= 0) {
                         isValid = false;
                         errorMessage = 'Vui lòng nhập giá thuê thỏa thuận!';
-                    }                   
+                    }
                 }
 
                 // 4. VALIDATE DATES
@@ -792,7 +553,7 @@
                     $form[0].submit();
                 }, 100);
             });
-            
+
         });
         $(document).on('change', '.company-room-checkbox', function () {
             var roomCard = $(this).closest('.room-card');

@@ -3,274 +3,7 @@
     ViewBag.Title = "Báo cáo danh sách khách thuê";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
-
-<style>
-    .btn-export {
-        background: #dc3545; /* Màu đỏ cho PDF */
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-        .btn-export:hover {
-            background: #c82333; /* Màu đỏ đậm hơn khi hover */
-        }
-    .tenant-report-container {
-        padding: 20px;
-    }
-
-    .report-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 30px;
-        border-radius: 10px;
-        margin-bottom: 30px;
-    }
-
-    .report-title {
-        font-size: 28px;
-        font-weight: bold;
-        margin-bottom: 10px;
-    }
-
-    .report-stats {
-        display: flex;
-        gap: 30px;
-        margin-top: 20px;
-    }
-
-    .stat-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .stat-value {
-        font-size: 24px;
-        font-weight: bold;
-    }
-
-    .stat-label {
-        opacity: 0.9;
-    }
-
-    .filter-section {
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        margin-bottom: 30px;
-    }
-
-    .filter-row {
-        display: flex;
-        gap: 15px;
-        flex-wrap: wrap;
-        align-items: end;
-    }
-
-    .filter-group {
-        flex: 1;
-        min-width: 200px;
-    }
-
-        .filter-group label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: #333;
-        }
-
-        .filter-group input,
-        .filter-group select {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-
-    .btn-search {
-        background: #667eea;
-        color: white;
-        padding: 10px 25px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-        .btn-search:hover {
-            background: #5a67d8;
-        }
-
-    .btn-export {
-        background: #48bb78;
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-        .btn-export:hover {
-            background: #38a169;
-        }
-
-    .btn-reset {
-        background: #718096;
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: 600;
-    }
-
-        .btn-reset:hover {
-            background: #4a5568;
-        }
-
-    .report-table {
-        background: white;
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .table {
-        width: 100%;
-        margin: 0;
-    }
-
-        .table thead {
-            background: #f7fafc;
-        }
-
-        .table th {
-            padding: 15px;
-            font-weight: 600;
-            color: #2d3748;
-            border-bottom: 2px solid #e2e8f0;
-            white-space: nowrap;
-        }
-
-        .table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .table tr:hover {
-            background: #f7fafc;
-        }
-
-    .tenant-photo {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        object-fit: cover;
-    }
-
-    .no-photo {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: #e2e8f0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #718096;
-    }
-
-    .room-badge {
-        background: #edf2f7;
-        padding: 4px 10px;
-        border-radius: 15px;
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    .contract-type-badge {
-        padding: 4px 10px;
-        border-radius: 15px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-
-    .type-individual {
-        background: #bee3f8;
-        color: #2c5282;
-    }
-
-    .type-company {
-        background: #d6f5d6;
-        color: #276749;
-    }
-
-    .status-badge {
-        padding: 4px 10px;
-        border-radius: 15px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-
-    .status-active {
-        background: #c6f6d5;
-        color: #22543d;
-    }
-
-    .status-expired {
-        background: #fed7d7;
-        color: #742a2a;
-    }
-
-    .status-terminated {
-        background: #e2e8f0;
-        color: #4a5568;
-    }
-
-    .primary-tenant {
-        color: #f6ad55;
-        font-size: 16px;
-    }
-
-    .company-name {
-        font-size: 13px;
-        color: #718096;
-        font-style: italic;
-    }
-
-    .no-data {
-        text-align: center;
-        padding: 60px 20px;
-        color: #718096;
-    }
-
-        .no-data i {
-            font-size: 48px;
-            margin-bottom: 15px;
-            opacity: 0.5;
-        }
-
-    .action-buttons {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-    }
-</style>
+<link href="~/CSS/contract-tenants.css" rel="stylesheet" />
 
 <div class="tenant-report-container">
     <!-- Header -->
@@ -369,8 +102,8 @@
                 </button>
 
                 @*<button type="button" class="btn-export" onclick="exportReport()">
-                    <i class="fas fa-file-excel"></i> Xuất Excel
-                </button>*@
+                        <i class="fas fa-file-excel"></i> Xuất Excel
+                    </button>*@
                 <button type="button" class="btn-export" onclick="exportReport()">
                     <i class="fas fa-file-pdf"></i> Xuất PDF
                 </button>
@@ -389,7 +122,7 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th width="50">Ảnh</th>
+                        <th width="100">Ảnh</th>
                         <th>Họ tên</th>
                         <th>CCCD</th>
                         <th>Điện thoại</th>
@@ -410,7 +143,9 @@
                             <td>
                                 @if (!string.IsNullOrEmpty(item.Photo))
                                 {
-                                    <img src="@item.Photo" class="tenant-photo" alt="@item.TenantName" />
+                                    var src = item.Photo != null && item.Photo.Contains(";") ? item.Photo.Split(';')[0].Trim() : item.Photo;
+                                    <img src="@src" class="tenant-photo" alt="@item.TenantName" />
+
                                 }
                                 else
                                 {
@@ -421,10 +156,6 @@
                             </td>
                             <td>
                                 <strong>@item.TenantName</strong>
-                                @if (item.IsPrimary)
-                                {
-                                    <i class="fas fa-star primary-tenant" title="Người thuê chính"></i>
-                                }
                             </td>
                             <td>@item.IdentityCard</td>
                             <td>@item.PhoneNumber</td>
