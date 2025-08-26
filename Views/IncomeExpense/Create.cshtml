@@ -1,5 +1,4 @@
-﻿
-@model NhaTroAnCu.Models.CreateIncomeExpenseViewModel
+﻿@model NhaTroAnCu.Models.CreateIncomeExpenseViewModel
 @{
     ViewBag.Title = "Thêm giao dịch";
 }
@@ -7,7 +6,7 @@
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card">
+            <div class="card shadow">
                 <div class="card-header bg-primary text-white">
                     <h4><i class="fas fa-plus-circle"></i> Thêm giao dịch mới</h4>
                 </div>
@@ -16,38 +15,112 @@
                     {
                         @Html.AntiForgeryToken()
 
-                        <div class="form-group">
-                            <label>Danh mục <span class="text-danger">*</span></label>
-                            @Html.DropDownListFor(m => m.CategoryId, (SelectList)ViewBag.Categories,
-                                "-- Chọn danh mục --", new { @class = "form-control", id = "categorySelect" })
-                            @Html.ValidationMessageFor(m => m.CategoryId, "", new { @class = "text-danger" })
+                        if (TempData["Error"] != null)
+                        {
+                            <div class="alert alert-danger alert-dismissible fade show">
+                                <button type="button" class="close" data-dismiss="alert">&times;</button>
+                                <i class="fas fa-exclamation-circle"></i> @TempData["Error"]
+                            </div>
+                        }
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        <i class="fas fa-list"></i> Danh mục
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    @Html.DropDownListFor(m => m.CategoryId, (SelectList)ViewBag.Categories,
+                                        "-- Chọn danh mục --", new { @class = "form-control", id = "categorySelect" })
+                                    @Html.ValidationMessageFor(m => m.CategoryId, "", new { @class = "text-danger small" })
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        <i class="fas fa-money-bill-wave"></i> Số tiền
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    @Html.TextBoxFor(m => m.Amount, new { @class = "form-control money", placeholder = "0" })
+                                    @Html.ValidationMessageFor(m => m.Amount, "", new { @class = "text-danger small" })
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        <i class="fas fa-calendar-alt"></i> Ngày giao dịch
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    @Html.TextBoxFor(m => m.TransactionDate, "{0:dd/MM/yyyy}",
+                                        new { @class = "form-control datetime", placeholder = "dd/mm/yyyy" })
+                                    @Html.ValidationMessageFor(m => m.TransactionDate, "", new { @class = "text-danger small" })
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        <i class="fas fa-file-invoice"></i> Số chứng từ
+                                    </label>
+                                    @Html.TextBoxFor(m => m.ReferenceNumber,
+                                        new { @class = "form-control", placeholder = "VD: HD001, PC001..." })
+                                </div>
+                            </div>
                         </div>
 
                         <div class="form-group">
-                            <label>Số tiền <span class="text-danger">*</span></label>
-                            @Html.TextBoxFor(m => m.Amount, new { @class = "form-control money" })
-                            @Html.ValidationMessageFor(m => m.Amount, "", new { @class = "text-danger" })
+                            <label class="font-weight-bold">
+                                <i class="fas fa-sticky-note"></i> Mô tả chi tiết
+                            </label>
+                            @Html.TextAreaFor(m => m.Description,
+                                new { @class = "form-control", rows = 4, placeholder = "Nhập mô tả chi tiết về giao dịch..." })
+                            @Html.ValidationMessageFor(m => m.Description, "", new { @class = "text-danger small" })
                         </div>
 
-                        <div class="form-group">
-                            <label>Ngày giao dịch <span class="text-danger">*</span></label>
-                            @Html.TextBoxFor(m => m.TransactionDate, "{0:dd/MM/yyyy}",
-                                new { @class = "form-control datepicker" })
-                            @Html.ValidationMessageFor(m => m.TransactionDate, "", new { @class = "text-danger" })
-                        </div>
-                        <div class="form-group">
-                            <label>Số chứng từ</label>
-                            @Html.TextBoxFor(m => m.ReferenceNumber, new { @class = "form-control" })
+                        <!-- Contract Section (ẩn/hiện) -->
+                        <div id="contractSection" style="display:none;">
+                            <hr />
+                            <h5 class="text-info mb-3">
+                                <i class="fas fa-file-contract"></i> Liên kết hợp đồng
+                            </h5>
+                            <div class="form-group">
+                                <label class="font-weight-bold">Chọn hợp đồng</label>
+                                @Html.DropDownListFor(m => m.ContractId,
+                                    (SelectList)ViewBag.Contracts ?? new SelectList(Enumerable.Empty<SelectListItem>()),
+                                    "-- Không liên kết --",
+                                    new { @class = "form-control", id = "contractSelect" })
+                            </div>
                         </div>
 
-                        <div class="form-group">
-                            <label>Mô tả</label>
-                            @Html.TextAreaFor(m => m.Description, new { @class = "form-control", rows = 3 })
+                        <!-- Preview Section -->
+                        <div class="card bg-light mb-3" id="previewSection" style="display:none;">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-eye"></i> Xem trước thông tin
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">Loại giao dịch:</small>
+                                        <div id="previewType" class="font-weight-bold"></div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted">Số tiền:</small>
+                                        <div id="previewAmount" class="font-weight-bold"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="form-group">
                             <button type="submit" class="btn btn-success">
                                 <i class="fas fa-save"></i> Lưu
+                            </button>
+                            <button type="button" class="btn btn-info" onclick="previewTransaction()">
+                                <i class="fas fa-eye"></i> Xem trước
                             </button>
                             <a href="@Url.Action("Index")" class="btn btn-secondary">
                                 <i class="fas fa-times"></i> Hủy
@@ -63,15 +136,54 @@
 @section Scripts {
     <script>
         $(function () {
-            // Hiển thị/ẩn section phòng và hợp đồng tùy theo danh mục
+            // Set default dates với format đúng
+            var today = new Date();
+            var dd = ('0' + today.getDate()).slice(-2);
+            var mm = ('0' + (today.getMonth() + 1)).slice(-2);
+            var yyyy = today.getFullYear();
+            var formattedToday = dd + '/' + mm + '/' + yyyy;
+
+            // Set default values cho các input rỗng
+            $('.datetime').each(function () {
+                if (!$(this).val() || $(this).val() === '') {
+                    $(this).datepicker('setDate', today);
+                }
+            });
+            // Xử lý thay đổi danh mục
             $('#categorySelect').change(function () {
                 var selectedText = $(this).find('option:selected').text().toLowerCase();
-                if (selectedText.includes('phòng')) {
-                    $('#roomSection, #contractSection').show();
+
+                // Hiển thị/ẩn section hợp đồng nếu liên quan đến phòng
+                if (selectedText.includes('phòng') || selectedText.includes('cọc')) {
+                    $('#contractSection').slideDown();
                 } else {
-                    $('#roomSection, #contractSection').hide();
+                    $('#contractSection').slideUp();
+                    $('#contractSelect').val('');
                 }
             });
         });
+
+        // Function xem trước giao dịch
+        function previewTransaction() {
+            var category = $('#categorySelect option:selected').text();
+            var amount = $('.money').val();
+
+            if (category && amount) {
+                $('#previewSection').show();
+
+                // Xác định loại
+                var type = category.toLowerCase();
+                if (type.includes('thu') || type.includes('tiền phòng') || type.includes('cọc')) {
+                    $('#previewType').html('<span class="text-success"><i class="fas fa-arrow-down"></i> Thu nhập</span>');
+                } else {
+                    $('#previewType').html('<span class="text-danger"><i class="fas fa-arrow-up"></i> Chi phí</span>');
+                }
+
+                // Hiển thị số tiền
+                $('#previewAmount').html('<span class="text-primary">' + amount + ' đ</span>');
+            } else {
+                alert('Vui lòng nhập đầy đủ thông tin danh mục và số tiền!');
+            }
+        }
     </script>
 }

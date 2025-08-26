@@ -46,26 +46,50 @@ namespace NhaTroAnCu.Controllers
 
             var totalItems = query.Count();
 
-            var items = query
+            // Lấy dữ liệu từ database trước, sau đó xử lý String.Join trong memory
+            var rawItems = query
                 .OrderByDescending(x => x.TransactionDate)
                 .ThenByDescending(x => x.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(x => new IncomeExpenseItemViewModel
+                .Select(x => new
                 {
-                    Id = x.Id,
+                    x.Id,
                     CategoryName = x.IncomeExpenseCategory.Name,
                     CategoryIsSystem = x.IncomeExpenseCategory.IsSystem,
                     Type = x.IncomeExpenseCategory.Type,
-                    Amount = x.Amount,
-                    TransactionDate = x.TransactionDate,
-                    Description = x.Description,
-                    ReferenceNumber = x.ReferenceNumber,
-                    ContractInfo = x.Contract != null ?
-                        "HĐ #" + x.Contract.Id + " - Phòng: " +
-                        string.Join(", ", x.Contract.ContractRooms.Select(cr => cr.Room.Name)) : "",
-                    CreatedAt = x.CreatedAt
-                }).ToList();
+                    x.Amount,
+                    x.TransactionDate,
+                    x.Description,
+                    x.ReferenceNumber,
+                    x.CreatedAt,
+                    Contract = x.Contract,
+                    ContractRooms = x.Contract.ContractRooms.Select(cr => new
+                    {
+                        RoomName = cr.Room.Name
+                    }).ToList()
+                })
+                .ToList(); // Thực thi query tại đây
+
+            // Sau khi có dữ liệu trong memory, thực hiện String.Join
+            var items = rawItems.Select(x => new IncomeExpenseItemViewModel
+            {
+                Id = x.Id,
+                CategoryName = x.CategoryName,
+                CategoryIsSystem = x.CategoryIsSystem,
+                Type = x.Type,
+                Amount = x.Amount,
+                TransactionDate = x.TransactionDate,
+                Description = x.Description,
+                ReferenceNumber = x.ReferenceNumber,
+                CreatedAt = x.CreatedAt,
+                ContractInfo = x.Contract != null
+                    ? (x.Contract.ContractType == "Company" && x.Contract.Company != null
+                        ? x.Contract.Company.CompanyName + " - " + string.Join(", ", x.ContractRooms.Select(cr => cr.RoomName))
+                        : string.Join(", ", x.ContractRooms.Select(cr => cr.RoomName)))
+                    : null,
+                RoomName = x.ContractRooms.FirstOrDefault()?.RoomName
+            }).ToList();
 
             var model = new IncomeExpenseListViewModel
             {
@@ -84,7 +108,6 @@ namespace NhaTroAnCu.Controllers
 
             // Load categories for filter
             ViewBag.Categories = db.IncomeExpenseCategories
-                .Where(c => c.IsActive)
                 .OrderBy(c => c.Type)
                 .ThenBy(c => c.Name)
                 .ToList();
@@ -292,23 +315,35 @@ namespace NhaTroAnCu.Controllers
         // Helper method
         private void LoadViewBagData()
         {
+            // Load categories
             ViewBag.Categories = new SelectList(
                 db.IncomeExpenseCategories.Where(c => c.IsActive && !c.IsSystem).OrderBy(c => c.Type).ThenBy(c => c.Name),
                 "Id", "Name");
 
-            // Load contracts với phòng
-            var contracts = db.Contracts
+            // Load contracts với phòng - SỬA LỖI STRING.JOIN
+            // Bước 1: Lấy dữ liệu từ database trước
+            var contractsData = db.Contracts
                 .Where(c => c.Status == "Active")
                 .Include(c => c.ContractRooms.Select(cr => cr.Room))
                 .Select(c => new
                 {
                     c.Id,
-                    Display = "HĐ #" + c.Id + " - Phòng: " +
-                        string.Join(", ", c.ContractRooms.Select(cr => cr.Room.Name))
+                    ContractRooms = c.ContractRooms.Select(cr => new
+                    {
+                        RoomName = cr.Room.Name
+                    })
                 })
-                .ToList();
+                .ToList(); // Thực thi query, đưa dữ liệu vào memory
 
-            ViewBag.Contracts = new SelectList(contracts, "Id", "Display");
+            // Bước 2: Xử lý String.Join trong memory
+            var contractsList = contractsData.Select(c => new
+            {
+                c.Id,
+                Display = "HĐ #" + c.Id + " - Phòng: " +
+                    string.Join(", ", c.ContractRooms.Select(cr => cr.RoomName))
+            }).ToList();
+
+            ViewBag.Contracts = new SelectList(contractsList, "Id", "Display");
         }
 
         // GET: IncomeExpense/GetContractsForRoom

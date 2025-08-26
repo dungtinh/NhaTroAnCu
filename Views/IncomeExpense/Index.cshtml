@@ -59,11 +59,11 @@
         <form method="get" class="filter-form">
             <div class="row">
                 <div class="col-md-2">
-                    <input type="text" name="fromDate" class="form-control datepicker"
+                    <input type="text" name="fromDate" class="form-control datetime"
                            placeholder="Từ ngày" value="@(Model.FromDate?.ToString("dd/MM/yyyy"))" />
                 </div>
                 <div class="col-md-2">
-                    <input type="text" name="toDate" class="form-control datepicker"
+                    <input type="text" name="toDate" class="form-control datetime"
                            placeholder="Đến ngày" value="@(Model.ToDate?.ToString("dd/MM/yyyy"))" />
                 </div>
                 <div class="col-md-3">

@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Web;
 using System.Web.Mvc;
+using Aspose.Words;
 using Microsoft.AspNet.Identity;
 using NhaTroAnCu.Helpers;
 using NhaTroAnCu.Models;
@@ -291,9 +294,10 @@ namespace NhaTroAnCu.Controllers
         // GET: Contracts/Create
         public ActionResult Create(int? roomId)
         {
+            var today = DateTime.Now;
             var model = new ContractCreateViewModel
             {
-                MoveInDate = DateTime.Now,
+                MoveInDate = new DateTime(today.Year, today.Month, 10),
                 StartDate = DateTime.Now,
                 ElectricityPrice = 3500,
                 WaterPrice = 15000,
@@ -993,5 +997,270 @@ namespace NhaTroAnCu.Controllers
             }
             base.Dispose(disposing);
         }
+
+
+
+        ////////////PRINT CONTRACT
+        public ActionResult Print(int? id)
+        {
+            if (id == null)
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+            }
+
+            var contract = db.Contracts
+                .Include(c => c.ContractRooms.Select(cr => cr.Room))
+                .Include(c => c.ContractTenants.Select(ct => ct.Tenant))
+                .Include(c => c.Company)
+                .FirstOrDefault(c => c.Id == id);
+
+            if (contract == null)
+            {
+                return HttpNotFound();
+            }
+
+            try
+            {
+                // Đường dẫn đến file template
+                string templatePath = Server.MapPath("~/App_Data/Templates/HOPDONG.docx");
+
+                if (!System.IO.File.Exists(templatePath))
+                {
+                    TempData["Error"] = "Không tìm thấy file mẫu hợp đồng!";
+                    return RedirectToAction("Details", new { id });
+                }
+
+                // Load document template
+                Document doc = new Document(templatePath);
+
+                // Chuẩn bị dữ liệu để merge
+                var mergeData = PrepareContractData(contract);
+
+                // Thực hiện mail merge
+                doc.MailMerge.Execute(mergeData.Keys.ToArray(), mergeData.Values.ToArray());
+
+
+                // Tạo tên file output
+                string fileName = $"HopDong_{contract.Id:D6}_{DateTime.Now:yyyyMMdd}.docx";
+
+                // Lưu document vào memory stream
+                using (MemoryStream stream = new MemoryStream())
+                {
+                    // Lưu dưới dạng DOCX
+                    doc.Save(stream, SaveFormat.Docx);
+
+                    // Trả về file để download
+                    return File(stream.ToArray(),
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        fileName);
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Lỗi khi tạo hợp đồng: " + ex.Message;
+                return RedirectToAction("Details", new { id });
+            }
+        }
+
+        // Helper method để chuẩn bị dữ liệu merge
+        private Dictionary<string, string> PrepareContractData(Contract contract)
+        {
+            var data = new Dictionary<string, string>();
+
+            // Thông tin ngày tháng
+            data["ngay"] = contract.StartDate.Day.ToString();
+            data["thang"] = contract.StartDate.Month.ToString();
+            data["nam"] = contract.StartDate.Year.ToString();
+
+            // Thông tin phòng
+            var rooms = contract.ContractRooms.Select(cr => cr.Room).ToList();
+            if (rooms.Any())
+            {
+                data["sophong"] = string.Join(", ", rooms.Select(r => r.Name));
+            }
+            else
+            {
+                data["sophong"] = "";
+                data["dientich"] = "16 m²";
+            }
+
+            // Thông tin bên thuê
+            if (contract.ContractType == "Company" && contract.Company != null)
+            {
+                // Hợp đồng công ty
+                var company = contract.Company;
+                data["benthue"] = BuildCompanyInfo(company);
+            }
+            else
+            {
+                // Hợp đồng cá nhân
+                var tenants = contract.ContractTenants
+                    .OrderBy(ct => ct.CreatedAt)
+                    .Select(ct => ct.Tenant)
+                    .ToList();
+
+                data["benthue"] = BuildTenantInfo(tenants);
+            }
+
+            // Thông tin giá thuê
+            data["giathue"] = FormatCurrency(contract.PriceAgreed);
+            data["giathue_text"] = NumberToText(contract.PriceAgreed);
+
+            // Thông tin điện nước
+            data["giadien"] = FormatNumber(contract.ElectricityPrice);
+            data["gianuoc"] = FormatNumber(contract.WaterPrice);
+
+            // Tiền cọc (thường là 2 tháng)
+            decimal depositAmount = contract.PriceAgreed * 2;
+            data["tiencoc"] = FormatCurrency(depositAmount);
+            data["tiencoc_text"] = NumberToText(depositAmount);
+
+            // Thời hạn hợp đồng
+            data["ngaybatdau"] = contract.StartDate.ToString("dd/MM/yyyy");
+            data["ngayketthuc"] = contract.EndDate.ToString("dd/MM/yyyy");
+
+            // Tính số tháng
+            int months = ((contract.EndDate.Year - contract.StartDate.Year) * 12)
+                + contract.EndDate.Month - contract.StartDate.Month;
+            data["sothang"] = months.ToString();
+
+            // Ngày nhận phòng
+            data["ngaynhanphong"] = contract.MoveInDate.ToString("dd/MM/yyyy");
+
+            // Ghi chú
+            data["ghichu"] = contract.Note ?? "";
+
+            return data;
+        }
+
+        // Helper method xây dựng thông tin công ty
+        private string BuildCompanyInfo(Company company)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Công ty: {company.CompanyName}");
+            sb.AppendLine($"Mã số thuế: {company.TaxCode}");
+            sb.AppendLine($"Địa chỉ: {company.Address}");
+            sb.AppendLine($"Điện thoại: {company.Phone}");
+
+            if (!string.IsNullOrEmpty(company.Representative))
+            {
+                sb.AppendLine($"Người đại diện: {company.Representative}");
+                if (!string.IsNullOrEmpty(company.RepresentativePhone))
+                    sb.AppendLine($"Số điện thoại người đại diện: {company.RepresentativePhone}");
+            }
+
+            return sb.ToString();
+        }
+
+        // Helper method xây dựng thông tin người thuê
+        private string BuildTenantInfo(List<Tenant> tenants)
+        {
+            if (!tenants.Any())
+                return "";
+
+            var sb = new StringBuilder();
+
+            // Người đại diện (người đầu tiên)
+            var mainTenant = tenants.First();
+            sb.AppendLine($"Họ và tên: {mainTenant.FullName}");
+            sb.AppendLine($"CMND/CCCD: {mainTenant.IdentityCard}");
+            sb.AppendLine($"Điện thoại: {mainTenant.PhoneNumber}");
+            sb.AppendLine($"Địa chỉ thường trú: {mainTenant.PermanentAddress}");
+
+            if (mainTenant.BirthDate.HasValue)
+            {
+                sb.AppendLine($"Ngày sinh: {mainTenant.BirthDate.Value:dd/MM/yyyy}");
+            }
+
+            // Nếu có nhiều người
+            if (tenants.Count > 1)
+            {
+                sb.AppendLine("");
+                sb.AppendLine("Cùng với những người sau:");
+
+                for (int i = 1; i < tenants.Count; i++)
+                {
+                    var tenant = tenants[i];
+                    sb.AppendLine($"{i}. {tenant.FullName} - CCCD: {tenant.IdentityCard}");
+                }
+            }
+
+            return sb.ToString();
+        }
+
+        // Format tiền tệ
+        private string FormatCurrency(decimal amount)
+        {
+            return amount.ToString("N0", CultureInfo.GetCultureInfo("vi-VN"));
+        }
+
+        // Format số
+        private string FormatNumber(decimal number)
+        {
+            return number.ToString("N0", CultureInfo.GetCultureInfo("vi-VN"));
+        }
+
+        // Chuyển số thành chữ tiếng Việt
+        private string NumberToText(decimal number)
+        {
+            if (number == 0)
+                return "không đồng";
+
+            string[] ones = { "", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín" };
+            string[] tens = { "", "", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín" };
+
+            // Simplified implementation - cần thư viện chuyển đổi số sang chữ tiếng Việt đầy đủ
+            // Ví dụ: 2000000 -> "hai triệu đồng"
+
+            long amount = (long)number;
+
+            if (amount < 1000)
+                return ConvertHundreds(amount, ones, tens) + " đồng";
+
+            if (amount < 1000000)
+                return ConvertThousands(amount, ones, tens) + " đồng";
+
+            if (amount < 1000000000)
+                return ConvertMillions(amount, ones, tens) + " đồng";
+
+            return amount.ToString("N0") + " đồng";
+        }
+
+        // Helper methods cho chuyển đổi số
+        private string ConvertHundreds(long number, string[] ones, string[] tens)
+        {
+            // Implementation đơn giản
+            return number.ToString();
+        }
+
+        private string ConvertThousands(long number, string[] ones, string[] tens)
+        {
+            long thousands = number / 1000;
+            long remainder = number % 1000;
+
+            string result = ConvertHundreds(thousands, ones, tens) + " nghìn";
+            if (remainder > 0)
+                result += " " + ConvertHundreds(remainder, ones, tens);
+
+            return result;
+        }
+
+        private string ConvertMillions(long number, string[] ones, string[] tens)
+        {
+            long millions = number / 1000000;
+            long remainder = number % 1000000;
+
+            string result = ConvertHundreds(millions, ones, tens) + " triệu";
+            if (remainder > 0)
+            {
+                if (remainder >= 1000)
+                    result += " " + ConvertThousands(remainder, ones, tens);
+                else
+                    result += " " + ConvertHundreds(remainder, ones, tens);
+            }
+
+            return result;
+        }
+        /// END\\//////////
     }
 }

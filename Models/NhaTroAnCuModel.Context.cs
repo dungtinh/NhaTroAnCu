@@ -39,7 +39,6 @@ namespace NhaTroAnCu.Models
         public virtual DbSet<ContractTenant> ContractTenants { get; set; }
         public virtual DbSet<IncomeExpenseCategory> IncomeExpenseCategories { get; set; }
         public virtual DbSet<IncomeExpense> IncomeExpenses { get; set; }
-        public virtual DbSet<PaymentHistory> PaymentHistories { get; set; }
         public virtual DbSet<Room> Rooms { get; set; }
         public virtual DbSet<Tenant> Tenants { get; set; }
         public virtual DbSet<UtilityBill> UtilityBills { get; set; }
@@ -48,7 +47,6 @@ namespace NhaTroAnCu.Models
         public virtual DbSet<vw_CompanyTenants> vw_CompanyTenants { get; set; }
         public virtual DbSet<vw_ContractDetails> vw_ContractDetails { get; set; }
         public virtual DbSet<vw_RoomStatus> vw_RoomStatus { get; set; }
-        public virtual DbSet<ContractRooms_Backup_20250819_103317> ContractRooms_Backup_20250819_103317 { get; set; }
     
         public virtual ObjectResult<Nullable<int>> sp_AddEmployeeToRoom(Nullable<int> contractId, Nullable<int> roomId, string fullName, string identityCard, string phoneNumber, Nullable<System.DateTime> birthDate, string gender, string permanentAddress)
         {

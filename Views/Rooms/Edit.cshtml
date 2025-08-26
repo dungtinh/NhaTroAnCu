@@ -1,64 +1,246 @@
 ﻿@model NhaTroAnCu.Models.Room
 
 @{
-    ViewBag.Title = "Sửa phòng";
+    ViewBag.Title = "Chỉnh sửa phòng " + Model.Name;
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h2>Sửa phòng</h2>
+<link href="~/CSS/room-action.css" rel="stylesheet" />
 
-@using (Html.BeginForm())
-{
-    @Html.AntiForgeryToken()
-    <div class="form-horizontal">
-        <div class="form-group">
-            <label>Dãy</label>
-            @Html.DropDownListFor(m => m.Area, new SelectList(new[] { "A", "B" }), "Chọn dãy", new { @class = "form-control" })
-        </div>
-
-        <div class="form-group">
-            <label>Tầng</label>
-            @Html.TextBoxFor(m => m.Floor, new { @class = "form-control", type = "number", min = 1, max = 4 })
-        </div>
-
-        <div class="form-group">
-            <label>Số phòng</label>
-            @Html.TextBoxFor(m => m.RoomNumber, new { @class = "form-control", type = "number", min = 1, max = 99 })
-        </div>
-
-        <div class="form-group">
-            <label>Tên phòng (tuỳ chọn)</label>
-            @Html.TextBoxFor(m => m.Name, new { @class = "form-control" })
-        </div>
-
-        <div class="form-group">
-            <label>Giá mặc định</label>
-            @Html.TextBoxFor(m => m.DefaultPrice, new { @class = "form-control money" })
-        </div>
-
-        <div class="form-group">
-            <label>Điều hoà</label>
-            @Html.CheckBoxFor(m => m.HasAirCondition)
-        </div>
-
-        <div class="form-group">
-            <label>Tủ lạnh</label>
-            @Html.CheckBoxFor(m => m.HasFridge)
-        </div>
-        <div class="form-group">
-            <label>Bình nóng lạnh</label>
-            @Html.CheckBoxFor(m => m.HasWaterHeater)
-        </div>
-        <div class="form-group">
-            <label>Giường</label>
-            @Html.CheckBoxFor(m => m.HasBed)
-        </div>
-        <div class="form-group">
-            <label>Tủ</label>
-            @Html.CheckBoxFor(m => m.HasWardrobe)
-        </div>
-        <!-- Add other fields if needed -->
-
-        <button type="submit" class="btn btn-primary">Lưu</button>
-        @Html.ActionLink("Quay lại", "Index", null, new { @class = "btn btn-default" })
+<div class="edit-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h2>
+            <i class="fas fa-door-open"></i>
+            Chỉnh Sửa Thông Tin Phòng
+        </h2>
+        <p>Cập nhật thông tin và tiện ích phòng trọ</p>
+        @if (!string.IsNullOrEmpty(Model.Name))
+        {
+            <span class="room-badge">
+                <i class="fas fa-tag"></i> @Model.Name
+            </span>
+        }
     </div>
+
+    <!-- Form Card -->
+    <div class="form-card">
+        @using (Html.BeginForm("Edit", "Rooms", FormMethod.Post, new { @class = "room-form", id = "roomEditForm" }))
+        {
+            @Html.AntiForgeryToken()
+            @Html.HiddenFor(m => m.Id)
+
+            <div class="form-body">
+                @Html.ValidationSummary(true, "", new { @class = "alert alert-danger" })
+
+                <!-- Basic Information Section -->
+                <div class="section-header">
+                    <div class="section-icon">
+                        <i class="fas fa-home"></i>
+                    </div>
+                    <div class="section-title">Thông Tin Cơ Bản</div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        @Html.LabelFor(m => m.Area, "Dãy phòng")
+                        @Html.DropDownListFor(m => m.Area,
+                            new SelectList(new[] {
+                                new { Value = "A", Text = "Dãy A" },
+                                new { Value = "B", Text = "Dãy B" }
+                            }, "Value", "Text", Model.Area),
+                            "-- Chọn dãy --",
+                            new { @class = "form-control" })
+                        @Html.ValidationMessageFor(m => m.Area, "", new { @class = "text-danger" })
+                    </div>
+
+                    <div class="form-group">
+                        @Html.LabelFor(m => m.Floor, "Tầng")
+                        @Html.TextBoxFor(m => m.Floor, new
+                        {
+                            @class = "form-control",
+                            type = "number",
+                            min = 0,
+                            max = 10,
+                            placeholder = "Nhập số tầng"
+                        })
+                        @Html.ValidationMessageFor(m => m.Floor, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        @Html.LabelFor(m => m.RoomNumber, "Số phòng")
+                        @Html.TextBoxFor(m => m.RoomNumber, new
+                        {
+                            @class = "form-control",
+                            type = "number",
+                            min = 1,
+                            max = 999,
+                            placeholder = "Nhập số phòng"
+                        })
+                        @Html.ValidationMessageFor(m => m.RoomNumber, "", new { @class = "text-danger" })
+                    </div>
+
+                    <div class="form-group">
+                        @Html.LabelFor(m => m.Name, "Tên phòng")
+                        @Html.TextBoxFor(m => m.Name, new
+                        {
+                            @class = "form-control",
+                            placeholder = "VD: Phòng VIP, Phòng góc..."
+                        })
+                        @Html.ValidationMessageFor(m => m.Name, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        @Html.LabelFor(m => m.DefaultPrice, "Giá thuê mặc định")
+                        <div class="input-group">
+                            @Html.TextBoxFor(m => m.DefaultPrice, new
+                            {
+                                @class = "form-control money",
+                                placeholder = "0"
+                            })
+                            <span class="input-addon">VNĐ</span>
+                        </div>
+                        @Html.ValidationMessageFor(m => m.DefaultPrice, "", new { @class = "text-danger" })
+                    </div>
+
+                    <div class="form-group">
+                        @Html.LabelFor(m => m.IsOccupied, "Trạng thái")
+                        @Html.DropDownListFor(m => m.IsOccupied,
+                            new SelectList(new[] {
+                                new { Value = false, Text = "Phòng trống" },
+                                new { Value = true, Text = "Đang có người ở" }
+                            }, "Value", "Text", Model.IsOccupied),
+                            new { @class = "form-control" })
+                        @Html.ValidationMessageFor(m => m.IsOccupied, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+
+                <!-- Amenities Section -->
+                <div class="section-header" style="margin-top: 40px;">
+                    <div class="section-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="section-title">Tiện Ích Phòng</div>
+                </div>
+
+                <div class="amenities-grid">
+                    <div class="checkbox-group @(Model.HasAirCondition ? "checked" : "")">
+                        <div class="checkbox-wrapper">
+                            @Html.CheckBoxFor(m => m.HasAirCondition)
+                            <span class="checkbox-slider"></span>
+                        </div>
+                        <label for="HasAirCondition" class="checkbox-label">
+                            <i class="fas fa-snowflake checkbox-icon"></i>
+                            Máy lạnh / Điều hòa
+                        </label>
+                    </div>
+
+                    <div class="checkbox-group @(Model.HasFridge ? "checked" : "")">
+                        <div class="checkbox-wrapper">
+                            @Html.CheckBoxFor(m => m.HasFridge)
+                            <span class="checkbox-slider"></span>
+                        </div>
+                        <label for="HasFridge" class="checkbox-label">
+                            <i class="fas fa-temperature-low checkbox-icon"></i>
+                            Tủ lạnh
+                        </label>
+                    </div>
+
+                    <div class="checkbox-group @(Model.HasWaterHeater ? "checked" : "")">
+                        <div class="checkbox-wrapper">
+                            @Html.CheckBoxFor(m => m.HasWaterHeater)
+                            <span class="checkbox-slider"></span>
+                        </div>
+                        <label for="HasWaterHeater" class="checkbox-label">
+                            <i class="fas fa-shower checkbox-icon"></i>
+                            Bình nóng lạnh
+                        </label>
+                    </div>
+
+                    <div class="checkbox-group @(Model.HasBed ? "checked" : "")">
+                        <div class="checkbox-wrapper">
+                            @Html.CheckBoxFor(m => m.HasBed)
+                            <span class="checkbox-slider"></span>
+                        </div>
+                        <label for="HasBed" class="checkbox-label">
+                            <i class="fas fa-bed checkbox-icon"></i>
+                            Giường
+                        </label>
+                    </div>
+
+                    <div class="checkbox-group @(Model.HasWardrobe ? "checked" : "")">
+                        <div class="checkbox-wrapper">
+                            @Html.CheckBoxFor(m => m.HasWardrobe)
+                            <span class="checkbox-slider"></span>
+                        </div>
+                        <label for="HasWardrobe" class="checkbox-label">
+                            <i class="fas fa-archive checkbox-icon"></i>
+                            Tủ quần áo
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+                @Html.ActionLink("Quay lại", "Index", null, new { @class = "btn btn-default" })
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    <i class="fas fa-save"></i>
+                    Lưu thay đổi
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Update checkbox group state
+            $('.checkbox-wrapper input[type="checkbox"]').change(function () {
+                var group = $(this).closest('.checkbox-group');
+                if ($(this).is(':checked')) {
+                    group.addClass('checked');
+                } else {
+                    group.removeClass('checked');
+                }
+            });
+
+            // Click on checkbox group
+            $('.checkbox-group').click(function (e) {
+                if (!$(e.target).is('input')) {
+                    var checkbox = $(this).find('input[type="checkbox"]');
+                    checkbox.prop('checked', !checkbox.prop('checked')).trigger('change');
+                }
+            });
+
+            // Auto-generate room name
+            function updateRoomName() {
+                var area = $('#Area').val();
+                var floor = $('#Floor').val();
+                var roomNumber = $('#RoomNumber').val();
+                var nameInput = $('#Name');
+
+                if (area && floor && roomNumber && !nameInput.val()) {
+                    var paddedNumber = ('0' + roomNumber).slice(-2);
+                    nameInput.attr('placeholder', 'P' + area + floor + paddedNumber);
+                }
+            }
+
+            $('#Area, #Floor, #RoomNumber').on('change input', updateRoomName);
+
+            // Form submit with loading
+            $('#roomEditForm').submit(function () {
+                var btn = $('#submitBtn');
+                btn.addClass('loading').html('<i class="fas fa-spinner fa-spin"></i> Đang lưu...');
+            });
+
+            // Initialize room name on load
+            updateRoomName();
+        });
+    </script>
 }

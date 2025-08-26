@@ -17,7 +17,6 @@
         <EntityTypeShape EntityType="NhaTroAnCuModel.ContractTenant" Width="1.5" PointX="5.25" PointY="13.625" />
         <EntityTypeShape EntityType="NhaTroAnCuModel.IncomeExpenseCategory" Width="1.5" PointX="6" PointY="5.75" />
         <EntityTypeShape EntityType="NhaTroAnCuModel.IncomeExpense" Width="1.5" PointX="8.25" PointY="9.375" />
-        <EntityTypeShape EntityType="NhaTroAnCuModel.PaymentHistory" Width="1.5" PointX="5.75" PointY="0.75" />
         <EntityTypeShape EntityType="NhaTroAnCuModel.Room" Width="1.5" PointX="3" PointY="4.125" />
         <EntityTypeShape EntityType="NhaTroAnCuModel.Tenant" Width="1.5" PointX="3" PointY="15.5" />
         <EntityTypeShape EntityType="NhaTroAnCuModel.UtilityBill" Width="1.5" PointX="5.25" PointY="21" />
@@ -40,7 +39,6 @@
         <AssociationConnector Association="NhaTroAnCuModel.FK__ContractT__Tenan__70A8B9AE" />
         <AssociationConnector Association="NhaTroAnCuModel.FK__IncomeExp__Categ__32AB8735" />
         <AssociationConnector Association="NhaTroAnCuModel.AspNetUserRoles" />
-        <EntityTypeShape EntityType="NhaTroAnCuModel.ContractRooms_Backup_20250819_103317" Width="1.5" PointX="7.375" PointY="13.75" />
         <AssociationConnector Association="NhaTroAnCuModel.FK_UtilityBills_Rooms" />
       </Diagram>
     </edmx:Diagrams>

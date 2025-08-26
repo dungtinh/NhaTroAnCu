@@ -64,6 +64,10 @@
                 <div class="card-header bg-gradient-primary">
                     <i class="fas fa-home"></i>
                     <span>Tiện ích & Thông tin phòng</span>
+                    <a href="@Url.Action("Edit", "Rooms", new { id = Model.Id })"
+                       class="btn btn-sm btn-info badge badge-light">
+                        <i class="fas fa-edit"></i> Sửa
+                    </a>
                 </div>
                 <div class="card-body">
                     <!-- Thông tin cơ bản -->

@@ -251,7 +251,17 @@
     <script>
 
         $(document).ready(function () {
+            // Set default dates với format đúng
+            var today = new Date();
+            var dd = ('0' + today.getDate()).slice(-2);
+            var mm = ('0' + (today.getMonth() + 1)).slice(-2);
+            var yyyy = today.getFullYear();
+            var formattedToday = dd + '/' + mm + '/' + yyyy;
 
+            // Set default values cho các input rỗng
+            if (!$('#StartDate').val() || $('#StartDate').val() === '') {
+                $('#StartDate').datepicker('setDate', today);
+            }
             // Xử lý chọn loại hợp đồng
             $('.type-card').click(function () {
                 $('.type-card').removeClass('selected');
