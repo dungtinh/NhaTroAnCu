@@ -460,6 +460,16 @@ namespace NhaTroAnCu.Controllers
                 {
                     model.RoomId = contractRoom.RoomId;
                     model.PriceAgreed = contractRoom.PriceAgreed;
+
+                    model.SelectedRooms = contract.ContractRooms.Select(r => new RoomSelectionModel
+                    {
+                        RoomId = r.RoomId,
+                        RoomName = r.Room.Name,
+                        DefaultPrice = r.Room.DefaultPrice,
+                        AgreedPrice = contract.ContractRooms.FirstOrDefault()?.PriceAgreed ?? r.Room.DefaultPrice,
+                        IsSelected = contract.ContractRooms.Any(cr => cr.RoomId == r.Room.Id),
+                        Notes = contract.ContractRooms.FirstOrDefault(cr => cr.RoomId == r.Room.Id)?.Notes
+                    }).ToList();
                 }
 
                 model.Tenants = contract.ContractTenants.Select(ct => new TenantViewModel
@@ -718,8 +728,8 @@ namespace NhaTroAnCu.Controllers
                     }
 
                     contractRoom.PriceAgreed = model.PriceAgreed.Value;
+                    contractRoom.Notes = model.SelectedRooms[0].Notes;
                 }
-
                 contract.PriceAgreed = model.PriceAgreed.Value;
             }
 

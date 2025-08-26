@@ -379,6 +379,7 @@
     <Content Include="Content\bootstrap.min.css" />
     <Content Include="Content\bootstrap.rtl.css" />
     <Content Include="Content\bootstrap.rtl.min.css" />
+    <Content Include="CSS\contract-tenants.css" />
     <Content Include="CSS\contract-details.css" />
     <Content Include="CSS\contract-action.css" />
     <Content Include="CSS\datepicker.css" />

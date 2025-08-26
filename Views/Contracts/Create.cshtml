@@ -107,6 +107,18 @@
                 @Html.TextBoxFor(m => m.SingleRoomPrice, new { @class = "form-control money", @id = "singleRoomPrice" })
                 <small class="form-text text-muted">Để trống sẽ lấy giá mặc định của phòng</small>
             </div>
+            <!-- Thêm đoạn code này vào phần Thông Tin Phòng cho Individual Contract -->
+            <!-- Đặt sau phần PriceAgreed (khoảng dòng 130 trong file Edit.cshtml) -->
+
+            <div class="form-group">
+                @Html.LabelFor(m => m.Note)
+                @Html.TextBoxFor(m => m.Note, new
+                {
+                    @class = "form-control",                    
+                    @placeholder = "Nhập ghi chú..."
+                })
+                @Html.ValidationMessageFor(m => m.Note, "", new { @class = "text-danger" })
+            </div>
         </div>
 
         <!-- Section cho khách hàng công ty (giữ nguyên) -->

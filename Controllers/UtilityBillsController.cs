@@ -316,22 +316,23 @@ namespace NhaTroAnCu.Controllers
                 if (contractRoom == null) return;
 
                 var moveInDay = contract.MoveInDate.Day;
+                var startDay = contract.StartDate.Day;
                 var pricePerDay = contractRoom.PriceAgreed / 30;
 
                 // Logic tính toán theo ngày chuyển vào
-                if (moveInDay < 10)
+                if (startDay < moveInDay)
                 {
                     // Chuyển vào trước ngày 10 - tính tiền cộng thêm
-                    vm.ExtraCharge = pricePerDay * (10 - moveInDay);
+                    vm.ExtraCharge = pricePerDay * (moveInDay - moveInDay);
                     vm.Discount = 0;
-                    vm.BillNote = $"Phụ thu {10 - moveInDay} ngày (chuyển vào ngày {moveInDay:00}/{month:00})";
+                    vm.BillNote = $"Phụ thu {moveInDay - startDay} ngày (chuyển vào ngày {moveInDay:00}/{month:00})";
                 }
-                else if (moveInDay > 10)
+                else if (startDay > moveInDay)
                 {
                     // Chuyển vào sau ngày 10 - tính tiền giảm trừ
                     vm.ExtraCharge = 0;
-                    vm.Discount = pricePerDay * (moveInDay - 10);
-                    vm.BillNote = $"Giảm trừ {moveInDay - 10} ngày (chuyển vào ngày {moveInDay:00}/{month:00})";
+                    vm.Discount = pricePerDay * (startDay - moveInDay);
+                    vm.BillNote = $"Giảm trừ {startDay - moveInDay} ngày (chuyển vào ngày {moveInDay:00}/{month:00})";
                 }
                 else
                 {
