@@ -122,7 +122,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Mã số thuế <span class="text-danger">*</span></label>
+                    <label>Mã số thuế </label>
                     @Html.TextBoxFor(m => m.Company.TaxCode, new { @class = "form-control" })
                 </div>
             </div>
@@ -223,7 +223,7 @@
                                         <div class="price-input-group">
                                             <label class="input-label">
                                                 <i class="fas fa-tag"></i> Giá thỏa thuận
-                                            </label>                                           
+                                            </label>
 
                                             <div class="custom-price-section">
                                                 <div class="input-with-unit">
@@ -235,7 +235,7 @@
                                                            data-default-price="@room.DefaultPrice"
                                                            placeholder="Nhập giá thỏa thuận" />
                                                     <span class="unit">đ/tháng</span>
-                                                </div>                                                
+                                                </div>
                                             </div>
                                         </div>
 
@@ -383,12 +383,12 @@
                     }
                 } else if (contractType === 'Company') {
                     // Validate công ty
-                    if (!$('#Company_CompanyName').val() || !$('#Company_TaxCode').val()) {
+                    if (!$('#Company_CompanyName').val()) {
                         e.preventDefault();
                         Swal.fire({
                             icon: 'warning',
                             title: 'Thiếu thông tin công ty',
-                            text: 'Vui lòng nhập tên công ty và mã số thuế!',
+                            text: 'Vui lòng nhập tên công ty!',
                             confirmButtonColor: '#ffc107'
                         });
                         return false;
