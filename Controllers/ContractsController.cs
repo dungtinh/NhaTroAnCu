@@ -10,9 +10,11 @@ using System.Text;
 using System.Web;
 using System.Web.Mvc;
 using Aspose.Words;
+using ClosedXML.Excel;
 using Microsoft.AspNet.Identity;
 using NhaTroAnCu.Helpers;
 using NhaTroAnCu.Models;
+using PagedList;
 using Contract = NhaTroAnCu.Models.Contract;
 
 namespace NhaTroAnCu.Controllers
@@ -259,15 +261,524 @@ namespace NhaTroAnCu.Controllers
         }
 
         // GET: Contracts
-        public ActionResult Index()
+        public ActionResult Index(string searchTerm, string contractType, string status,
+    DateTime? fromDate, DateTime? toDate, int? companyId,
+    string sortOrder, int? page, int? pageSize)
         {
+            // Query cơ bản
             var contracts = db.Contracts
                 .Include(c => c.ContractRooms.Select(cr => cr.Room))
+                .Include(c => c.ContractTenants.Select(ct => ct.Tenant))
                 .Include(c => c.Company)
-                .OrderByDescending(c => c.StartDate)
+                .AsQueryable();
+
+            // Tìm kiếm
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                contracts = contracts.Where(c =>
+                    c.Id.ToString().Contains(searchTerm) ||
+                    c.ContractRooms.Any(cr => cr.Room.Name.Contains(searchTerm)) ||
+                    c.ContractTenants.Any(ct => ct.Tenant.FullName.Contains(searchTerm) ||
+                                               ct.Tenant.IdentityCard.Contains(searchTerm)) ||
+                    (c.Company != null && c.Company.CompanyName.Contains(searchTerm))
+                );
+            }
+
+            // Lọc theo loại hợp đồng
+            if (!string.IsNullOrEmpty(contractType))
+            {
+                contracts = contracts.Where(c => c.ContractType == contractType);
+            }
+
+            // Lọc theo trạng thái
+            if (!string.IsNullOrEmpty(status))
+            {
+                if (status == "NearExpiry")
+                {
+                    var thirtyDaysFromNow = DateTime.Now.AddDays(30);
+                    contracts = contracts.Where(c => c.Status == "Active" &&
+                                                    c.EndDate <= thirtyDaysFromNow);
+                }
+                else
+                {
+                    contracts = contracts.Where(c => c.Status == status);
+                }
+            }
+
+            // Lọc theo ngày
+            if (fromDate.HasValue)
+            {
+                contracts = contracts.Where(c => c.StartDate >= fromDate.Value);
+            }
+            if (toDate.HasValue)
+            {
+                contracts = contracts.Where(c => c.EndDate <= toDate.Value);
+            }
+
+            // Lọc theo công ty
+            if (companyId.HasValue)
+            {
+                contracts = contracts.Where(c => c.CompanyId == companyId.Value);
+            }
+
+            // Cập nhật trạng thái hợp đồng hết hạn
+            UpdateExpiredContracts();
+
+            // Sắp xếp
+            switch (sortOrder)
+            {
+                case "id_desc":
+                    contracts = contracts.OrderByDescending(c => c.Id);
+                    break;
+                case "Date":
+                    contracts = contracts.OrderBy(c => c.StartDate);
+                    break;
+                case "date_desc":
+                    contracts = contracts.OrderByDescending(c => c.StartDate);
+                    break;
+                case "Status":
+                    contracts = contracts.OrderBy(c => c.Status);
+                    break;
+                case "status_desc":
+                    contracts = contracts.OrderByDescending(c => c.Status);
+                    break;
+                case "EndDate":
+                    contracts = contracts.OrderBy(c => c.EndDate);
+                    break;
+                case "enddate_desc":
+                    contracts = contracts.OrderByDescending(c => c.EndDate);
+                    break;
+                default:
+                    contracts = contracts.OrderByDescending(c => c.Id);
+                    break;
+            }
+
+            // Phân trang
+            int currentPageSize = pageSize ?? 10;
+            int pageNumber = page ?? 1;
+
+            // Tạo ViewModel
+            var viewModel = new ContractListViewModel
+            {
+                Contracts = contracts.ToPagedList(pageNumber, currentPageSize),
+                SearchTerm = searchTerm,
+                ContractType = contractType,
+                Status = status,
+                FromDate = fromDate,
+                ToDate = toDate,
+                CompanyId = companyId,
+                SortOrder = sortOrder,
+                PageSize = pageSize,
+
+                // Sort parameters
+                IdSortParm = String.IsNullOrEmpty(sortOrder) ? "id_desc" : "",
+                DateSortParm = sortOrder == "Date" ? "date_desc" : "Date",
+                StatusSortParm = sortOrder == "Status" ? "status_desc" : "Status",
+                EndDateSortParm = sortOrder == "EndDate" ? "enddate_desc" : "EndDate",
+
+                // Companies dropdown
+                Companies = new SelectList(
+                    db.Companies.OrderBy(c => c.CompanyName),
+                    "Id",
+                    "CompanyName",
+                    companyId
+                )
+            };
+
+            // Calculate statistics
+            var contractsList = contracts.ToList();
+            viewModel.TotalContracts = contractsList.Count;
+            viewModel.ActiveContracts = contractsList.Count(c => c.Status == "Active");
+            viewModel.ExpiredContracts = contractsList.Count(c => c.Status == "Expired");
+            viewModel.EndedContracts = contractsList.Count(c => c.Status == "Ended");
+
+            var expiryDateThreshold = DateTime.Now.AddDays(30);
+            viewModel.NearExpiryContracts = contractsList.Count(c =>
+                c.Status == "Active" && c.EndDate <= expiryDateThreshold);
+
+            viewModel.TotalActiveValue = contractsList
+                .Where(c => c.Status == "Active")
+                .Sum(c => c.PriceAgreed);
+
+            viewModel.TotalRoomsRented = contractsList
+                .Where(c => c.Status == "Active")
+                .SelectMany(c => c.ContractRooms)
+                .Select(cr => cr.RoomId)
+                .Distinct()
+                .Count();
+
+            viewModel.TotalTenants = contractsList
+                .Where(c => c.Status == "Active")
+                .SelectMany(c => c.ContractTenants)
+                .Select(ct => ct.TenantId)
+                .Distinct()
+                .Count();
+
+            return View(viewModel);
+        }
+
+        // Helper method: Cập nhật hợp đồng hết hạn
+        private void UpdateExpiredContracts()
+        {
+            var expiredContracts = db.Contracts
+                .Where(c => c.Status == "Active" && c.EndDate < DateTime.Now)
                 .ToList();
 
-            return View(contracts);
+            foreach (var contract in expiredContracts)
+            {
+                contract.Status = "Expired";
+            }
+
+            if (expiredContracts.Any())
+            {
+                db.SaveChanges();
+            }
+        }
+
+        // Helper method: Chuẩn bị dữ liệu cho ViewBag
+        private void PrepareViewBagData(string searchTerm, string contractType, string status,
+            DateTime? fromDate, DateTime? toDate, int? companyId, int? pageSize)
+        {
+            // Maintain filter state
+            ViewBag.CurrentFilter = searchTerm;
+            ViewBag.ContractType = contractType;
+            ViewBag.Status = status;
+            ViewBag.FromDate = fromDate;
+            ViewBag.ToDate = toDate;
+            ViewBag.CompanyId = companyId;
+            ViewBag.PageSize = pageSize;
+
+            // Dropdown lists
+            ViewBag.ContractTypes = new List<SelectListItem>
+            {
+                new SelectListItem { Value = "", Text = "-- Tất cả --" },
+                new SelectListItem { Value = "Individual", Text = "Cá nhân/Hộ gia đình" },
+                new SelectListItem { Value = "Company", Text = "Công ty" }
+            };
+
+            ViewBag.Statuses = new List<SelectListItem>
+            {
+                new SelectListItem { Value = "", Text = "-- Tất cả --" },
+                new SelectListItem { Value = "Active", Text = "Đang hiệu lực" },
+                new SelectListItem { Value = "Expired", Text = "Đã hết hạn" },
+                new SelectListItem { Value = "Ended", Text = "Đã kết thúc" },
+                new SelectListItem { Value = "NearExpiry", Text = "Sắp hết hạn (30 ngày)" }
+            };
+
+            ViewBag.Companies = new SelectList(
+                db.Companies.OrderBy(c => c.CompanyName),
+                "Id",
+                "CompanyName",
+                companyId
+            );
+
+            ViewBag.PageSizes = new List<SelectListItem>
+            {
+                new SelectListItem { Value = "10", Text = "10" },
+                new SelectListItem { Value = "25", Text = "25" },
+                new SelectListItem { Value = "50", Text = "50" },
+                new SelectListItem { Value = "100", Text = "100" }
+            };
+        }
+
+        // Helper method: Tính toán thống kê
+        private void CalculateStatistics(IQueryable<Contract> contracts)
+        {
+            var contractsList = contracts.ToList();
+
+            ViewBag.TotalContracts = contractsList.Count;
+            ViewBag.ActiveContracts = contractsList.Count(c => c.Status == "Active");
+            ViewBag.ExpiredContracts = contractsList.Count(c => c.Status == "Expired");
+            ViewBag.EndedContracts = contractsList.Count(c => c.Status == "Ended");
+
+            // Sắp hết hạn trong 30 ngày
+            var thirtyDaysFromNow = DateTime.Now.AddDays(30);
+            ViewBag.NearExpiryContracts = contractsList.Count(c =>
+                c.Status == "Active" && c.EndDate <= thirtyDaysFromNow);
+
+            // Tổng giá trị hợp đồng đang active
+            ViewBag.TotalActiveValue = contractsList
+                .Where(c => c.Status == "Active")
+                .Sum(c => c.PriceAgreed);
+
+            // Tổng số phòng đang cho thuê
+            ViewBag.TotalRoomsRented = contractsList
+                .Where(c => c.Status == "Active")
+                .SelectMany(c => c.ContractRooms)
+                .Select(cr => cr.RoomId)
+                .Distinct()
+                .Count();
+
+            // Tổng số khách thuê
+            ViewBag.TotalTenants = contractsList
+                .Where(c => c.Status == "Active")
+                .SelectMany(c => c.ContractTenants)
+                .Select(ct => ct.TenantId)
+                .Distinct()
+                .Count();
+        }
+
+        // GET: Contracts/Export - Xuất Excel
+        public ActionResult Export(string searchTerm, string contractType, string status,
+            DateTime? fromDate, DateTime? toDate, int? companyId)
+        {
+            // Sử dụng cùng logic filter như Index
+            var contracts = db.Contracts
+                .Include(c => c.ContractRooms.Select(cr => cr.Room))
+                .Include(c => c.ContractTenants.Select(ct => ct.Tenant))
+                .Include(c => c.Company)
+                .AsQueryable();
+
+            // Apply filters (giống như trong Index)
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                contracts = contracts.Where(c =>
+                    c.Id.ToString().Contains(searchTerm) ||
+                    c.ContractRooms.Any(cr => cr.Room.Name.Contains(searchTerm)) ||
+                    c.ContractTenants.Any(ct => ct.Tenant.FullName.Contains(searchTerm) ||
+                                               ct.Tenant.IdentityCard.Contains(searchTerm)) ||
+                    (c.Company != null && c.Company.CompanyName.Contains(searchTerm))
+                );
+            }
+
+            if (!string.IsNullOrEmpty(contractType))
+                contracts = contracts.Where(c => c.ContractType == contractType);
+
+            if (!string.IsNullOrEmpty(status))
+            {
+                if (status == "NearExpiry")
+                {
+                    var thirtyDaysFromNow = DateTime.Now.AddDays(30);
+                    contracts = contracts.Where(c => c.Status == "Active" &&
+                                                    c.EndDate <= thirtyDaysFromNow);
+                }
+                else
+                {
+                    contracts = contracts.Where(c => c.Status == status);
+                }
+            }
+
+            if (fromDate.HasValue)
+                contracts = contracts.Where(c => c.StartDate >= fromDate.Value);
+
+            if (toDate.HasValue)
+                contracts = contracts.Where(c => c.EndDate <= toDate.Value);
+
+            if (companyId.HasValue)
+                contracts = contracts.Where(c => c.CompanyId == companyId.Value);
+
+            // Tạo Excel file
+            using (var workbook = new XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("Danh sách hợp đồng");
+
+                // Headers
+                worksheet.Cell(1, 1).Value = "Mã HĐ";
+                worksheet.Cell(1, 2).Value = "Loại HĐ";
+                worksheet.Cell(1, 3).Value = "Phòng";
+                worksheet.Cell(1, 4).Value = "Khách thuê/Công ty";
+                worksheet.Cell(1, 5).Value = "Ngày bắt đầu";
+                worksheet.Cell(1, 6).Value = "Ngày kết thúc";
+                worksheet.Cell(1, 7).Value = "Giá thuê";
+                worksheet.Cell(1, 8).Value = "Điện";
+                worksheet.Cell(1, 9).Value = "Nước";
+                worksheet.Cell(1, 10).Value = "Trạng thái";
+                worksheet.Cell(1, 11).Value = "Ghi chú";
+
+                // Format header row
+                var headerRange = worksheet.Range(1, 1, 1, 11);
+                headerRange.Style.Font.Bold = true;
+                headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+                headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+                // Data rows
+                var row = 2;
+                foreach (var contract in contracts.OrderByDescending(c => c.Id))
+                {
+                    worksheet.Cell(row, 1).Value = contract.Id;
+                    worksheet.Cell(row, 2).Value = contract.ContractType == "Company" ? "Công ty" : "Cá nhân";
+
+                    // Danh sách phòng
+                    var rooms = string.Join(", ", contract.ContractRooms.Select(cr => cr.Room.Name));
+                    worksheet.Cell(row, 3).Value = rooms;
+
+                    // Tên khách thuê hoặc công ty
+                    string customerName = "";
+                    if (contract.ContractType == "Company")
+                    {
+                        customerName = contract.Company?.CompanyName ?? "";
+                    }
+                    else
+                    {
+                        var tenants = contract.ContractTenants.Select(ct => ct.Tenant.FullName).ToList();
+                        customerName = string.Join(", ", tenants);
+                    }
+                    worksheet.Cell(row, 4).Value = customerName;
+
+                    worksheet.Cell(row, 5).Value = contract.StartDate.ToString("dd/MM/yyyy");
+                    worksheet.Cell(row, 6).Value = contract.EndDate.ToString("dd/MM/yyyy");
+                    worksheet.Cell(row, 7).Value = contract.PriceAgreed;
+                    worksheet.Cell(row, 7).Style.NumberFormat.Format = "#,##0";
+
+                    worksheet.Cell(row, 8).Value = contract.ElectricityPrice;
+                    worksheet.Cell(row, 8).Style.NumberFormat.Format = "#,##0";
+
+                    worksheet.Cell(row, 9).Value = contract.WaterPrice;
+                    worksheet.Cell(row, 9).Style.NumberFormat.Format = "#,##0";
+
+                    worksheet.Cell(row, 10).Value = GetStatusDisplay(contract.Status);
+                    worksheet.Cell(row, 11).Value = contract.Note;
+
+                    // Highlight theo trạng thái
+                    if (contract.Status == "Expired")
+                    {
+                        worksheet.Range(row, 1, row, 11).Style.Fill.BackgroundColor = XLColor.LightCoral;
+                    }
+                    else if (contract.Status == "Ended")
+                    {
+                        worksheet.Range(row, 1, row, 11).Style.Fill.BackgroundColor = XLColor.LightGray;
+                    }
+                    else if (contract.EndDate <= DateTime.Now.AddDays(30))
+                    {
+                        worksheet.Range(row, 1, row, 11).Style.Fill.BackgroundColor = XLColor.LightYellow;
+                    }
+
+                    row++;
+                }
+
+                // Auto fit columns
+                worksheet.Columns().AdjustToContents();
+
+                // Thêm sheet thống kê
+                var statsSheet = workbook.Worksheets.Add("Thống kê");
+                AddStatisticsSheet(statsSheet, contracts.ToList());
+
+                // Save to memory stream
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    var content = stream.ToArray();
+                    var fileName = $"DanhSachHopDong_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+                    return File(content,
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        fileName);
+                }
+            }
+        }
+
+        // Helper method: Thêm sheet thống kê
+        private void AddStatisticsSheet(IXLWorksheet sheet, List<Contract> contracts)
+        {
+            sheet.Cell(1, 1).Value = "THỐNG KÊ HỢP ĐỒNG";
+            sheet.Cell(1, 1).Style.Font.Bold = true;
+            sheet.Cell(1, 1).Style.Font.FontSize = 16;
+
+            int row = 3;
+            sheet.Cell(row, 1).Value = "Tổng số hợp đồng:";
+            sheet.Cell(row, 2).Value = contracts.Count;
+            row++;
+
+            sheet.Cell(row, 1).Value = "Đang hiệu lực:";
+            sheet.Cell(row, 2).Value = contracts.Count(c => c.Status == "Active");
+            row++;
+
+            sheet.Cell(row, 1).Value = "Đã hết hạn:";
+            sheet.Cell(row, 2).Value = contracts.Count(c => c.Status == "Expired");
+            row++;
+
+            sheet.Cell(row, 1).Value = "Đã kết thúc:";
+            sheet.Cell(row, 2).Value = contracts.Count(c => c.Status == "Ended");
+            row++;
+
+            var thirtyDaysFromNow = DateTime.Now.AddDays(30);
+            sheet.Cell(row, 1).Value = "Sắp hết hạn (30 ngày):";
+            sheet.Cell(row, 2).Value = contracts.Count(c =>
+                c.Status == "Active" && c.EndDate <= thirtyDaysFromNow);
+            row += 2;
+
+            sheet.Cell(row, 1).Value = "THỐNG KÊ THEO LOẠI";
+            sheet.Cell(row, 1).Style.Font.Bold = true;
+            row++;
+
+            sheet.Cell(row, 1).Value = "Hợp đồng cá nhân:";
+            sheet.Cell(row, 2).Value = contracts.Count(c => c.ContractType == "Individual");
+            row++;
+
+            sheet.Cell(row, 1).Value = "Hợp đồng công ty:";
+            sheet.Cell(row, 2).Value = contracts.Count(c => c.ContractType == "Company");
+            row += 2;
+
+            sheet.Cell(row, 1).Value = "GIÁ TRỊ HỢP ĐỒNG";
+            sheet.Cell(row, 1).Style.Font.Bold = true;
+            row++;
+
+            var activeContracts = contracts.Where(c => c.Status == "Active").ToList();
+            sheet.Cell(row, 1).Value = "Tổng giá trị đang active:";
+            sheet.Cell(row, 2).Value = activeContracts.Sum(c => c.PriceAgreed);
+            sheet.Cell(row, 2).Style.NumberFormat.Format = "#,##0 VNĐ";
+
+            sheet.Columns().AdjustToContents();
+        }
+
+        // Helper method: Lấy text hiển thị cho status
+        private string GetStatusDisplay(string status)
+        {
+            switch (status)
+            {
+                case "Active": return "Đang hiệu lực";
+                case "Expired": return "Đã hết hạn";
+                case "Ended": return "Đã kết thúc";
+                default: return status;
+            }
+        }
+
+        // GET: Contracts/BatchUpdate - Cập nhật hàng loạt
+        [HttpPost]
+        public ActionResult BatchUpdate(int[] contractIds, string action)
+        {
+            if (contractIds == null || contractIds.Length == 0)
+            {
+                TempData["Error"] = "Vui lòng chọn ít nhất một hợp đồng.";
+                return RedirectToAction("Index");
+            }
+
+            try
+            {
+                var contracts = db.Contracts.Where(c => contractIds.Contains(c.Id)).ToList();
+
+                switch (action)
+                {
+                    case "extend":
+                        // Chuyển đến trang gia hạn hàng loạt
+                        return RedirectToAction("BatchExtend", new { ids = string.Join(",", contractIds) });
+
+                    case "end":
+                        // Kết thúc hàng loạt
+                        foreach (var contract in contracts.Where(c => c.Status == "Active"))
+                        {
+                            contract.Status = "Ended";
+                            contract.EndDate = DateTime.Now;
+                        }
+                        db.SaveChanges();
+                        TempData["Success"] = $"Đã kết thúc {contracts.Count} hợp đồng.";
+                        break;
+
+                    case "delete":
+                        // Xóa hàng loạt (cần xác nhận)
+                        return View("ConfirmBatchDelete", contracts);
+
+                    default:
+                        TempData["Error"] = "Hành động không hợp lệ.";
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Có lỗi xảy ra: {ex.Message}";
+            }
+
+            return RedirectToAction("Index");
         }
 
 

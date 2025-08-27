@@ -1,0 +1,464 @@
+﻿@model NhaTroAnCu.Models.ContractListViewModel
+@using PagedList.Mvc;
+@{
+    ViewBag.Title = "Quản lý Hợp đồng";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<link href="~/CSS/contract-index.css" rel="stylesheet" />
+
+<div class="container-fluid">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">
+            <i class="fas fa-file-contract"></i> Quản lý Hợp đồng
+        </h1>
+        <div class="dashboard-subtitle">
+            Quản lý tất cả hợp đồng thuê nhà của bạn
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-container">
+        <div class="stat-card total">
+            <i class="fas fa-file-alt stat-icon"></i>
+            <div class="stat-value">@Model.TotalContracts</div>
+            <div class="stat-label">Tổng hợp đồng</div>
+        </div>
+        <div class="stat-card active">
+            <i class="fas fa-check-circle stat-icon"></i>
+            <div class="stat-value">@Model.ActiveContracts</div>
+            <div class="stat-label">Đang hiệu lực</div>
+        </div>
+        <div class="stat-card warning">
+            <i class="fas fa-exclamation-triangle stat-icon"></i>
+            <div class="stat-value">@Model.NearExpiryContracts</div>
+            <div class="stat-label">Sắp hết hạn</div>
+        </div>
+        <div class="stat-card expired">
+            <i class="fas fa-times-circle stat-icon"></i>
+            <div class="stat-value">@Model.ExpiredContracts</div>
+            <div class="stat-label">Đã hết hạn</div>
+        </div>
+        <div class="stat-card ended">
+            <i class="fas fa-archive stat-icon"></i>
+            <div class="stat-value">@Model.EndedContracts</div>
+            <div class="stat-label">Đã kết thúc</div>
+        </div>
+        <div class="stat-card value">
+            <i class="fas fa-dollar-sign stat-icon"></i>
+            <div class="stat-value">@String.Format("{0:N0}", Model.TotalActiveValue)</div>
+            <div class="stat-label">Tổng giá trị/tháng</div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <h3 class="filter-title">
+            <i class="fas fa-filter"></i> Bộ lọc tìm kiếm
+        </h3>
+
+        @using (Html.BeginForm("Index", "Contracts", FormMethod.Get, new { @class = "filter-form" }))
+        {
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>đăt</label>
+                    <input type="text" name="searchTerm" value="@Model.SearchTerm"
+                           placeholder="Mã HĐ, phòng, tên khách..." />
+                </div>
+
+                <div class="filter-group">
+                    <label>Loại hợp đồng</label>
+                    @Html.DropDownList("contractType",
+                        Model.ContractTypes,
+                        new { @class = "form-control" })
+                </div>
+
+                <div class="filter-group">
+                    <label>Trạng thái</label>
+                    @Html.DropDownList("status",
+                        Model.Statuses,
+                        new { @class = "form-control" })
+                </div>
+
+                <div class="filter-group">
+                    <label>Công ty</label>
+                    @Html.DropDownList("companyId",
+                        Model.Companies,
+                        "-- Tất cả công ty --",
+                        new { @class = "form-control" })
+                </div>
+
+                <div class="filter-group">
+                    <label>Từ ngày</label>
+                    <input type="date" name="fromDate" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" />
+                </div>
+
+                <div class="filter-group">
+                    <label>Đến ngày</label>
+                    <input type="date" name="toDate" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" />
+                </div>
+
+                <div class="filter-group">
+                    <label>Hiển thị</label>
+                    @Html.DropDownList("pageSize",
+                        Model.PageSizes,
+                        Model.PageSize?.ToString() ?? "10",
+                        new { @class = "form-control", onchange = "this.form.submit()" })
+                </div>
+            </div>
+
+            <div class="filter-buttons">
+                <button type="submit" class="btn-filter btn-primary">
+                    <i class="fas fa-search"></i> Tìm kiếm
+                </button>
+                <a href="@Url.Action("Index")" class="btn btn-filter btn-secondary">
+                    <i class="fas fa-redo"></i> Đặt lại
+                </a>
+                <a href="@Url.Action("Create")" class="btn btn-filter btn-success">
+                    <i class="fas fa-plus"></i> Tạo hợp đồng mới
+                </a>
+                <a href="@Url.Action("Export", new {
+                    searchTerm = Model.SearchTerm,
+                    contractType = Model.ContractType,
+                    status = Model.Status,
+                    fromDate = Model.FromDate,
+                    toDate = Model.ToDate,
+                    companyId = Model.CompanyId
+                })" class="btn btn-filter btn-info">
+                    <i class="fas fa-file-excel"></i> Xuất Excel
+                </a>
+            </div>
+        }
+    </div>
+
+    <!-- Batch Operations Bar -->
+    <div class="batch-operations" id="batchOperations">
+        <div class="selected-count">
+            Đã chọn: <span id="selectedCount">0</span> hợp đồng
+        </div>
+        <div class="batch-buttons">
+            <button onclick="batchAction('extend')" class="btn-filter btn-info">
+                <i class="fas fa-calendar-plus"></i> Gia hạn
+            </button>
+            <button onclick="batchAction('end')" class="btn-filter btn-secondary">
+                <i class="fas fa-stop"></i> Kết thúc
+            </button>
+            <button onclick="batchAction('delete')" class="btn-filter btn-danger">
+                <i class="fas fa-trash"></i> Xóa
+            </button>
+        </div>
+    </div>
+
+    <!-- Contracts Table -->
+    @if (Model.Contracts.Any())
+    {
+        <div class="table-container">
+            <table class="contracts-table">
+                <thead>
+                    <tr>
+                        <th class="checkbox-column">
+                            <input type="checkbox" id="selectAll" />
+                        </th>
+                        <th>
+                            @Html.ActionLink("Mã HĐ", "Index", new
+                            {
+                                sortOrder = Model.IdSortParm,
+                                searchTerm = Model.SearchTerm,
+                                contractType = Model.ContractType,
+                                status = Model.Status,
+                                fromDate = Model.FromDate,
+                                toDate = Model.ToDate,
+                                companyId = Model.CompanyId,
+                                pageSize = Model.PageSize
+                            })
+                            <i class="fas fa-sort"></i>
+                        </th>
+                        <th>Loại HĐ</th>
+                        <th>Phòng</th>
+                        <th>Khách thuê/Công ty</th>
+                        <th>
+                            @Html.ActionLink("Ngày bắt đầu", "Index", new
+                            {
+                                sortOrder = Model.DateSortParm,
+                                searchTerm = Model.SearchTerm,
+                                contractType = Model.ContractType,
+                                status = Model.Status,
+                                fromDate = Model.FromDate,
+                                toDate = Model.ToDate,
+                                companyId = Model.CompanyId,
+                                pageSize = Model.PageSize
+                            })
+                            <i class="fas fa-sort"></i>
+                        </th>
+                        <th>
+                            @Html.ActionLink("Ngày kết thúc", "Index", new
+                            {
+                                sortOrder = Model.EndDateSortParm,
+                                searchTerm = Model.SearchTerm,
+                                contractType = Model.ContractType,
+                                status = Model.Status,
+                                fromDate = Model.FromDate,
+                                toDate = Model.ToDate,
+                                companyId = Model.CompanyId,
+                                pageSize = Model.PageSize
+                            })
+                            <i class="fas fa-sort"></i>
+                        </th>
+                        <th>Giá thuê</th>
+                        <th>
+                            @Html.ActionLink("Trạng thái", "Index", new
+                            {
+                                sortOrder = Model.StatusSortParm,
+                                searchTerm = Model.SearchTerm,
+                                contractType = Model.ContractType,
+                                status = Model.Status,
+                                fromDate = Model.FromDate,
+                                toDate = Model.ToDate,
+                                companyId = Model.CompanyId,
+                                pageSize = Model.PageSize
+                            })
+                            <i class="fas fa-sort"></i>
+                        </th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Contracts)
+                    {
+                        var daysUntilExpiry = (item.EndDate - DateTime.Now).Days;
+                        var rowClass = "";
+                        if (item.Status == "Expired") { rowClass = "table-danger"; }
+                        else if (item.Status == "Ended") { rowClass = "table-secondary"; }
+                        else if (daysUntilExpiry <= 30 && item.Status == "Active") { rowClass = "table-warning"; }
+
+                        <tr class="@rowClass">
+                            <td>
+                                <input type="checkbox" class="contract-checkbox" value="@item.Id" />
+                            </td>
+                            <td>
+                                <strong>#@item.Id</strong>
+                            </td>
+                            <td>
+                                @if (item.ContractType == "Company")
+                                {
+                                    <span class="badge badge-info">Công ty</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-secondary">Cá nhân</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="room-list">
+                                    @foreach (var room in item.ContractRooms)
+                                    {
+                                        <span class="room-tag">@room.Room.Name</span>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                @if (item.ContractType == "Company")
+                                {
+                                    <strong>@item.Company?.CompanyName</strong>
+                                }
+                                else
+                                {
+                                    var tenants = item.ContractTenants.Select(ct => ct.Tenant.FullName).ToList();
+                                    if (tenants.Any())
+                                    {
+                                        <span>@string.Join(", ", tenants)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Chưa có người thuê</span>
+                                    }
+                                }
+                            </td>
+                            <td>@item.StartDate.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                @item.EndDate.ToString("dd/MM/yyyy")
+                                @if (daysUntilExpiry <= 30 && daysUntilExpiry > 0 && item.Status == "Active")
+                                {
+                                    <br />
+                                    <small class="text-warning">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        Còn @daysUntilExpiry ngày
+                                    </small>
+                                }
+                            </td>
+                            <td>
+                                <strong>@item.PriceAgreed.ToString("N0") đ</strong>
+                            </td>
+                            <td>
+                                @if (item.Status == "Active")
+                                {
+                                    <span class="badge badge-success">Đang hiệu lực</span>
+                                }
+                                else if (item.Status == "Expired")
+                                {
+                                    <span class="badge badge-danger">Đã hết hạn</span>
+                                }
+                                else if (item.Status == "Ended")
+                                {
+                                    <span class="badge badge-secondary">Đã kết thúc</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <a href="@Url.Action("Details", new { id = item.Id })"
+                                       class="btn-action btn-view" title="Xem chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    @if (item.Status == "Active")
+                                    {
+                                        <a href="@Url.Action("Edit", new { id = item.Id })"
+                                           class="btn-action btn-edit" title="Sửa">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="@Url.Action("Extend", new { id = item.Id })"
+                                           class="btn-action btn-extend" title="Gia hạn">
+                                            <i class="fas fa-calendar-plus"></i>
+                                        </a>
+                                        <a href="@Url.Action("End", new { id = item.Id })"
+                                           class="btn-action btn-end" title="Kết thúc">
+                                            <i class="fas fa-stop"></i>
+                                        </a>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-container">
+            <div>
+                Hiển thị @((Model.Contracts.PageNumber - 1) * Model.Contracts.PageSize + 1) -
+                @(Math.Min(Model.Contracts.PageNumber * Model.Contracts.PageSize, Model.Contracts.TotalItemCount))
+                trong tổng số @Model.Contracts.TotalItemCount hợp đồng
+            </div>
+            <div>
+                @Html.PagedListPager(Model.Contracts, page => Url.Action("Index", new
+                {
+                    page,
+                    sortOrder = Model.SortOrder,
+                    searchTerm = Model.SearchTerm,
+                    contractType = Model.ContractType,
+                    status = Model.Status,
+                    fromDate = Model.FromDate,
+                    toDate = Model.ToDate,
+                    companyId = Model.CompanyId,
+                    pageSize = Model.PageSize
+                }))
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="no-data">
+            <i class="fas fa-inbox"></i>
+            <h3>Không có hợp đồng nào</h3>
+            <p>Nhấn nút "Tạo hợp đồng mới" để bắt đầu</p>
+            <a href="@Url.Action("Create")" class="btn-filter btn-success">
+                <i class="fas fa-plus"></i> Tạo hợp đồng mới
+            </a>
+        </div>
+    }
+</div>
+
+<!-- Success/Error Messages -->
+@if (TempData["Success"] != null)
+{
+    <script>
+        toastr.success('@TempData["Success"]');
+    </script>
+}
+
+@if (TempData["Error"] != null)
+{
+    <script>
+        toastr.error('@TempData["Error"]');
+    </script>
+}
+
+<script>
+    // Select all checkbox
+    document.getElementById('selectAll')?.addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.contract-checkbox');
+        checkboxes.forEach(cb => cb.checked = this.checked);
+        updateSelectedCount();
+    });
+
+    // Individual checkbox change
+    document.querySelectorAll('.contract-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateSelectedCount);
+    });
+
+    function updateSelectedCount() {
+        const checked = document.querySelectorAll('.contract-checkbox:checked');
+        const count = checked.length;
+        document.getElementById('selectedCount').textContent = count;
+
+        const batchOps = document.getElementById('batchOperations');
+        if (count > 0) {
+            batchOps.classList.add('show');
+        } else {
+            batchOps.classList.remove('show');
+        }
+    }
+
+    function batchAction(action) {
+        const checked = document.querySelectorAll('.contract-checkbox:checked');
+        if (checked.length === 0) {
+            alert('Vui lòng chọn ít nhất một hợp đồng');
+            return;
+        }
+
+        if (action === 'delete' && !confirm('Bạn có chắc muốn xóa các hợp đồng đã chọn?')) {
+            return;
+        }
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '@Url.Action("BatchUpdate", "Contracts")';
+
+        checked.forEach(cb => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'contractIds';
+            input.value = cb.value;
+            form.appendChild(input);
+        });
+
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = action;
+        form.appendChild(actionInput);
+
+        // Add anti-forgery token
+        const token = document.querySelector('[name=__RequestVerificationToken]');
+        if (token) {
+            form.appendChild(token.cloneNode());
+        }
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    // Auto-refresh for near-expiry contracts
+    @if (Model.NearExpiryContracts > 0)
+    {
+        <text>
+        setInterval(function() {
+            toastr.warning('Có @Model.NearExpiryContracts hợp đồng sắp hết hạn!', 'Nhắc nhở', {
+                timeOut: 10000,
+                positionClass: 'toast-bottom-right'
+            });
+        }, 300000); // Every 5 minutes
+        </text>
+    }
+</script>
