@@ -80,6 +80,12 @@
       <HintPath>packages\Microsoft.Bcl.HashCode.1.1.1\lib\net461\Microsoft.Bcl.HashCode.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="PagedList, Version=1.17.0.0, Culture=neutral, PublicKeyToken=abbb863e9397c5e1, processorArchitecture=MSIL">
+      <HintPath>packages\PagedList.1.17.0.0\lib\net40\PagedList.dll</HintPath>
+    </Reference>
+    <Reference Include="PagedList.Mvc, Version=4.5.0.0, Culture=neutral, PublicKeyToken=abbb863e9397c5e1, processorArchitecture=MSIL">
+      <HintPath>packages\PagedList.Mvc.4.5.0.0\lib\net40\PagedList.Mvc.dll</HintPath>
+    </Reference>
     <Reference Include="RBush, Version=4.0.0.0, Culture=neutral, PublicKeyToken=c77e27b81f4d0187, processorArchitecture=MSIL">
       <HintPath>packages\RBush.Signed.4.0.0\lib\net47\RBush.dll</HintPath>
     </Reference>
@@ -254,6 +260,7 @@
     <Compile Include="Helpers\TenantPhotoHelper.cs" />
     <Compile Include="Helpers\DateTimeHelper.cs" />
     <Compile Include="Helpers\UtilityBillService.cs" />
+    <Compile Include="Models\ContractListViewModel.cs" />
     <Compile Include="Models\ContractTenantViewModel.cs" />
     <Compile Include="Models\CompanyTenantViewModel.cs" />
     <Compile Include="Models\ContractRoomsViewModel.cs" />
@@ -379,6 +386,8 @@
     <Content Include="Content\bootstrap.min.css" />
     <Content Include="Content\bootstrap.rtl.css" />
     <Content Include="Content\bootstrap.rtl.min.css" />
+    <Content Include="Content\PagedList.css" />
+    <Content Include="CSS\contract-index.css" />
     <Content Include="CSS\contract-tenants.css" />
     <Content Include="CSS\contract-details.css" />
     <Content Include="CSS\contract-action.css" />
@@ -621,6 +630,7 @@
     <Content Include="Views\ContractTenants\Index.cshtml" />
     <Content Include="Views\ContractTenants\TenantManager.cshtml" />
     <Content Include="Views\Rooms\History.cshtml" />
+    <Content Include="Views\Contracts\Index.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Uploads\ContractScans\" />
