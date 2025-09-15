@@ -395,4 +395,19 @@ var TenantManager = (function () {
 // Auto-init khi document ready
 $(document).ready(function () {
     TenantManager.init();
+    $('.cccd-file').on('change', function (e) {
+        var tenantIndex = $(this).data('tenant-index');
+        var files = e.target.files;
+        var selectedFilesDiv = $('.selected-files[data-tenant-index="' + tenantIndex + '"]');
+
+        if (files.length > 0) {
+            var fileNames = [];
+            for (var i = 0; i < files.length; i++) {
+                fileNames.push(files[i].name);
+            }
+            selectedFilesDiv.html('<strong>Đã chọn ' + files.length + ' ảnh:</strong><br>' + fileNames.join(', '));
+        } else {
+            selectedFilesDiv.empty();
+        }
+    });
 });

@@ -546,7 +546,6 @@ namespace NhaTroAnCu.Controllers
                     {
                         throw new InvalidOperationException("Phòng không thuộc hợp đồng này");
                     }
-
                     // Convert Tenants to TenantViewModel for processing
                     var tenantViewModels = model.Tenants?.Select(t => new TenantViewModel
                     {
@@ -561,6 +560,50 @@ namespace NhaTroAnCu.Controllers
                         VehiclePlate = t.VehiclePlate,
                         Photo = t.Photo
                     }).ToList();
+
+                    // PHOTO
+                    var photoFiles = new List<HttpPostedFileBase>();
+                    for (int i = 0; i < Request.Files.Count; i++)
+                    {
+                        var file = Request.Files[i];
+                        if (file != null && file.ContentLength > 0)
+                        {
+                            photoFiles.Add(file);
+                        }
+                    }
+                    for (int i = 0; i < tenantViewModels.Count; i++)
+                    {
+                        var tenant = tenantViewModels[i];
+
+                        // Xử lý upload nhiều ảnh cho tenant này
+                        var tenantPhotos = GetTenantPhotosFromRequest(i);
+                        if (tenantPhotos != null && tenantPhotos.Count > 0)
+                        {
+                            var photoPaths = new List<string>();
+                            foreach (var photo in tenantPhotos)
+                            {
+                                if (TenantPhotoHelper.IsValidImageFile(photo))
+                                {
+                                    var photoPath = TenantPhotoHelper.SaveTenantPhoto(
+                                        photo,
+                                        tenant.IdentityCard ?? $"tenant_{i}_{DateTime.Now:yyyyMMddHHmmss}"
+                                    );
+
+                                    if (!string.IsNullOrEmpty(photoPath))
+                                    {
+                                        photoPaths.Add(photoPath);
+                                    }
+                                }
+                            }
+
+                            // Lưu các đường dẫn vào trường Photo, cách nhau bằng ;
+                            if (photoPaths.Count > 0)
+                            {
+                                tenant.Photo = string.Join(";", photoPaths);
+                            }
+                        }
+                    }
+
 
                     // Process tenants based on contract type
                     if (contract.ContractType == "Company")
@@ -601,6 +644,59 @@ namespace NhaTroAnCu.Controllers
             }
         }
 
+        private List<HttpPostedFileBase> GetTenantPhotosFromRequest(int tenantIndex)
+        {
+            var photos = new List<HttpPostedFileBase>();
+            var fileKey = $"TenantPhotos[{tenantIndex}]";
+
+            // Tìm tất cả file có name matching với pattern
+            for (int i = 0; i < Request.Files.Count; i++)
+            {
+                var key = Request.Files.GetKey(i);
+                if (key == fileKey)
+                {
+                    // Trường hợp multiple files với cùng name
+                    var file = Request.Files[i];
+                    if (file != null && file.ContentLength > 0)
+                    {
+                        photos.Add(file);
+                    }
+                }
+            }
+
+            return photos;
+        }
+        [HttpPost]
+        public ActionResult RemoveTenantPhoto(int tenantId, string photoPath)
+        {
+            try
+            {
+                using (var db = new NhaTroAnCuEntities())
+                {
+                    var tenant = db.Tenants.Find(tenantId);
+                    if (tenant == null)
+                    {
+                        return Json(new { success = false, message = "Không tìm thấy người thuê" });
+                    }
+
+                    if (!string.IsNullOrEmpty(tenant.Photo))
+                    {
+                        var photos = tenant.Photo.Split(';').ToList();
+                        photos.Remove(photoPath);
+                        tenant.Photo = string.Join(";", photos);
+                        db.SaveChanges();
+
+                        // Xóa file vật lý nếu cần                        
+                    }
+
+                    return Json(new { success = true });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
         private void LoadViewData(TenantManagerViewModel model)
         {
             // Reload contract and room info for display

@@ -172,21 +172,11 @@ namespace NhaTroAnCu.Helpers
             tenant.PermanentAddress = model.PermanentAddress;
             tenant.Ethnicity = model.Ethnicity;
             tenant.VehiclePlate = model.VehiclePlate;
-
+            tenant.Photo = model.Photo;
             // Update CompanyId nếu cần
             if (companyId.HasValue)
             {
                 tenant.CompanyId = companyId;
-            }
-
-            // Handle photo upload if provided
-            if (request?.Files != null && request.Files.Count > 0)
-            {
-                var photoPath = HandlePhotoUpload(request, tenant.IdentityCard);
-                if (!string.IsNullOrEmpty(photoPath))
-                {
-                    tenant.Photo = photoPath;
-                }
             }
         }
 
@@ -210,63 +200,13 @@ namespace NhaTroAnCu.Helpers
                 VehiclePlate = model.VehiclePlate,
                 CompanyId = companyId
             };
-
-            // Handle photo upload
-            if (request?.Files != null && request.Files.Count > 0)
-            {
-                var photoPath = HandlePhotoUpload(request, tenant.IdentityCard);
-                if (!string.IsNullOrEmpty(photoPath))
-                {
-                    tenant.Photo = photoPath;
-                }
-            }
-
+            tenant.Photo = model.Photo;
             return tenant;
-        }
-
-        /// <summary>
-        /// Xử lý upload ảnh
-        /// </summary>
-        private static string HandlePhotoUpload(HttpRequestBase request, string identityCard)
-        {
-            try
-            {
-                foreach (string fileName in request.Files)
-                {
-                    HttpPostedFileBase file = request.Files[fileName];
-                    if (file != null && file.ContentLength > 0)
-                    {
-                        // Generate unique filename
-                        var extension = System.IO.Path.GetExtension(file.FileName);
-                        var newFileName = $"tenant_{identityCard}_{DateTime.Now:yyyyMMddHHmmss}{extension}";
-                        var uploadPath = "~/Uploads/Tenants/";
-                        var physicalPath = HttpContext.Current.Server.MapPath(uploadPath);
-
-                        // Create directory if not exists
-                        if (!System.IO.Directory.Exists(physicalPath))
-                        {
-                            System.IO.Directory.CreateDirectory(physicalPath);
-                        }
-
-                        var fullPath = System.IO.Path.Combine(physicalPath, newFileName);
-                        file.SaveAs(fullPath);
-
-                        return uploadPath + newFileName;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // Log error but don't throw
-                System.Diagnostics.Debug.WriteLine($"Error uploading photo: {ex.Message}");
-            }
-
-            return null;
         }
     }
 
     /// <summary>
     /// ViewModel for Tenant data
     /// </summary>
-   
+
 }
