@@ -1,20 +1,19 @@
 ﻿
-.btn-export {
+.btn-export-pdf {
     background: #dc3545; /* Màu đỏ cho PDF */
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
 }
 
-.btn-export:hover {
-    background: #c82333; /* Màu đỏ đậm hơn khi hover */
+    .btn-export-pdf:hover {
+        background: #c82333; /* Màu đỏ đậm hơn khi hover */
+    }
+
+.btn-export-excel {
+    background: #28a745; /* Màu xanh cho Excel */
 }
+
+    .btn-export-excel:hover {
+        background: #218838; /* Màu xanh đậm hơn khi hover */
+    }
 
 .tenant-report-container {
     padding: 20px;
@@ -109,7 +108,6 @@
     }
 
 .btn-export {
-    background: #48bb78;
     color: white;
     padding: 10px 20px;
     border: none;
@@ -120,10 +118,6 @@
     align-items: center;
     gap: 8px;
 }
-
-    .btn-export:hover {
-        background: #38a169;
-    }
 
 .btn-reset {
     background: #718096;

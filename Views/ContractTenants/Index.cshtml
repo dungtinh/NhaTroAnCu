@@ -100,14 +100,12 @@
                 <button type="submit" class="btn-search">
                     <i class="fas fa-search"></i> Tìm kiếm
                 </button>
-
-                @*<button type="button" class="btn-export" onclick="exportReport()">
-                        <i class="fas fa-file-excel"></i> Xuất Excel
-                    </button>*@
-                <button type="button" class="btn-export" onclick="exportReport()">
+                <button type="button" class="btn-export btn-export-excel" onclick="exportExcel()">
+                    <i class="fas fa-file-excel"></i> Xuất Excel
+                </button>
+                <button type="button" class="btn-export btn-export-pdf" onclick="exportReport()">
                     <i class="fas fa-file-pdf"></i> Xuất PDF
                 </button>
-
                 <button type="button" class="btn-reset" onclick="resetFilter()">
                     <i class="fas fa-redo"></i> Đặt lại
                 </button>
@@ -222,6 +220,23 @@
 @section Scripts {
 
     <script>
+        function exportExcel() {
+        var searchName = $('#searchName').val();
+        var searchCard = $('#searchCard').val();
+        var searchRoom = $('#searchRoom').val();
+        var filterStatus = $('#filterStatus').val();
+        var filterCompany = $('#filterCompany').val();
+        var filterContractType = $('#filterContractType').val();
+
+        var queryString = '?searchName=' + encodeURIComponent(searchName || '') +
+            '&searchCard=' + encodeURIComponent(searchCard || '') +
+            '&searchRoom=' + encodeURIComponent(searchRoom || '') +
+            '&filterStatus=' + encodeURIComponent(filterStatus || '') +
+            '&filterCompany=' + encodeURIComponent(filterCompany || '') +
+            '&filterContractType=' + encodeURIComponent(filterContractType || '');
+
+        window.location.href = '@Url.Action("ExportExcel", "ContractTenants")' + queryString;
+    }
         function resetFilter() {
             window.location.href = '@Url.Action("Index", "ContractTenants")';
         }
