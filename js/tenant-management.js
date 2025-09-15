@@ -393,6 +393,10 @@ var TenantManager = (function () {
 })();
 
 // Auto-init khi document ready
+function showImageModal(imagePath) {
+    $('#modalImage').attr('src', imagePath);
+    $('#imageModal').modal('show');
+}
 $(document).ready(function () {
     TenantManager.init();
     $('.cccd-file').on('change', function (e) {
@@ -409,5 +413,34 @@ $(document).ready(function () {
         } else {
             selectedFilesDiv.empty();
         }
+    });
+
+    // Xóa ảnh
+    $('.btn-remove-photo').on('click', function () {
+        if (!confirm('Bạn có chắc muốn xóa ảnh này?')) return;
+
+        var $btn = $(this);
+        var tenantId = $btn.data('tenant-id');
+        var photoPath = $btn.data('photo-path');
+
+        $.ajax({
+            url: '/ContractTenants/RemoveTenantPhoto',
+            type: 'POST',
+            data: {
+                tenantId: tenantId,
+                photoPath: photoPath
+            },
+            success: function (response) {
+                if (response.success) {
+                    $btn.closest('.col-md-3').remove();
+                    toastr.success('Đã xóa ảnh thành công!');
+                } else {
+                    toastr.error(response.message);
+                }
+            },
+            error: function () {
+                toastr.error('Có lỗi xảy ra!');
+            }
+        });
     });
 });
