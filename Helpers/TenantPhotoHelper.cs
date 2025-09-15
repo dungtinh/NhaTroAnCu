@@ -47,7 +47,8 @@ namespace NhaTroAnCu.Helpers
                 var fileName = GenerateUniqueFileName(tenantIdentityCard, extension);
 
                 // Đường dẫn thư mục lưu file
-                var uploadDir = GetUploadDirectory();
+                var webpath = string.Empty;
+                var uploadDir = GetUploadDirectory(out webpath);
 
                 // Tạo thư mục nếu chưa tồn tại
                 if (!Directory.Exists(uploadDir))
@@ -62,7 +63,7 @@ namespace NhaTroAnCu.Helpers
                 photoFile.SaveAs(filePath);
 
                 // Trả về đường dẫn relative để lưu vào database
-                return $"/Uploads/TenantPhotos/{fileName}";
+                return $"{webpath}/{fileName}";
             }
             catch (Exception ex)
             {
@@ -154,13 +155,14 @@ namespace NhaTroAnCu.Helpers
 
                 var extension = Path.GetExtension(tempPath);
                 var newFileName = GenerateUniqueFileName(tenantIdentityCard, extension);
-                var uploadDir = GetUploadDirectory();
+                var webpath = string.Empty;
+                var uploadDir = GetUploadDirectory(out webpath);
                 var newFilePath = Path.Combine(uploadDir, newFileName);
 
                 // Di chuyển file
                 File.Move(physicalTempPath, newFilePath);
 
-                return $"/Uploads/TenantPhotos/{newFileName}";
+                return $"{webpath}/{newFileName}";
             }
             catch
             {
@@ -259,14 +261,14 @@ namespace NhaTroAnCu.Helpers
         /// <summary>
         /// Lấy đường dẫn thư mục upload
         /// </summary>
-        private static string GetUploadDirectory()
+        private static string GetUploadDirectory(out string webpath)
         {
             var uploadDir = HttpContext.Current.Server.MapPath("~/Uploads/TenantPhotos");
 
             // Tạo thư mục theo năm/tháng để dễ quản lý
             var yearMonth = DateTime.Now.ToString("yyyy-MM");
             uploadDir = Path.Combine(uploadDir, yearMonth);
-
+            webpath = $"/Uploads/TenantPhotos/{yearMonth}";
             return uploadDir;
         }
 
