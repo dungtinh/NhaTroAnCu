@@ -312,10 +312,11 @@
 
                             <div class="form-group">
                                 <label>Upload ảnh CCCD/CMND để tự động điền thông tin</label>
-                                <input type="file" name="Tenants[0].Photo" class="cccd-file form-control" data-tenant-index="0" accept="image/*" />
+                                <input name="TenantPhotos[0]" type="file" class="cccd-file form-control" data-tenant-index="0" accept="image/*" multiple />
                                 <small class="form-text text-muted">
                                     Hỗ trợ định dạng: JPG, PNG, GIF. Hệ thống sẽ tự động nhận diện và điền thông tin.
                                 </small>
+                                <div class="selected-files mt-2" data-tenant-index="0"></div>
                             </div>
 
                             <button type="button" class="btn btn-info btn-scan-cccd" data-tenant-index="0">
