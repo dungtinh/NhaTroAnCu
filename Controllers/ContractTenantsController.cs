@@ -9,12 +9,455 @@ using System.Linq;
 using System.Net;
 using System.Web;
 using System.Web.Mvc;
+using FlexCel.Core;
+using FlexCel.XlsAdapter;
+using System.Drawing;
+using System.IO;
+using System.Drawing;
 
 namespace NhaTroAnCu.Controllers
 {
     public class ContractTenantsController : Controller
     {
         private NhaTroAnCuEntities db = new NhaTroAnCuEntities();
+
+        // GET: ContractTenants/ExportExcel - Xuất danh sách khách thuê ra Excel
+        public ActionResult ExportExcel(string searchName, string searchCard, string searchRoom,
+    string filterStatus, string filterCompany, string filterContractType)
+        {
+            try
+            {
+                var query = from ct in db.ContractTenants
+                            join t in db.Tenants on ct.TenantId equals t.Id
+                            join r in db.Rooms on ct.RoomId equals r.Id
+                            join c in db.Contracts on ct.ContractId equals c.Id
+                            join cr in db.ContractRooms on new { c.Id, ct.RoomId }
+                                equals new { Id = cr.ContractId, RoomId = cr.RoomId }
+                            select new
+                            {
+                                ct.Id,
+                                TenantId = t.Id,
+                                TenantName = t.FullName,
+                                t.IdentityCard,
+                                t.PhoneNumber,
+                                t.BirthDate,
+                                t.Gender,
+                                t.Ethnicity,
+                                t.PermanentAddress,
+                                t.VehiclePlate,
+                                t.Photo,
+                                RoomId = r.Id,
+                                RoomName = r.Name,
+                                ContractId = c.Id,
+                                ContractType = c.ContractType,
+                                ContractStatus = c.Status,
+                                c.StartDate,
+                                c.EndDate,
+                                c.MoveInDate,
+                                CompanyId = c.CompanyId,
+                                CompanyName = c.Company != null ? c.Company.CompanyName : null
+                            };
+
+                // Apply filters
+                if (!string.IsNullOrEmpty(searchName))
+                    query = query.Where(x => x.TenantName.Contains(searchName));
+
+                if (!string.IsNullOrEmpty(searchCard))
+                    query = query.Where(x => x.IdentityCard.Contains(searchCard));
+
+                if (!string.IsNullOrEmpty(searchRoom))
+                    query = query.Where(x => x.RoomName.Contains(searchRoom));
+
+                if (!string.IsNullOrEmpty(filterStatus))
+                    query = query.Where(x => x.ContractStatus == filterStatus);
+
+                if (!string.IsNullOrEmpty(filterCompany) && filterCompany != "0")
+                {
+                    int companyId = int.Parse(filterCompany);
+                    query = query.Where(x => x.CompanyId == companyId);
+                }
+
+                if (!string.IsNullOrEmpty(filterContractType))
+                    query = query.Where(x => x.ContractType == filterContractType);
+
+                var allTenants = query.OrderBy(x => x.RoomName).ThenBy(x => x.TenantName).ToList();
+
+                // Phân loại người Việt Nam và người nước ngoài
+                var vietnameseTenants = allTenants.Where(t =>
+                    string.IsNullOrEmpty(t.Ethnicity) ||
+                    (!t.Ethnicity.ToLower().Contains("trung quốc") &&
+                     !t.Ethnicity.ToLower().Contains("china") &&
+                     !t.Ethnicity.ToLower().Contains("chinese") &&
+                     !t.Ethnicity.ToLower().Contains("tq") &&
+                     !t.Ethnicity.ToLower().Contains("nước ngoài") &&
+                     !t.Ethnicity.ToLower().Contains("foreign") &&
+                     !t.Ethnicity.ToLower().Contains("lào") &&
+                     !t.Ethnicity.ToLower().Contains("campuchia") &&
+                     !t.Ethnicity.ToLower().Contains("thái lan"))
+                ).ToList();
+
+                var foreignTenants = allTenants.Where(t =>
+                    !string.IsNullOrEmpty(t.Ethnicity) &&
+                    (t.Ethnicity.ToLower().Contains("trung quốc") ||
+                     t.Ethnicity.ToLower().Contains("china") ||
+                     t.Ethnicity.ToLower().Contains("chinese") ||
+                     t.Ethnicity.ToLower().Contains("tq") ||
+                     t.Ethnicity.ToLower().Contains("nước ngoài") ||
+                     t.Ethnicity.ToLower().Contains("foreign") ||
+                     t.Ethnicity.ToLower().Contains("lào") ||
+                     t.Ethnicity.ToLower().Contains("campuchia") ||
+                     t.Ethnicity.ToLower().Contains("thái lan"))
+                ).ToList();
+
+                // Tạo file Excel với FlexCel - luôn tạo 2 sheets
+                XlsFile xls = new XlsFile(2, true);
+
+                // ===== ĐỊNH NGHĨA CÁC FORMAT DÙNG CHUNG =====
+                // Format tiêu đề chính
+                TFlxFormat titleFormat = xls.GetDefaultFormat;
+                titleFormat.Font.Name = "Times New Roman";
+                titleFormat.Font.Style = TFlxFontStyles.Bold;
+                titleFormat.HAlignment = THFlxAlignment.center;
+                titleFormat.VAlignment = TVFlxAlignment.center;
+                titleFormat.WrapText = true;
+                int titleFormatIdx = xls.AddFormat(titleFormat);
+
+                // Format ngày giờ
+                TFlxFormat dateFormat = xls.GetDefaultFormat;
+                dateFormat.Font.Name = "Times New Roman";
+                dateFormat.Font.Style = TFlxFontStyles.Italic;
+                int dateFormatIdx = xls.AddFormat(dateFormat);
+
+                // Format header
+                TFlxFormat headerFormat = xls.GetDefaultFormat;
+                headerFormat.Font.Name = "Times New Roman";
+                headerFormat.Font.Style = TFlxFontStyles.Bold;
+                headerFormat.HAlignment = THFlxAlignment.center;
+                headerFormat.VAlignment = TVFlxAlignment.center;
+                headerFormat.Borders.Left.Style = TFlxBorderStyle.Thin;
+                headerFormat.Borders.Left.Color = Color.Black;
+                headerFormat.Borders.Right.Style = TFlxBorderStyle.Thin;
+                headerFormat.Borders.Right.Color = Color.Black;
+                headerFormat.Borders.Top.Style = TFlxBorderStyle.Medium;
+                headerFormat.Borders.Top.Color = Color.Black;
+                headerFormat.Borders.Bottom.Style = TFlxBorderStyle.Medium;
+                headerFormat.Borders.Bottom.Color = Color.Black;
+                headerFormat.WrapText = true;
+                int headerFormatIdx = xls.AddFormat(headerFormat);
+
+                // Format data
+                TFlxFormat dataFormat = xls.GetDefaultFormat;
+                dataFormat.Font.Name = "Times New Roman";
+                dataFormat.Borders.Left.Style = TFlxBorderStyle.Thin;
+                dataFormat.Borders.Left.Color = Color.Black;
+                dataFormat.Borders.Right.Style = TFlxBorderStyle.Thin;
+                dataFormat.Borders.Right.Color = Color.Black;
+                dataFormat.Borders.Top.Style = TFlxBorderStyle.Thin;
+                dataFormat.Borders.Top.Color = Color.Black;
+                dataFormat.Borders.Bottom.Style = TFlxBorderStyle.Thin;
+                dataFormat.Borders.Bottom.Color = Color.Black;
+                dataFormat.VAlignment = TVFlxAlignment.center;
+                int dataFormatIdx = xls.AddFormat(dataFormat);
+
+                // Format center
+                TFlxFormat centerFormat = dataFormat;
+                centerFormat.HAlignment = THFlxAlignment.center;
+                int centerFormatIdx = xls.AddFormat(centerFormat);
+
+                // Format số phòng
+                TFlxFormat roomFormat = dataFormat;
+                //roomFormat.Font.Style = TFlxFontStyles.Bold;
+                roomFormat.HAlignment = THFlxAlignment.center;
+                roomFormat.VAlignment = TVFlxAlignment.center;
+                int roomFormatIdx = xls.AddFormat(roomFormat);
+
+                // Format dòng chẵn
+                TFlxFormat evenRowFormat = dataFormat;
+                int evenRowFormatIdx = xls.AddFormat(evenRowFormat);
+
+                TFlxFormat evenCenterFormat = centerFormat;
+                int evenCenterFormatIdx = xls.AddFormat(evenCenterFormat);
+
+                // Format footer
+                TFlxFormat footerFormat = xls.GetDefaultFormat;
+                footerFormat.Font.Name = "Times New Roman";
+                footerFormat.Font.Style = TFlxFontStyles.Bold;
+                footerFormat.Font.Color = Color.Black;
+                int footerFormatIdx = xls.AddFormat(footerFormat);
+
+                // ========== SHEET 1: NGƯỜI VIỆT NAM ==========
+                xls.ActiveSheet = 1;
+                xls.SheetName = "Việt Nam";
+
+                // Tiêu đề chính
+                xls.MergeCells(1, 1, 2, 11);
+                xls.SetCellValue(1, 1, "DANH SÁCH ĐĂNG KÝ Ở TẠI NHÀ TRỌ AN CƯ, TỔ DÂN PHỐ ĐÌNH NGỌ, PHƯỜNG AN PHONG");
+                xls.SetCellFormat(1, 1, titleFormatIdx);
+
+                // Thông tin thời gian
+                xls.SetCellValue(3, 1, $"Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm}");
+                xls.SetCellFormat(3, 1, dateFormatIdx);
+                xls.MergeCells(3, 1, 3, 11);
+
+                // Headers
+                var headers = new[] {
+            "STT", "Số phòng", "Họ và Tên", "Năm sinh",
+            "Số điện thoại", "Giới tính", "Số giấy tờ",
+            "Dân tộc", "Địa chỉ thường trú", "Biển số xe", "Ghi chú"
+        };
+
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    xls.SetCellValue(4, i + 1, headers[i]);
+                    xls.SetCellFormat(4, i + 1, headerFormatIdx);
+                }
+
+                // Data rows cho người Việt Nam
+                int row = 5;
+                int stt = 1;
+                Dictionary<string, List<int>> roomRowRanges = new Dictionary<string, List<int>>();
+
+                foreach (var tenant in vietnameseTenants)
+                {
+                    if (!roomRowRanges.ContainsKey(tenant.RoomName))
+                        roomRowRanges[tenant.RoomName] = new List<int>();
+                    roomRowRanges[tenant.RoomName].Add(row);
+
+                    bool isEvenRow = (row - 5) % 2 == 1;
+                    int rowDataFormat = isEvenRow ? evenRowFormatIdx : dataFormatIdx;
+                    int rowCenterFormat = isEvenRow ? evenCenterFormatIdx : centerFormatIdx;
+
+                    xls.SetCellValue(row, 1, stt++);
+                    xls.SetCellFormat(row, 1, rowCenterFormat);
+
+                    xls.SetCellValue(row, 2, tenant.RoomName);
+                    xls.SetCellFormat(row, 2, roomFormatIdx);
+
+                    xls.SetCellValue(row, 3, tenant.TenantName ?? "");
+                    xls.SetCellFormat(row, 3, rowCenterFormat);
+
+                    xls.SetCellValue(row, 4, tenant.BirthDate?.ToString("dd/MM/yyyy") ?? "");
+                    xls.SetCellFormat(row, 4, rowCenterFormat);
+
+                    xls.SetCellValue(row, 5, tenant.PhoneNumber ?? "");
+                    xls.SetCellFormat(row, 5, rowCenterFormat);
+
+                    xls.SetCellValue(row, 6, tenant.Gender ?? "");
+                    xls.SetCellFormat(row, 6, rowCenterFormat);
+
+                    xls.SetCellValue(row, 7, tenant.IdentityCard ?? "");
+                    xls.SetCellFormat(row, 7, rowCenterFormat);
+
+                    xls.SetCellValue(row, 8, tenant.Ethnicity ?? "Kinh");
+                    xls.SetCellFormat(row, 8, rowCenterFormat);
+
+                    xls.SetCellValue(row, 9, tenant.PermanentAddress ?? "");
+                    xls.SetCellFormat(row, 9, rowCenterFormat);
+
+                    xls.SetCellValue(row, 10, tenant.VehiclePlate ?? "");
+                    xls.SetCellFormat(row, 10, rowCenterFormat);
+
+                    xls.SetCellValue(row, 11, "");
+                    xls.SetCellFormat(row, 11, rowCenterFormat);
+
+                    row++;
+                }
+
+                // Merge cells cho cùng phòng
+                foreach (var roomGroup in roomRowRanges.Where(g => g.Value.Count > 1))
+                {
+                    int startRow = roomGroup.Value.Min();
+                    int endRow = roomGroup.Value.Max();
+                    xls.MergeCells(startRow, 2, endRow, 2);
+                }
+
+                // Footer
+                row++;
+                xls.SetCellValue(row, 1, $"Tổng số người: {vietnameseTenants.Count}");
+                xls.MergeCells(row, 1, row, 3);
+                xls.SetCellFormat(row, 1, footerFormatIdx);
+
+                row++;
+                xls.SetCellValue(row, 1, $"Tổng số phòng: {roomRowRanges.Count}");
+                xls.MergeCells(row, 1, row, 3);
+                xls.SetCellFormat(row, 1, footerFormatIdx);
+
+                // Column widths
+                xls.SetColWidth(1, 1, 1536);   // STT
+                xls.SetColWidth(2, 2, 2560);   // Số phòng
+                xls.SetColWidth(3, 3, 5632);   // Họ và Tên
+                xls.SetColWidth(4, 4, 2816);   // Năm sinh
+                xls.SetColWidth(5, 5, 3584);   // Số điện thoại
+                xls.SetColWidth(6, 6, 2048);   // Giới tính
+                xls.SetColWidth(7, 7, 3840);   // Số CCCD
+                xls.SetColWidth(8, 8, 2304);   // Dân tộc
+                xls.SetColWidth(9, 9, 12240);  // Địa chỉ
+                xls.SetColWidth(10, 10, 3072); // Biển xe
+                xls.SetColWidth(11, 11, 3120); // Ghi chú
+
+                // Page setup
+                xls.PrintLandscape = true;
+                xls.PrintPaperSize = TPaperSize.A4;
+                xls.PrintOptions = TPrintOptions.None;
+                xls.PrintScale = 100;
+                xls.PageHeader = "&C&\"Times New Roman,Bold\"&14DANH SÁCH NGƯỜI VIỆT NAM";
+                xls.PageFooter = "&L&\"Times New Roman\"&10Ngày in: &D &T" + "&C&P/&N" + "&R&\"Times New Roman\"&10Nhà Trọ An Cư";
+                xls.SetPrintMargins(new TXlsMargins(0.7, 0.7, 0.7, 0.7, 0.3, 0.3));
+                xls.FreezePanes(new TCellAddress(5, 1));
+
+                // ========== SHEET 2: KHÁCH NƯỚC NGOÀI ==========
+                xls.ActiveSheet = 2;
+                xls.SheetName = "Nước ngoài";
+
+                if (foreignTenants.Any())
+                {
+                    // Tiêu đề chính
+                    xls.MergeCells(1, 1, 2, 11);
+                    xls.SetCellValue(1, 1, "DANH SÁCH KHÁCH NƯỚC NGOÀI LƯU TRÚ TẠI NHÀ TRỌ AN CƯ");
+                    xls.SetCellFormat(1, 1, titleFormatIdx);
+                    // Thông tin thời gian
+                    xls.SetCellValue(3, 1, $"Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm}");
+                    xls.SetCellFormat(3, 1, dateFormatIdx);
+                    xls.MergeCells(3, 1, 3, 11);
+
+                    // Headers cho khách nước ngoài
+                    var foreignHeaders = new[] {
+                "STT", "Số phòng", "Họ và Tên", "Năm sinh",
+                "Giới tính", "Số giấy tờ",
+                "Quốc tịch", "Địa chỉ"
+            };
+
+                    for (int i = 0; i < foreignHeaders.Length; i++)
+                    {
+                        xls.SetCellValue(4, i + 1, foreignHeaders[i]);
+                        xls.SetCellFormat(4, i + 1, headerFormatIdx);
+                    }
+
+                    // Data rows cho khách nước ngoài
+                    int foreignRow = 5;
+                    int foreignStt = 1;
+                    Dictionary<string, List<int>> foreignRoomRows = new Dictionary<string, List<int>>();
+
+                    foreach (var tenant in foreignTenants)
+                    {
+                        if (!foreignRoomRows.ContainsKey(tenant.RoomName))
+                            foreignRoomRows[tenant.RoomName] = new List<int>();
+                        foreignRoomRows[tenant.RoomName].Add(foreignRow);
+
+                        bool isEvenRow = (foreignRow - 5) % 2 == 1;
+                        int rowDataFormat = isEvenRow ? evenRowFormatIdx : dataFormatIdx;
+                        int rowCenterFormat = isEvenRow ? evenCenterFormatIdx : centerFormatIdx;
+
+                        xls.SetCellValue(foreignRow, 1, foreignStt++);
+                        xls.SetCellFormat(foreignRow, 1, rowCenterFormat);
+
+                        xls.SetCellValue(foreignRow, 2, tenant.RoomName);
+                        xls.SetCellFormat(foreignRow, 2, roomFormatIdx);
+
+                        xls.SetCellValue(foreignRow, 3, tenant.TenantName ?? "");
+                        xls.SetCellFormat(foreignRow, 3, rowCenterFormat);
+
+                        xls.SetCellValue(foreignRow, 4, tenant.BirthDate?.ToString("dd/MM/yyyy") ?? "");
+                        xls.SetCellFormat(foreignRow, 4, rowCenterFormat);
+
+                        xls.SetCellValue(foreignRow, 5, tenant.Gender ?? "");
+                        xls.SetCellFormat(foreignRow, 5, rowCenterFormat);
+
+                        xls.SetCellValue(foreignRow, 6, tenant.IdentityCard ?? "");
+                        xls.SetCellFormat(foreignRow, 6, rowCenterFormat);
+
+                        // Xác định quốc tịch từ Ethnicity
+                        string nationality = "Trung Quốc";
+                        if (!string.IsNullOrEmpty(tenant.Ethnicity))
+                        {
+                            var eth = tenant.Ethnicity.ToLower();
+                            if (eth.Contains("trung quốc") || eth.Contains("china") || eth.Contains("tq"))
+                                nationality = "Trung Quốc";
+                            else if (eth.Contains("lào"))
+                                nationality = "Lào";
+                            else if (eth.Contains("campuchia"))
+                                nationality = "Campuchia";
+                            else if (eth.Contains("thái lan"))
+                                nationality = "Thái Lan";
+                            else
+                                nationality = tenant.Ethnicity;
+                        }
+                        xls.SetCellValue(foreignRow, 7, nationality);
+                        xls.SetCellFormat(foreignRow, 7, rowCenterFormat);
+
+                        xls.SetCellValue(foreignRow, 8, tenant.PermanentAddress ?? "");
+                        xls.SetCellFormat(foreignRow, 8, rowCenterFormat);
+
+                        foreignRow++;
+                    }
+
+                    // Merge cells cho cùng phòng
+                    foreach (var roomGroup in foreignRoomRows.Where(g => g.Value.Count > 1))
+                    {
+                        int startRow = roomGroup.Value.Min();
+                        int endRow = roomGroup.Value.Max();
+                        xls.MergeCells(startRow, 2, endRow, 2);
+                    }
+
+                    // Footer
+                    foreignRow++;
+                    xls.SetCellValue(foreignRow, 1, $"Tổng số khách nước ngoài: {foreignTenants.Count}");
+                    xls.MergeCells(foreignRow, 1, foreignRow, 3);
+                    xls.SetCellFormat(foreignRow, 1, footerFormatIdx);
+
+                    foreignRow++;
+                    xls.SetCellValue(foreignRow, 1, $"Số phòng có khách nước ngoài: {foreignRoomRows.Count}");
+                    xls.MergeCells(foreignRow, 1, foreignRow, 3);
+                    xls.SetCellFormat(foreignRow, 1, footerFormatIdx);
+
+                    foreignRow++;
+
+                    // Column widths
+                    xls.SetColWidth(1, 1, 1536);   // STT
+                    xls.SetColWidth(2, 2, 2560);   // Số phòng
+                    xls.SetColWidth(3, 3, 5632);   // Họ và Tên
+                    xls.SetColWidth(4, 4, 2816);   // Năm sinh                    
+                    xls.SetColWidth(5, 5, 2048);   // Giới tính
+                    xls.SetColWidth(6, 6, 3840);   // Số hộ chiếu
+                    xls.SetColWidth(7, 7, 2560);   // Quốc tịch
+                    xls.SetColWidth(8, 8, 12240);  // Địa chỉ                    
+
+                    // Page setup
+                    xls.PrintLandscape = true;
+                    xls.PrintPaperSize = TPaperSize.A4;
+                    xls.PrintOptions = TPrintOptions.None;
+                    xls.PrintScale = 100;
+                    xls.PageHeader = "&C&\"Times New Roman,Bold\"&14DANH SÁCH KHÁCH NƯỚC NGOÀI";
+                    xls.PageFooter = "&L&\"Times New Roman\"&10Ngày in: &D &T" + "&C&P/&N" + "&R&\"Times New Roman\"&10Nhà Trọ An Cư";
+                    xls.SetPrintMargins(new TXlsMargins(0.7, 0.7, 0.7, 0.7, 0.3, 0.3));
+                    xls.FreezePanes(new TCellAddress(5, 1));
+                }
+                else
+                {
+                    // Nếu không có khách nước ngoài, hiển thị thông báo
+                    xls.SetCellValue(1, 1, "Không có khách nước ngoài");
+                    xls.SetCellFormat(1, 1, titleFormatIdx);
+                }
+
+                // Quay lại sheet 1 là active sheet
+                xls.ActiveSheet = 1;
+
+                // Save to memory stream
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    xls.Save(ms, TFileFormats.Xlsx);
+                    ms.Position = 0;
+
+                    string fileName = $"DanhSachKhachThue_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                    return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Lỗi khi xuất Excel: {ex.Message}";
+                return RedirectToAction("Index");
+            }
+        }
 
         public ActionResult TenantManager(int contractId, int roomId)
         {
