@@ -27,7 +27,7 @@
                         </select>
                     </div>
                     <div class="col-12"><label class="form-label">Ghi chú</label><input class="form-control" maxlength="200" @bind="form.Note" /></div>
-                    <div class="col-12"><FileUpload Kind="Receipts" Label="Chứng từ thu tiền (tùy chọn)" @bind-Files="form.Receipts" /></div>
+                    <div class="col-12"><FileUpload Kind="Receipts" Label="Chứng từ thu tiền (tùy chọn, tự quét số tiền)" @bind-Files="form.Receipts" Scanned="OnScanned" /></div>
                 </div>
                 <div class="text-end mt-3">
                     <button type="button" class="btn btn-secondary me-2" @onclick="CloseAsync">Hủy</button>
@@ -49,6 +49,13 @@
     private List<MoneyAccount> accounts = [];
     private int? currentBillId;
     private bool busy;
+
+    private void OnScanned(ReceiptScanResult r)
+    {
+        if (r.Amount is decimal a) form.Amount = a;
+        if (r.Date is DateTime d) form.Date = d;
+        if (string.IsNullOrWhiteSpace(form.Note) && !string.IsNullOrWhiteSpace(r.Description)) form.Note = r.Description.Truncate(200);
+    }
 
     protected override async Task OnParametersSetAsync()
     {

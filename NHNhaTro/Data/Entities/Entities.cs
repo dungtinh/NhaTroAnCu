@@ -29,6 +29,14 @@ public class AppSetting
     public double? Longitude { get; set; }
     public string? MapUrl { get; set; }
     public string? ZaloPhone { get; set; }
+
+    // Quét CCCD và chứng từ bằng AI
+    /// <summary>"Gemini", "Claude" hoặc rỗng (tắt).</summary>
+    public string? ScanProvider { get; set; }
+    public string? GeminiApiKey { get; set; }
+    public string? GeminiModel { get; set; }
+    public string? ClaudeApiKey { get; set; }
+    public string? ClaudeModel { get; set; }
 }
 
 public class Block
@@ -412,13 +420,6 @@ public static class AttachmentOwner
     public const string Room = "Room";
 }
 
-/// <summary>Cấu hình API key FPT.AI để quét CCCD (bảng FPTReaderAPI).</summary>
-public class FptReaderApi
-{
-    public string ApiKey { get; set; } = "";
-    public string Email { get; set; } = "";
-    public bool Status { get; set; }
-}
 
 public static class Roles
 {

@@ -84,8 +84,10 @@ public class SetupService(IDbContextFactory<ApplicationDbContext> dbFactory)
         if (input.BillingDay is < 1 or > 28) throw new InvalidOperationException("Ngày thu tiền phải từ 1 đến 28.");
         await using var db = await dbFactory.CreateDbContextAsync();
         var s = await db.Settings.FirstAsync();
+        var (provider, gk, gm, ck, cm) = (s.ScanProvider, s.GeminiApiKey, s.GeminiModel, s.ClaudeApiKey, s.ClaudeModel);
         db.Entry(s).CurrentValues.SetValues(input);
         s.Id = 1;
+        (s.ScanProvider, s.GeminiApiKey, s.GeminiModel, s.ClaudeApiKey, s.ClaudeModel) = (provider, gk, gm, ck, cm);
         await db.SaveChangesAsync();
     }
 
@@ -181,18 +183,28 @@ public class SetupService(IDbContextFactory<ApplicationDbContext> dbFactory)
         await db.SaveChangesAsync();
     }
 
-    public async Task<string?> GetFptApiKeyAsync()
+    /// <summary>Lưu cấu hình quét AI. Key để trống thì giữ key cũ; clearKeys xóa cả hai key.</summary>
+    public async Task SaveScanSettingsAsync(string? provider, string? geminiKey, string? geminiModel, string? claudeKey, string? claudeModel)
     {
         await using var db = await dbFactory.CreateDbContextAsync();
-        return await db.FptReaderApis.Where(x => x.Status).Select(x => x.ApiKey).FirstOrDefaultAsync();
+        var s = await db.Settings.FirstAsync();
+        s.ScanProvider = provider is ScanProvider.Gemini or ScanProvider.Claude ? provider : null;
+        if (!string.IsNullOrWhiteSpace(geminiKey)) s.GeminiApiKey = geminiKey.Trim();
+        if (!string.IsNullOrWhiteSpace(claudeKey)) s.ClaudeApiKey = claudeKey.Trim();
+        s.GeminiModel = string.IsNullOrWhiteSpace(geminiModel) ? null : geminiModel.Trim();
+        s.ClaudeModel = string.IsNullOrWhiteSpace(claudeModel) ? null : claudeModel.Trim();
+        if (s.ScanProvider == ScanProvider.Gemini && string.IsNullOrWhiteSpace(s.GeminiApiKey)) throw new InvalidOperationException("Nhập API key Gemini.");
+        if (s.ScanProvider == ScanProvider.Claude && string.IsNullOrWhiteSpace(s.ClaudeApiKey)) throw new InvalidOperationException("Nhập API key Claude.");
+        await db.SaveChangesAsync();
     }
 
-    public async Task SaveFptApiKeyAsync(string? apiKey, string? email)
+    public async Task ClearScanKeyAsync(string provider)
     {
         await using var db = await dbFactory.CreateDbContextAsync();
-        db.FptReaderApis.RemoveRange(await db.FptReaderApis.ToListAsync());
-        if (!string.IsNullOrWhiteSpace(apiKey))
-            db.FptReaderApis.Add(new FptReaderApi { ApiKey = apiKey.Trim(), Email = string.IsNullOrWhiteSpace(email) ? "-" : email.Trim(), Status = true });
+        var s = await db.Settings.FirstAsync();
+        if (provider == ScanProvider.Gemini) s.GeminiApiKey = null;
+        if (provider == ScanProvider.Claude) s.ClaudeApiKey = null;
+        if (s.ScanProvider == provider) s.ScanProvider = null;
         await db.SaveChangesAsync();
     }
 }

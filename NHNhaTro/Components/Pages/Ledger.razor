@@ -107,7 +107,7 @@
                     <div class="col-6"><label class="form-label">Phòng (nếu có)</label>
                         <select class="form-select" @bind="manual.RoomId"><option value="">--</option>@foreach (var r in rooms) {<option value="@r.Id">@r.Code</option>}</select></div>
                     <div class="col-12"><label class="form-label">Nội dung <span class="text-danger">*</span></label><input class="form-control" maxlength="500" @bind="manual.Description" /></div>
-                    <div class="col-12"><FileUpload Kind="Receipts" Label="Chứng từ" @bind-Files="manualFiles" /></div>
+                    <div class="col-12"><FileUpload Kind="Receipts" Label="Chứng từ (tự quét số tiền)" @bind-Files="manualFiles" Scanned="OnManualScanned" /></div>
                 </div>
                 <div class="text-end mt-3">
                     <button type="button" class="btn btn-secondary me-2" @onclick="() => manual = null">Hủy</button>
@@ -130,7 +130,7 @@
                     <div class="col-6"><label class="form-label">Số tiền</label><MoneyInput @bind-Value="tAmount" /></div>
                     <div class="col-6"><label class="form-label">Ngày</label><input type="date" class="form-control" @bind="tDate" /></div>
                     <div class="col-12"><label class="form-label">Ghi chú</label><input class="form-control" @bind="tNote" /></div>
-                    <div class="col-12"><FileUpload Kind="Receipts" Label="Chứng từ" @bind-Files="manualFiles" /></div>
+                    <div class="col-12"><FileUpload Kind="Receipts" Label="Chứng từ (tự quét số tiền)" @bind-Files="manualFiles" Scanned="OnTransferScanned" /></div>
                 </div>
                 <div class="text-end mt-3">
                     <button type="button" class="btn btn-secondary me-2" @onclick="() => transfer = false">Hủy</button>
@@ -215,6 +215,21 @@
         var business = accounts.FirstOrDefault(a => a.Kind == AccountKind.Business)?.Id ?? 0;
         manual = new ManualTransactionForm { IsIncome = income, AccountId = income ? business : personal, Category = income ? TxCategory.OtherIncome : TxCategory.OtherExpense };
         manualFiles = [];
+    }
+
+    private void OnManualScanned(ReceiptScanResult r)
+    {
+        if (manual == null) return;
+        if (r.Amount is decimal a) manual.Amount = a;
+        if (r.Date is DateTime d) manual.Date = d;
+        if (string.IsNullOrWhiteSpace(manual.Description) && !string.IsNullOrWhiteSpace(r.Description)) manual.Description = r.Description.Truncate(500);
+    }
+
+    private void OnTransferScanned(ReceiptScanResult r)
+    {
+        if (r.Amount is decimal a) tAmount = a;
+        if (r.Date is DateTime d) tDate = d;
+        if (string.IsNullOrWhiteSpace(tNote) && !string.IsNullOrWhiteSpace(r.Description)) tNote = r.Description.Truncate(500);
     }
 
     private void OpenTransfer()

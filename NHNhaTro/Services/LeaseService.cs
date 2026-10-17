@@ -105,7 +105,7 @@ public static class Nationality
     }
 }
 
-public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory, FileStorage files, IHttpClientFactory httpFactory, ILogger<LeaseService> logger)
+public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
 {
     public static decimal RoundMoney(decimal v) => Math.Round(v / 1000m, MidpointRounding.AwayFromZero) * 1000m;
 
@@ -318,6 +318,33 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory, Fil
         await db.SaveChangesAsync();
     }
 
+    /// <summary>Tiền cọc đã thu (trừ phần đã trả lại) của hợp đồng.</summary>
+    public async Task<decimal> GetDepositHeldAsync(int leaseId)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync();
+        return await db.Transactions.Where(t => t.LeaseId == leaseId && (t.Category == TxCategory.Deposit || t.Category == TxCategory.DepositRefund))
+            .SumAsync(t => (decimal?)t.Amount) ?? 0;
+    }
+
+    /// <summary>Thu cọc sau khi nhận phòng (khách chưa nộp đủ cọc lúc vào).</summary>
+    public async Task CollectDepositAsync(int leaseId, decimal amount, DateTime date, IEnumerable<PendingFile> receipts, string? user)
+    {
+        if (amount <= 0) throw new InvalidOperationException("Số tiền phải lớn hơn 0.");
+        await using var db = await dbFactory.CreateDbContextAsync();
+        var settings = await db.Settings.FirstAsync();
+        var lease = await db.Leases.Include(l => l.Room).FirstAsync(l => l.Id == leaseId);
+        if (lease.Status != LeaseStatus.Active) throw new InvalidOperationException("Hợp đồng đã kết thúc.");
+        var tx = new MoneyTransaction
+        {
+            AccountId = settings.PersonalAccountId, Date = date.Date, Amount = amount, Category = TxCategory.Deposit,
+            Description = $"Thu cọc phòng {lease.Room.Code}", RoomId = lease.RoomId, LeaseId = lease.Id, CreatedAt = DateTime.Now, CreatedBy = user
+        };
+        db.Transactions.Add(tx);
+        await db.SaveChangesAsync();
+        AttachmentService.Attach(db, AttachmentOwner.Transaction, tx.Id, receipts, user);
+        await db.SaveChangesAsync();
+    }
+
     // ============================ TRẢ PHÒNG ============================
 
     public async Task<CheckoutPreview> PreviewCheckoutAsync(CheckoutForm form)
@@ -346,7 +373,11 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory, Fil
             else if (actual != def) warnings.Add($"{name}: phòng có {actual}, mặc định dãy {def}");
         }
 
-        return new CheckoutPreview(lease.Deposit, lastMeter, used, used * settings.ElectricityPrice, form.Penalties.Sum(p => p.Amount), form.OtherAmount,
+        // Cọc thực giữ = tiền cọc đã thu − đã trả, không lấy số ghi trên hợp đồng (có thể chưa thu đủ).
+        var held = await db.Transactions.Where(t => t.LeaseId == lease.Id && (t.Category == TxCategory.Deposit || t.Category == TxCategory.DepositRefund))
+            .SumAsync(t => (decimal?)t.Amount) ?? 0;
+
+        return new CheckoutPreview(Math.Max(0, held), lastMeter, used, used * settings.ElectricityPrice, form.Penalties.Sum(p => p.Amount), form.OtherAmount,
             unpaid.Sum(u => u.Item2), unpaid, warnings);
     }
 
@@ -393,7 +424,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory, Fil
         if (moveOut != null && moveOut.TotalAmount > 0) dues.Add((moveOut.Id, moveOut.TotalAmount));
 
         // 1) Khấu trừ cọc: chuyển từ TK cá nhân sang TK hộ kinh doanh, ghi là tiền thu của từng phiếu
-        decimal applied = Math.Min(lease.Deposit - form.DepositRefund, dues.Sum(d => d.Due));
+        decimal applied = Math.Min(preview.Deposit - form.DepositRefund, dues.Sum(d => d.Due));
         var room = lease.Room;
         if (applied > 0)
         {
@@ -497,57 +528,5 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory, Fil
         return rows.Select(r => new ResidentRow(r.LeaseId, r.Code, r.Tenant.FullName, r.Tenant.IdentityCard, r.Tenant.BirthDate, r.Tenant.Gender, r.Tenant.Phone,
             r.Tenant.Ethnicity, r.Tenant.Nationality, r.Tenant.PermanentAddress, r.Tenant.VehiclePlate, r.MoveInDate, r.MoveOutDate, r.IsRepresentative,
             r.Tenant.PhotoList.FirstOrDefault())).ToList();
-    }
-
-    // ============================ QUÉT CCCD (FPT.AI) ============================
-
-    public async Task<bool> IsCardScanConfiguredAsync()
-    {
-        await using var db = await dbFactory.CreateDbContextAsync();
-        return await db.FptReaderApis.AnyAsync(x => x.Status);
-    }
-
-    public async Task<CardScanResult> ScanIdentityCardAsync(string photoWebPath)
-    {
-        var physical = files.ResolvePhysicalPath(photoWebPath);
-        if (physical == null || !File.Exists(physical)) throw new InvalidOperationException("Không tìm thấy ảnh để quét.");
-        string apiKey;
-        await using (var db = await dbFactory.CreateDbContextAsync())
-        {
-            apiKey = await db.FptReaderApis.Where(x => x.Status).Select(x => x.ApiKey).FirstOrDefaultAsync()
-                ?? throw new InvalidOperationException("Chưa cấu hình API key FPT.AI (Cấu hình > Quét CCCD).");
-        }
-
-        var ext = Path.GetExtension(physical).ToLowerInvariant();
-        var mime = ext switch { ".png" => "image/png", ".gif" => "image/gif", ".bmp" => "image/bmp", ".webp" => "image/webp", _ => "image/jpeg" };
-        await using var image = File.OpenRead(physical);
-        var client = httpFactory.CreateClient("fptai");
-        using var content = new MultipartFormDataContent();
-        var file = new StreamContent(image);
-        file.Headers.ContentType = MediaTypeHeaderValue.Parse(mime);
-        content.Add(file, "image", Path.GetFileName(physical));
-        using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.fpt.ai/vision/idr/vnm") { Content = content };
-        request.Headers.Add("api-key", apiKey);
-        using var response = await client.SendAsync(request);
-        var body = await response.Content.ReadAsStringAsync();
-        if (!response.IsSuccessStatusCode)
-        {
-            logger.LogWarning("FPT.AI trả về {Status}: {Body}", response.StatusCode, body);
-            throw new InvalidOperationException($"Lỗi từ FPT API: {(int)response.StatusCode}");
-        }
-
-        using var json = JsonDocument.Parse(body);
-        var root = json.RootElement;
-        if (root.TryGetProperty("errorCode", out var code) && code.ValueKind == JsonValueKind.Number && code.GetInt32() != 0)
-            throw new InvalidOperationException(root.TryGetProperty("errorMessage", out var msg) ? msg.GetString() : "Không thể nhận diện CCCD");
-        if (!root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array || data.GetArrayLength() == 0)
-            throw new InvalidOperationException("Không tìm thấy thông tin CCCD trong ảnh");
-
-        var card = data[0];
-        string? S(string name) => card.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String && v.GetString() is { } s
-            && !string.IsNullOrWhiteSpace(s) && s != "N/A" ? s.Trim() : null;
-        DateTime? dob = DateTime.TryParseExact(S("dob"), ["dd/MM/yyyy", "d/M/yyyy"], CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
-        var sex = S("sex")?.ToUpperInvariant() switch { "NAM" or "MALE" => "Nam", "NỮ" or "NU" or "FEMALE" => "Nữ", var x => x };
-        return new CardScanResult(S("id"), S("name"), dob, sex, S("address") ?? S("home"), S("ethnicity"), S("nationality"));
     }
 }

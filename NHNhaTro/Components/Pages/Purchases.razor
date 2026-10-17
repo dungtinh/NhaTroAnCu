@@ -29,7 +29,7 @@
             <div class="col-md-3 pt-md-4">
                 <div class="form-check"><input class="form-check-input" type="checkbox" id="isAd" @bind="form.IsAdvertising" /><label class="form-check-label" for="isAd">Là chi phí quảng cáo</label></div>
             </div>
-            <div class="col-12"><FileUpload Kind="Receipts" Label="Ảnh hóa đơn/chứng từ" Camera="true" Required="true" @bind-Files="form.Receipts" /></div>
+            <div class="col-12"><FileUpload Kind="Receipts" Label="Ảnh hóa đơn/chứng từ" Camera="true" Required="true" @bind-Files="form.Receipts" Scanned="OnScanned" /></div>
         </div>
         <div class="text-end mt-2">
             <button type="button" class="btn btn-secondary me-2" @onclick="() => form = null">Hủy</button>
@@ -92,6 +92,15 @@
 
     private async Task LoadAsync() =>
         list = await Expenses.ListPurchasesAsync(from, to, kind switch { "ad" => true, "buy" => false, _ => null }, search);
+
+    private void OnScanned(ReceiptScanResult r)
+    {
+        if (form == null) return;
+        if (r.Amount is decimal a) form.Amount = a;
+        if (r.Date is DateTime d) form.Date = d;
+        if (string.IsNullOrWhiteSpace(form.Supplier) && !string.IsNullOrWhiteSpace(r.Payee)) form.Supplier = r.Payee.Truncate(200);
+        if (string.IsNullOrWhiteSpace(form.Description) && !string.IsNullOrWhiteSpace(r.Description)) form.Description = r.Description.Truncate(1000);
+    }
 
     private void OpenForm(bool ad) => form = new PurchaseForm { AccountId = personalId, IsAdvertising = ad };
 

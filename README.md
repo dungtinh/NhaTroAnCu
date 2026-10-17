@@ -25,7 +25,7 @@ Chi tiết nghiệp vụ và các giả định: [docs/PHAN-TICH-NGHIEP-VU.md](d
 | Excel (sổ tạm trú, sổ thu chi) | ClosedXML |
 | Word (hợp đồng từ mẫu) | DocumentFormat.OpenXml |
 | Mã QR | QRCoder |
-| Quét CCCD | API FPT.AI |
+| Quét CCCD và chứng từ | Google Gemini (có gói miễn phí) hoặc Claude, chọn ở trang Cấu hình |
 
 ## Chạy trên máy phát triển
 
@@ -57,7 +57,7 @@ Cài đủ bản cập nhật Windows thì có thể xóa các file này.
 ## Cấu hình
 
 Phần lớn cấu hình nằm trong database và sửa trên trang **Cấu hình**: thông tin nhà trọ, giá điện nước, ngày thu,
-giá và đồ đạc mặc định từng dãy, số dư đầu kỳ hai tài khoản, API key quét CCCD.
+giá và đồ đạc mặc định từng dãy, số dư đầu kỳ hai tài khoản, API key quét bằng AI.
 `NHNhaTro/appsettings.json` chỉ còn:
 
 | Khóa | Ý nghĩa |
@@ -79,6 +79,21 @@ git config core.hooksPath .githooks
 Mẫu hiện tại ghi cứng giá thuê, tiền cọc, giá điện nước; ứng dụng tự thay các đoạn đó bằng số của hợp đồng.
 
 **Font PDF**: PDF dùng Times New Roman của Windows. Máy chủ không có font này thì đặt file `.ttf` vào thư mục `NHNhaTro/Fonts`.
+
+**Quét bằng AI**: chọn Gemini hoặc Claude ở **Cấu hình > Quét CCCD và chứng từ**, dán API key, bấm *Kiểm tra kết nối*.
+Key Gemini miễn phí lấy tại aistudio.google.com/apikey, key Claude tại console.anthropic.com. Key lưu trong database, không nằm trong mã nguồn.
+Khi đã bật, ảnh CCCD tự điền thông tin người ở; ảnh chứng từ (chuyển khoản, hóa đơn) tự điền số tiền, ngày và nội dung ở các ô thu tiền,
+thu cọc, trả cọc, sửa chữa, mua sắm, thu chi. Luôn kiểm tra lại số đã điền.
+
+## Dữ liệu nghiệm thu
+
+```bash
+NHNhaTro.exe --seed-demo    # nạp dữ liệu mẫu: 9 hợp đồng, phiếu tháng 9-10, trả phòng, sửa chữa, mua sắm, thu chi
+NHNhaTro.exe --clear-data   # xóa toàn bộ dữ liệu nghiệp vụ, giữ cấu hình, phòng, tài khoản tiền, người dùng
+```
+
+Chạy trong thư mục site (trên máy chủ dùng chuỗi kết nối của `appsettings.Production.json`). Lệnh nạp chỉ chạy khi chưa có dữ liệu nghiệp vụ.
+Sau khi nghiệm thu xong, chạy `--clear-data` để bắt đầu nhập thật; nhớ đặt lại số dư đầu kỳ ở trang Cấu hình.
 
 ## Triển khai lên IIS
 

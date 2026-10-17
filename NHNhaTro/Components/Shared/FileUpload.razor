@@ -1,6 +1,7 @@
 @* Tải ảnh/chứng từ lên ngay khi chọn; danh sách file chờ gắn vào phiếu khi lưu. *@
 @inject AttachmentService Attachments
 @inject ToastService Toast
+@inject DocumentScanService Scanner
 
 <div class="nh-upload">
     @if (!string.IsNullOrEmpty(Label))
@@ -23,8 +24,8 @@
             </div>
         }
         <label class="nh-upload-btn @(uploading ? "disabled" : "")">
-            <i class="fas @(uploading ? "fa-spinner fa-spin" : (Camera ? "fa-camera" : "fa-paperclip"))"></i>
-            <span>@(uploading ? "Đang tải..." : ButtonText)</span>
+            <i class="fas @(uploading || scanning ? "fa-spinner fa-spin" : (Camera ? "fa-camera" : "fa-paperclip"))"></i>
+            <span>@(scanning ? "Đang quét chứng từ..." : uploading ? "Đang tải..." : ButtonText)</span>
             <InputFile class="d-none" accept="@Accept" multiple="@Multiple" capture="@(Camera ? "environment" : null)" OnChange="OnSelected" disabled="@uploading" />
         </label>
     </div>
@@ -43,12 +44,19 @@
     [Parameter] public bool IsPublic { get; set; }
     [Parameter] public EventCallback<PendingFile> Uploaded { get; set; }
     [Parameter] public EventCallback<PendingFile> Removed { get; set; }
+    /// <summary>Gọi một lần sau khi tải xong cả lượt file đã chọn.</summary>
+    [Parameter] public EventCallback<List<PendingFile>> BatchUploaded { get; set; }
+    /// <summary>Có đặt thì tự quét chứng từ vừa tải (Gemini/Claude) và trả kết quả để điền số tiền, ngày, nội dung.</summary>
+    [Parameter] public EventCallback<ReceiptScanResult> Scanned { get; set; }
+
+    private bool scanning;
 
     private bool uploading;
 
     private async Task OnSelected(InputFileChangeEventArgs e)
     {
         uploading = true;
+        var batch = new List<PendingFile>();
         try
         {
             foreach (var file in e.GetMultipleFiles(20))
@@ -67,6 +75,7 @@
                     var saved = await Attachments.UploadAsync(buffer, file.Name, Kind, IsPublic);
                     if (!Multiple) Files.Clear();
                     Files.Add(saved);
+                    batch.Add(saved);
                     await Uploaded.InvokeAsync(saved);
                 }
                 catch (InvalidOperationException ex)
@@ -80,6 +89,26 @@
         {
             uploading = false;
         }
+        if (batch.Count > 0) await BatchUploaded.InvokeAsync(batch);
+        if (batch.Count > 0 && Scanned.HasDelegate) await ScanAsync(batch[0]);
+    }
+
+    private async Task ScanAsync(PendingFile f)
+    {
+        try
+        {
+            if (!await Scanner.IsConfiguredAsync()) return;
+            scanning = true;
+            StateHasChanged();
+            var r = await Scanner.ScanReceiptAsync(f.Path);
+            if (r.Amount == null && r.Date == null && r.Description == null) { Toast.Warning("Không đọc được số tiền trong chứng từ, hãy nhập tay."); return; }
+            await Scanned.InvokeAsync(r);
+            Toast.Info("Đã quét chứng từ: " + r.Summary + ". Hãy kiểm tra lại.");
+        }
+        catch (InvalidOperationException ex) { Toast.Warning(ex.Message); }
+        catch (HttpRequestException ex) { Toast.Warning("Không kết nối được dịch vụ quét: " + ex.Message); }
+        catch (TaskCanceledException) { Toast.Warning("Quét chứng từ quá lâu, hãy nhập tay."); }
+        finally { scanning = false; }
     }
 
     private async Task Remove(PendingFile f)

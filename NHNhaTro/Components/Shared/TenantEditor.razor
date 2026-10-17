@@ -1,10 +1,11 @@
-@* Nhập danh sách người ở trong phòng: ảnh CCCD, quét CCCD (FPT.AI), tự điền người cũ theo số CCCD. *@
+@* Nhập danh sách người ở trong phòng: ảnh CCCD, quét CCCD bằng AI (Gemini/Claude), tự điền người cũ theo số CCCD. *@
 @inject LeaseService Leases
+@inject DocumentScanService Scanner
 @inject ToastService Toast
 
 @if (!scanConfigured)
 {
-    <div class="alert alert-light border small py-2"><i class="fas fa-info-circle"></i> Chưa cấu hình API key FPT.AI nên chưa quét CCCD tự động được. Ảnh CCCD vẫn lưu bình thường.</div>
+    <div class="alert alert-light border small py-2"><i class="fas fa-info-circle"></i> Chưa cấu hình quét bằng AI (Gemini hoặc Claude) ở trang Cấu hình nên chưa tự điền từ ảnh CCCD được. Ảnh CCCD vẫn lưu bình thường.</div>
 }
 
 @for (int i = 0; i < Tenants.Count; i++)
@@ -20,7 +21,7 @@
             }
         </div>
         <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
-            <FileUpload Kind="TenantPhotos" Files="Pending(t)" ButtonText="Ảnh CCCD (2 mặt)" Accept="image/*" Camera="true" Uploaded="f => OnPhotoUploaded(t, f)" Removed="f => t.Photos.Remove(f.Path)" />
+            <FileUpload Kind="TenantPhotos" Files="Pending(t)" ButtonText="Ảnh CCCD (2 mặt)" Accept="image/*" Camera="true" Uploaded="f => t.Photos.Add(f.Path)" BatchUploaded="_ => OnPhotosUploadedAsync(t)" Removed="f => t.Photos.Remove(f.Path)" />
             @foreach (var p in t.Photos.Where(p => !Pending(t).Any(x => x.Path == p)))
             {
                 <div class="nh-thumb"><a href="@p" target="_blank"><img src="@p" alt="CCCD" /></a><button type="button" class="nh-thumb-remove" @onclick="() => t.Photos.Remove(p)">×</button></div>
@@ -33,8 +34,8 @@
             }
         </div>
         <div class="row g-2">
-            <div class="col-md-5"><label class="form-label">Họ và tên <span class="text-danger">*</span></label><input class="form-control" maxlength="100" @bind="t.FullName" /></div>
-            <div class="col-md-4"><label class="form-label">Số CCCD/Hộ chiếu <span class="text-danger">*</span></label><input class="form-control" maxlength="30" @bind="t.IdentityCard" @bind:after="() => LookupAsync(t)" /></div>
+            <div class="col-md-5"><label class="form-label">Họ và tên <span class="text-danger">*</span></label><input class="form-control" maxlength="100" @bind="t.FullName" @bind:after="() => Changed.InvokeAsync()" /></div>
+            <div class="col-md-4"><label class="form-label">Số CCCD/Hộ chiếu <span class="text-danger">*</span></label><input class="form-control" maxlength="30" @bind="t.IdentityCard" @bind:after="() => OnCardChangedAsync(t)" /></div>
             <div class="col-md-3"><label class="form-label">Điện thoại</label><input class="form-control" maxlength="20" @bind="t.Phone" /></div>
             <div class="col-md-3"><label class="form-label">Ngày sinh</label><input type="date" class="form-control" @bind="t.BirthDate" /></div>
             <div class="col-md-2">
@@ -67,7 +68,7 @@
 
     private List<PendingFile> Pending(TenantInput t) => pending.TryGetValue(t, out var l) ? l : pending[t] = [];
 
-    protected override async Task OnInitializedAsync() => scanConfigured = await Leases.IsCardScanConfiguredAsync();
+    protected override async Task OnInitializedAsync() => scanConfigured = await Scanner.IsConfiguredAsync();
 
     private async Task Add()
     {
@@ -81,18 +82,18 @@
         await Changed.InvokeAsync();
     }
 
-    private async Task OnPhotoUploaded(TenantInput t, PendingFile f)
+    private async Task OnPhotosUploadedAsync(TenantInput t)
     {
-        t.Photos.Add(f.Path);
-        if (scanConfigured && string.IsNullOrWhiteSpace(t.FullName)) await ScanAsync(t, f.Path);
+        if (scanConfigured && string.IsNullOrWhiteSpace(t.FullName)) await ScanAsync(t);
     }
 
-    private async Task ScanAsync(TenantInput t, string? path = null)
+    private async Task ScanAsync(TenantInput t)
     {
         scanning = t;
+        StateHasChanged();
         try
         {
-            var r = await Leases.ScanIdentityCardAsync(path ?? t.Photos.Last());
+            var r = await Scanner.ScanIdentityCardAsync(t.Photos);
             if (!string.IsNullOrEmpty(r.Name)) t.FullName = r.Name;
             if (!string.IsNullOrEmpty(r.Id)) t.IdentityCard = r.Id;
             if (r.BirthDate.HasValue) t.BirthDate = r.BirthDate;
@@ -100,12 +101,20 @@
             if (!string.IsNullOrEmpty(r.Address)) t.PermanentAddress = r.Address;
             if (!string.IsNullOrEmpty(r.Ethnicity)) t.Ethnicity = r.Ethnicity;
             if (!string.IsNullOrEmpty(r.Nationality)) t.Nationality = r.Nationality;
-            Toast.Success("Đã quét CCCD.");
+            Toast.Success("Đã quét CCCD, hãy kiểm tra lại thông tin.");
             await CheckOtherRoomAsync(t);
+            await Changed.InvokeAsync();
         }
         catch (InvalidOperationException ex) { Toast.Error(ex.Message); }
-        catch (HttpRequestException ex) { Toast.Error("Lỗi kết nối FPT.AI: " + ex.Message); }
+        catch (HttpRequestException ex) { Toast.Error("Lỗi kết nối dịch vụ quét: " + ex.Message); }
+        catch (TaskCanceledException) { Toast.Error("Quét quá lâu, hãy thử lại hoặc nhập tay."); }
         finally { scanning = null; }
+    }
+
+    private async Task OnCardChangedAsync(TenantInput t)
+    {
+        await LookupAsync(t);
+        await Changed.InvokeAsync();
     }
 
     private async Task LookupAsync(TenantInput t)

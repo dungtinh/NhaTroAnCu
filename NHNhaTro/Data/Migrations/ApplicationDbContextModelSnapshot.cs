@@ -264,9 +264,25 @@ namespace NHNhaTro.Migrations
                     b.Property<int>("BusinessAccountId")
                         .HasColumnType("int");
 
+                    b.Property<string>("ClaudeApiKey")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("ClaudeModel")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<decimal>("ElectricityPrice")
                         .HasPrecision(18)
                         .HasColumnType("decimal(18,0)");
+
+                    b.Property<string>("GeminiApiKey")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("GeminiModel")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<double?>("Latitude")
                         .HasColumnType("float");
@@ -297,6 +313,10 @@ namespace NHNhaTro.Migrations
                     b.Property<string>("RegisterArea")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ScanProvider")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<decimal>("WaterPricePerPerson")
                         .HasPrecision(18)
@@ -502,24 +522,6 @@ namespace NHNhaTro.Migrations
                         .IsUnique();
 
                     b.ToTable("BlockFurniture");
-                });
-
-            modelBuilder.Entity("NHNhaTro.Data.Entities.FptReaderApi", b =>
-                {
-                    b.Property<string>("ApiKey")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<bool>("Status")
-                        .HasColumnType("bit");
-
-                    b.HasKey("ApiKey", "Email", "Status");
-
-                    b.ToTable("FPTReaderAPI", (string)null);
                 });
 
             modelBuilder.Entity("NHNhaTro.Data.Entities.FurnitureItem", b =>

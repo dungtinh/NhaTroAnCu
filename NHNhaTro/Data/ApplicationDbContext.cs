@@ -22,7 +22,6 @@ namespace NHNhaTro.Data
         public DbSet<Repair> Repairs => Set<Repair>();
         public DbSet<Purchase> Purchases => Set<Purchase>();
         public DbSet<Attachment> Attachments => Set<Attachment>();
-        public DbSet<FptReaderApi> FptReaderApis => Set<FptReaderApi>();
 
         protected override void ConfigureConventions(ModelConfigurationBuilder b)
         {
@@ -45,6 +44,11 @@ namespace NHNhaTro.Data
                 e.Property(x => x.RegisterArea).HasMaxLength(200);
                 e.Property(x => x.AdTitle).HasMaxLength(200);
                 e.Property(x => x.MapUrl).HasMaxLength(1000);
+                e.Property(x => x.ScanProvider).HasMaxLength(20);
+                e.Property(x => x.GeminiApiKey).HasMaxLength(300);
+                e.Property(x => x.ClaudeApiKey).HasMaxLength(300);
+                e.Property(x => x.GeminiModel).HasMaxLength(100);
+                e.Property(x => x.ClaudeModel).HasMaxLength(100);
             });
 
             builder.Entity<Block>(e =>
@@ -183,14 +187,6 @@ namespace NHNhaTro.Data
                 e.Property(x => x.Caption).HasMaxLength(300);
                 e.Property(x => x.CreatedBy).HasMaxLength(256);
                 e.HasIndex(x => new { x.EntityType, x.EntityId });
-            });
-
-            builder.Entity<FptReaderApi>(e =>
-            {
-                e.ToTable("FPTReaderAPI");
-                e.HasKey(x => new { x.ApiKey, x.Email, x.Status });
-                e.Property(x => x.ApiKey).HasMaxLength(150);
-                e.Property(x => x.Email).HasMaxLength(150);
             });
 
             // Không xóa dây chuyền (trừ các bảng con thuần túy): mọi xóa do nghiệp vụ xử lý có kiểm soát.

@@ -102,7 +102,11 @@ else
                 @if (preview != null)
                 {
                     <table class="nh-table mb-2">
-                        <tr><td>Tiền cọc đang giữ</td><td class="text-end fw-bold">@Fmt.Money(preview.Deposit)</td></tr>
+                        <tr><td>Tiền cọc đã thu, đang giữ</td><td class="text-end fw-bold">@Fmt.Money(preview.Deposit)</td></tr>
+                        @if (preview.Deposit < lease.Deposit)
+                        {
+                            <tr><td colspan="2" class="small text-danger">Hợp đồng ghi cọc @Fmt.Vnd(lease.Deposit) nhưng mới thu @Fmt.Vnd(preview.Deposit).</td></tr>
+                        }
                         <tr><td>− Tiền điện chưa thu (@preview.UsedKwh số)</td><td class="text-end">@Fmt.Money(preview.Electricity)</td></tr>
                         <tr><td>− Phạt hư hỏng</td><td class="text-end">@Fmt.Money(preview.Penalties)</td></tr>
                         @if (preview.Other != 0) { <tr><td>− Khoản khác</td><td class="text-end">@Fmt.Money(preview.Other)</td></tr> }
@@ -118,7 +122,7 @@ else
 
                     <label class="form-label">Trả lại cọc cho khách (chi từ TK cá nhân)</label>
                     <MoneyInput @bind-Value="form.DepositRefund" />
-                    <div class="my-2"><FileUpload Kind="Receipts" ButtonText="Chứng từ trả cọc" @bind-Files="form.RefundReceipts" /></div>
+                    <div class="my-2"><FileUpload Kind="Receipts" ButtonText="Chứng từ trả cọc" @bind-Files="form.RefundReceipts" Scanned="r => { if (r.Amount is decimal a) form.DepositRefund = a; }" /></div>
 
                     <label class="form-label">Khách nộp thêm (vào TK hộ kinh doanh)</label>
                     <MoneyInput @bind-Value="form.Collected" />

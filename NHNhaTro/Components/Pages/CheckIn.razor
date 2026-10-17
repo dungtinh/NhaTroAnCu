@@ -80,12 +80,12 @@ else
 
                     <label class="form-label">Đã thu tiền cọc</label>
                     <MoneyInput @bind-Value="form.DepositPaid" />
-                    <div class="my-2"><FileUpload Kind="Receipts" ButtonText="Chứng từ cọc" @bind-Files="form.DepositReceipts" /></div>
+                    <div class="my-2"><FileUpload Kind="Receipts" ButtonText="Chứng từ cọc" @bind-Files="form.DepositReceipts" Scanned="r => { if (r.Amount is decimal a) form.DepositPaid = a; if (r.Date is DateTime d) form.PaymentDate = d; }" /></div>
 
                     <label class="form-label">Đã thu tiền phòng kỳ đầu</label>
                     <MoneyInput @bind-Value="form.FirstPaymentPaid" />
-                    <div class="my-2"><FileUpload Kind="Receipts" ButtonText="Chứng từ thu" @bind-Files="form.PaymentReceipts" /></div>
-                    <button type="button" class="btn btn-sm btn-link px-0" @onclick="() => { form.DepositPaid = form.Deposit; form.FirstPaymentPaid = first.Total; }">Điền đủ số phải thu</button>
+                    <div class="my-2"><FileUpload Kind="Receipts" ButtonText="Chứng từ thu" @bind-Files="form.PaymentReceipts" Scanned="r => { if (r.Amount is decimal a) form.FirstPaymentPaid = a; if (r.Date is DateTime d) form.PaymentDate = d; }" /></div>
+                    <button type="button" class="btn btn-sm btn-link px-0" @onclick="FillAll">Điền đủ số phải thu</button>
                     <div class="small text-muted">Chưa thu thì để 0, phiếu kỳ đầu sẽ hiện là còn nợ.</div>
                 }
                 <button type="button" class="btn btn-primary btn-lg w-100 mt-3" disabled="@(Busy || room == null)" @onclick="SaveAsync">
@@ -122,6 +122,15 @@ else
         form.MonthlyRent = r.Rent;
         form.Deposit = r.Rent;
         form.StartMeterReading = r.MeterReading;
+    }
+
+    /// <summary>Tính lại theo số người hiện tại, không dùng số đã tính ở lần vẽ trước.</summary>
+    private void FillAll()
+    {
+        if (settings == null || form.RoomId == 0) return;
+        var p = LeaseService.CalculateFirstPeriod(form.MonthlyRent, form.MoveInDate, settings.BillingDay, settings.WaterPricePerPerson, Math.Max(1, form.Tenants.Count(t => !t.IsEmpty)));
+        form.DepositPaid = form.Deposit;
+        form.FirstPaymentPaid = p.Total;
     }
 
     private void OnRentChanged(decimal v)

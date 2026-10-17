@@ -54,11 +54,12 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 // Từ QuestPDF 2026.9 font hệ thống không được dùng mặc định: bật lại để dùng Times New Roman của Windows.
 QuestPDF.Settings.UseSystemFonts = true;
-builder.Services.AddHttpClient("fptai", c => c.Timeout = TimeSpan.FromSeconds(60));
+builder.Services.AddHttpClient("ai", c => c.Timeout = TimeSpan.FromSeconds(90));
 builder.Services.AddSingleton<FileStorage>();
 builder.Services.AddScoped<SetupService>();
 builder.Services.AddScoped<RoomService>();
 builder.Services.AddScoped<LeaseService>();
+builder.Services.AddScoped<DocumentScanService>();
 builder.Services.AddScoped<BillingService>();
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<ExpenseService>();
@@ -84,6 +85,28 @@ using (var scope = app.Services.CreateScope())
     await db.Database.MigrateAsync();
     await SetupService.SeedAsync(db);
     await UserService.EnsureRolesAsync(scope.ServiceProvider);
+}
+
+// Lệnh quản trị chạy một lần rồi thoát (không mở web):
+//   NHNhaTro.exe --seed-demo   nạp dữ liệu nghiệm thu
+//   NHNhaTro.exe --clear-data  xóa toàn bộ dữ liệu nghiệp vụ, giữ cấu hình và người dùng
+if (args.Contains("--seed-demo") || args.Contains("--clear-data"))
+{
+    Console.OutputEncoding = System.Text.Encoding.UTF8;
+    using var scope = app.Services.CreateScope();
+    try
+    {
+        var message = args.Contains("--clear-data")
+            ? await DemoDataSeeder.ClearAsync(scope.ServiceProvider)
+            : await DemoDataSeeder.SeedAsync(scope.ServiceProvider);
+        Console.WriteLine(message);
+        return 0;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("LỖI: " + ex);
+        return 1;
+    }
 }
 
 // Font cho PDF: nạp mọi .ttf trong thư mục Fonts (nếu có).
@@ -162,6 +185,7 @@ app.MapGet("/Uploads/{**path}", (string path, FileStorage storage, HttpContext c
 });
 
 app.Run();
+return 0;
 
 public record LedgerQuery(int? AccountId, DateTime? From, DateTime? To, string? Category, string? Direction, string? Search)
 {

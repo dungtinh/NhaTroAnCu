@@ -40,7 +40,7 @@
                 <select class="form-select" @bind="form.AccountId">@foreach (var a in accounts) {<option value="@a.Id">@a.Name</option>}</select></div>
             <div class="col-md-4"><FileUpload Kind="Repairs" Label="Ảnh hư hỏng (trước)" Camera="true" Accept="image/*" Required="true" @bind-Files="form.BeforePhotos" /></div>
             <div class="col-md-4"><FileUpload Kind="Repairs" Label="Ảnh sau khi sửa" Camera="true" Accept="image/*" @bind-Files="form.AfterPhotos" /></div>
-            <div class="col-md-4"><FileUpload Kind="Receipts" Label="Chứng từ chuyển khoản/hóa đơn" Required="@(form.Amount > 0)" @bind-Files="form.Receipts" /></div>
+            <div class="col-md-4"><FileUpload Kind="Receipts" Label="Chứng từ chuyển khoản/hóa đơn" Required="@(form.Amount > 0)" @bind-Files="form.Receipts" Scanned="OnScanned" /></div>
         </div>
         @if (RepeatWarning is { } w) { <div class="alert alert-warning small py-2 mt-2 mb-0"><i class="fas fa-exclamation-triangle"></i> @w</div> }
         <div class="small text-muted mt-2">Bắt buộc có ảnh; có chi tiền thì bắt buộc chứng từ. Phiếu ghi lại người tạo và thời điểm, chỉ Quản trị được xóa.</div>
@@ -135,6 +135,15 @@
     {
         scope = e.Value?.ToString() ?? "";
         await LoadAsync();
+    }
+
+    private void OnScanned(ReceiptScanResult r)
+    {
+        if (form == null) return;
+        if (r.Amount is decimal a) form.Amount = a;
+        if (r.Date is DateTime d) form.Date = d;
+        if (string.IsNullOrWhiteSpace(form.PerformedBy) && !string.IsNullOrWhiteSpace(r.Payee)) form.PerformedBy = r.Payee.Truncate(200);
+        if (string.IsNullOrWhiteSpace(form.Description) && !string.IsNullOrWhiteSpace(r.Description)) form.Description = r.Description.Truncate(1000);
     }
 
     private void OpenForm() => form = new RepairForm { AccountId = personalId };

@@ -3,6 +3,7 @@
 @rendermode InteractiveServer
 @inherits NhPage
 @inject SetupService Setup
+@inject DocumentScanService Scanner
 
 <PageTitle>Cấu hình</PageTitle>
 
@@ -53,12 +54,37 @@
             </div>
 
             <div class="nh-card">
-                <h5>Quét CCCD (FPT.AI)</h5>
-                <div class="row g-2">
-                    <div class="col-md-8"><label class="form-label small">API key</label><input type="password" class="form-control" autocomplete="off" placeholder="@(hasFpt ? "Đã cấu hình - nhập để thay" : "Chưa cấu hình")" @bind="fptKey" /></div>
-                    <div class="col-md-4 align-self-end"><button type="button" class="btn btn-primary w-100" @onclick="SaveFptAsync">Lưu key</button></div>
+                <h5>Quét CCCD và chứng từ bằng AI</h5>
+                <div class="small text-muted mb-2">
+                    Ảnh CCCD tự điền họ tên, số CCCD, ngày sinh, địa chỉ. Ảnh chứng từ chuyển khoản/hóa đơn tự điền số tiền, ngày, nội dung.
+                    Gemini có gói miễn phí: lấy key tại aistudio.google.com/apikey. Claude lấy key tại console.anthropic.com.
                 </div>
-                <div class="small text-muted mt-1">Đăng ký key tại console.fpt.ai. Để trống rồi lưu là tắt chức năng quét.</div>
+                <div class="row g-2">
+                    <div class="col-md-4"><label class="form-label small">Dùng</label>
+                        <select class="form-select" @bind="scanProvider">
+                            <option value="">Tắt</option>
+                            <option value="@ScanProvider.Gemini">Google Gemini</option>
+                            <option value="@ScanProvider.Claude">Claude (Anthropic)</option>
+                        </select></div>
+                    <div class="col-md-8 small pt-md-4">
+                        Gemini: <strong>@(string.IsNullOrEmpty(s.GeminiApiKey) ? "chưa có key" : "đã có key")</strong> ·
+                        Claude: <strong>@(string.IsNullOrEmpty(s.ClaudeApiKey) ? "chưa có key" : "đã có key")</strong>
+                    </div>
+                    <div class="col-md-8"><label class="form-label small">API key Gemini</label>
+                        <input type="password" class="form-control" autocomplete="off" placeholder="@(string.IsNullOrEmpty(s.GeminiApiKey) ? "Dán key" : "Để trống để giữ key cũ")" @bind="geminiKey" /></div>
+                    <div class="col-md-4"><label class="form-label small">Mô hình Gemini</label>
+                        <input class="form-control" placeholder="@ScanProvider.DefaultGeminiModel" @bind="geminiModel" /></div>
+                    <div class="col-md-8"><label class="form-label small">API key Claude</label>
+                        <input type="password" class="form-control" autocomplete="off" placeholder="@(string.IsNullOrEmpty(s.ClaudeApiKey) ? "Dán key" : "Để trống để giữ key cũ")" @bind="claudeKey" /></div>
+                    <div class="col-md-4"><label class="form-label small">Mô hình Claude</label>
+                        <input class="form-control" placeholder="@ScanProvider.DefaultClaudeModel" @bind="claudeModel" /></div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="SaveScanAsync"><i class="fas fa-save"></i> Lưu</button>
+                    <button type="button" class="btn btn-outline-primary" disabled="@Busy" @onclick="TestScanAsync"><i class="fas fa-plug"></i> Kiểm tra kết nối</button>
+                    @if (!string.IsNullOrEmpty(s.GeminiApiKey)) { <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => ClearKeyAsync(ScanProvider.Gemini)">Xóa key Gemini</button> }
+                    @if (!string.IsNullOrEmpty(s.ClaudeApiKey)) { <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => ClearKeyAsync(ScanProvider.Claude)">Xóa key Claude</button> }
+                </div>
             </div>
         </div>
 
@@ -113,8 +139,7 @@
     private List<FurnitureItem> items = [];
     private Dictionary<int, Dictionary<int, int>> blockQty = [];
     private Dictionary<int, bool> applyFurniture = [], applyRent = [];
-    private string? fptKey, newItem;
-    private bool hasFpt;
+    private string? newItem, geminiKey, claudeKey, geminiModel, claudeModel, scanProvider;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -126,7 +151,9 @@
         blocks = await Setup.GetBlocksAsync();
         blockQty = blocks.ToDictionary(b => b.Id, b => b.DefaultFurniture.ToDictionary(f => f.FurnitureItemId, f => f.Quantity));
         foreach (var b in blocks) { applyFurniture.TryAdd(b.Id, false); applyRent.TryAdd(b.Id, false); }
-        hasFpt = !string.IsNullOrEmpty(await Setup.GetFptApiKeyAsync());
+        scanProvider = s.ScanProvider ?? "";
+        geminiModel = s.GeminiModel;
+        claudeModel = s.ClaudeModel;
     }
 
     private void SetQty(int blockId, int itemId, ChangeEventArgs e)
@@ -145,13 +172,28 @@
             Toast.Success($"Đã lưu dãy {b.Code}" + (changed > 0 ? $", cập nhật {changed} phòng trống." : "."));
     }
 
-    private async Task SaveFptAsync()
+    private async Task SaveScanAsync()
     {
-        if (string.IsNullOrWhiteSpace(fptKey) && hasFpt && !await ConfirmAsync("Tắt chức năng quét CCCD?")) return;
-        if (await RunAsync(() => Setup.SaveFptApiKeyAsync(fptKey, null), "Đã lưu."))
+        if (await RunAsync(() => Setup.SaveScanSettingsAsync(scanProvider, geminiKey, geminiModel, claudeKey, claudeModel), "Đã lưu cấu hình quét."))
         {
-            fptKey = null;
-            hasFpt = !string.IsNullOrEmpty(await Setup.GetFptApiKeyAsync());
+            geminiKey = claudeKey = null;
+            s = await Setup.GetSettingsAsync();
+        }
+    }
+
+    private async Task TestScanAsync()
+    {
+        string? result = null;
+        if (await RunAsync(async () => result = await Scanner.TestAsync())) Toast.Success("Kết nối được: " + result);
+    }
+
+    private async Task ClearKeyAsync(string provider)
+    {
+        if (!await ConfirmAsync($"Xóa API key {provider}?")) return;
+        if (await RunAsync(() => Setup.ClearScanKeyAsync(provider), "Đã xóa key."))
+        {
+            s = await Setup.GetSettingsAsync();
+            scanProvider = s.ScanProvider ?? "";
         }
     }
 
