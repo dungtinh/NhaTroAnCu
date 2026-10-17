@@ -9,9 +9,9 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Confirm email change</PageTitle>
+<PageTitle>Xác nhận đổi email</PageTitle>
 
-<h1>Confirm email change</h1>
+<h1>Xác nhận đổi email</h1>
 
 <StatusMessage Message="@message" />
 
@@ -35,14 +35,14 @@
         if (UserId is null || Email is null || Code is null)
         {
             RedirectManager.RedirectToWithStatus(
-                "Account/Login", "Error: Invalid email change confirmation link.", HttpContext);
+                "Account/Login", "Lỗi: Liên kết xác nhận đổi email không hợp lệ.", HttpContext);
             return;
         }
 
         var user = await UserManager.FindByIdAsync(UserId);
         if (user is null)
         {
-            message = "Unable to find user with Id '{userId}'";
+            message = "Lỗi: Không tìm thấy người dùng.";
             return;
         }
 
@@ -50,7 +50,7 @@
         var result = await UserManager.ChangeEmailAsync(user, Email, code);
         if (!result.Succeeded)
         {
-            message = "Error changing email.";
+            message = "Lỗi: Không đổi được email.";
             return;
         }
 
@@ -59,11 +59,11 @@
         var setUserNameResult = await UserManager.SetUserNameAsync(user, Email);
         if (!setUserNameResult.Succeeded)
         {
-            message = "Error changing user name.";
+            message = "Lỗi: Không đổi được tên đăng nhập.";
             return;
         }
 
         await SignInManager.RefreshSignInAsync(user);
-        message = "Thank you for confirming your email change.";
+        message = "Cảm ơn bạn đã xác nhận đổi email.";
     }
 }

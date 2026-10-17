@@ -61,7 +61,7 @@ namespace Microsoft.AspNetCore.Routing
                 var user = await userManager.GetUserAsync(context.User);
                 if (user is null)
                 {
-                    return Results.NotFound($"Unable to load user with ID '{userManager.GetUserId(context.User)}'.");
+                    return Results.NotFound($"Không tải được người dùng có ID '{userManager.GetUserId(context.User)}'.");
                 }
 
                 var userId = await userManager.GetUserIdAsync(user);
@@ -119,7 +119,7 @@ namespace Microsoft.AspNetCore.Routing
                 var user = await userManager.GetUserAsync(context.User);
                 if (user is null)
                 {
-                    return Results.NotFound($"Unable to load user with ID '{userManager.GetUserId(context.User)}'.");
+                    return Results.NotFound($"Không tải được người dùng có ID '{userManager.GetUserId(context.User)}'.");
                 }
 
                 var userId = await userManager.GetUserIdAsync(user);

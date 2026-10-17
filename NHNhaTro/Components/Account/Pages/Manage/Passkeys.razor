@@ -9,9 +9,9 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Manage your passkeys</PageTitle>
+<PageTitle>Quản lý passkey</PageTitle>
 
-<h3>Manage your passkeys</h3>
+<h3>Quản lý passkey</h3>
 
 <StatusMessage />
 
@@ -22,7 +22,7 @@
             @foreach (var passkey in currentPasskeys)
             {
                 <tr>
-                    <td>@(passkey.Name ?? "Unnamed passkey")</td>
+                    <td>@(passkey.Name ?? "Passkey chưa đặt tên")</td>
                     <td>
                         @{
                             var credentialId = Base64Url.EncodeToString(passkey.CredentialId);
@@ -31,8 +31,8 @@
                             <AntiforgeryToken />
                             <div>
                                 <input type="hidden" name="CredentialId" value="@credentialId" />
-                                <button type="submit" name="Action" value="rename" class="btn btn-primary" title="Rename this passkey">Rename</button>
-                                <button type="submit" name="Action" value="delete" class="btn btn-danger" title="Remove this passkey from your account">Delete</button>
+                                <button type="submit" name="Action" value="rename" class="btn btn-primary" title="Đổi tên passkey này">Đổi tên</button>
+                                <button type="submit" name="Action" value="delete" class="btn btn-danger" title="Xóa passkey này khỏi tài khoản">Xóa</button>
                             </div>
                         </form>
                     </td>
@@ -43,18 +43,18 @@
 }
 else
 {
-    <p>No passkeys are registered.</p>
+    <p>Chưa đăng ký passkey nào.</p>
 }
 
 <form @formname="add-passkey" @onsubmit="AddPasskey" method="post">
     <AntiforgeryToken />
     @if (currentPasskeys is { Count: >= MaxPasskeyCount })
     {
-        <p class="text-danger">You have reached the maximum number of allowed passkeys. Please delete one before adding a new one.</p>
+        <p class="text-danger">Bạn đã đạt số passkey tối đa. Hãy xóa bớt một passkey trước khi thêm mới.</p>
     }
     else
     {
-        <PasskeySubmit Operation="PasskeyOperation.Create" Name="Input" class="btn btn-primary">Add a new passkey</PasskeySubmit>
+        <PasskeySubmit Operation="PasskeyOperation.Create" Name="Input" class="btn btn-primary">Thêm passkey mới</PasskeySubmit>
     }
 
 </form>
@@ -100,33 +100,33 @@ else
 
         if (!string.IsNullOrEmpty(Input.Error))
         {
-            RedirectManager.RedirectToCurrentPageWithStatus($"Error: {Input.Error}", HttpContext);
+            RedirectManager.RedirectToCurrentPageWithStatus($"Lỗi: {Input.Error}", HttpContext);
             return;
         }
 
         if (string.IsNullOrEmpty(Input.CredentialJson))
         {
-            RedirectManager.RedirectToCurrentPageWithStatus("Error: The browser did not provide a passkey.", HttpContext);
+            RedirectManager.RedirectToCurrentPageWithStatus("Lỗi: Trình duyệt không cung cấp passkey.", HttpContext);
             return;
         }
 
         if (currentPasskeys!.Count >= MaxPasskeyCount)
         {
-            RedirectManager.RedirectToCurrentPageWithStatus($"Error: You have reached the maximum number of allowed passkeys.", HttpContext);
+            RedirectManager.RedirectToCurrentPageWithStatus("Lỗi: Bạn đã đạt số passkey tối đa.", HttpContext);
             return;
         }
 
         var attestationResult = await SignInManager.PerformPasskeyAttestationAsync(Input.CredentialJson);
         if (!attestationResult.Succeeded)
         {
-            RedirectManager.RedirectToCurrentPageWithStatus($"Error: Could not add the passkey: {attestationResult.Failure.Message}", HttpContext);
+            RedirectManager.RedirectToCurrentPageWithStatus($"Lỗi: Không thêm được passkey: {attestationResult.Failure.Message}", HttpContext);
             return;
         }
 
         var addPasskeyResult = await UserManager.AddOrUpdatePasskeyAsync(user, attestationResult.Passkey);
         if (!addPasskeyResult.Succeeded)
         {
-            RedirectManager.RedirectToCurrentPageWithStatus("Error: The passkey could not be added to your account.", HttpContext);
+            RedirectManager.RedirectToCurrentPageWithStatus("Lỗi: Không thêm được passkey vào tài khoản.", HttpContext);
             return;
         }
 
@@ -146,7 +146,7 @@ else
                 await DeletePasskey();
                 break;
             default:
-                RedirectManager.RedirectToCurrentPageWithStatus($"Error: Unknown action '{Action}'.", HttpContext);
+                RedirectManager.RedirectToCurrentPageWithStatus($"Lỗi: Thao tác không hợp lệ '{Action}'.", HttpContext);
                 break;
         }
     }
@@ -166,17 +166,17 @@ else
         }
         catch (FormatException)
         {
-            RedirectManager.RedirectToCurrentPageWithStatus("Error: The specified passkey ID had an invalid format.", HttpContext);
+            RedirectManager.RedirectToCurrentPageWithStatus("Lỗi: ID passkey không đúng định dạng.", HttpContext);
             return;
         }
 
         var result = await UserManager.RemovePasskeyAsync(user, credentialId);
         if (!result.Succeeded)
         {
-            RedirectManager.RedirectToCurrentPageWithStatus("Error: The passkey could not be deleted.", HttpContext);
+            RedirectManager.RedirectToCurrentPageWithStatus("Lỗi: Không xóa được passkey.", HttpContext);
             return;
         }
 
-        RedirectManager.RedirectToCurrentPageWithStatus("Passkey deleted successfully.", HttpContext);
+        RedirectManager.RedirectToCurrentPageWithStatus("Đã xóa passkey.", HttpContext);
     }
 }

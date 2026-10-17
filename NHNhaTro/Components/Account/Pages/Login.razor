@@ -11,16 +11,16 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Log in</PageTitle>
+<PageTitle>Đăng nhập</PageTitle>
 
-<h1>Log in</h1>
+<h1>Đăng nhập</h1>
 <div class="row">
     <div class="col-lg-6">
         <section>
             <StatusMessage Message="@errorMessage" />
             <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login">
                 <DataAnnotationsValidator />
-                <h2>Use a local account to log in.</h2>
+                <h2>Đăng nhập bằng tài khoản của hệ thống.</h2>
                 <hr />
                 <ValidationSummary class="text-danger" role="alert" />
                 <div class="form-floating mb-3">
@@ -29,34 +29,34 @@
                     <ValidationMessage For="() => Input.Email" class="text-danger" />
                 </div>
                 <div class="form-floating mb-3">
-                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
-                    <label for="Input.Password" class="form-label">Password</label>
+                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="mật khẩu" />
+                    <label for="Input.Password" class="form-label">Mật khẩu</label>
                     <ValidationMessage For="() => Input.Password" class="text-danger" />
                 </div>
                 <div class="checkbox mb-3">
                     <label class="form-label">
                         <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
-                        Remember me
+                        Ghi nhớ đăng nhập
                     </label>
                 </div>
                 <div>
-                    <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
+                    <button type="submit" class="w-100 btn btn-lg btn-primary">Đăng nhập</button>
                 </div>
                 <hr />
                 <div class="d-flex flex-column">
-                    <span class="text-secondary mx-auto mt-2">OR</span>
-                    <PasskeySubmit Operation="PasskeyOperation.Request" Name="Input.Passkey" EmailName="Input.Email" class="btn btn-link mx-auto">Log in with a passkey</PasskeySubmit>
+                    <span class="text-secondary mx-auto mt-2">HOẶC</span>
+                    <PasskeySubmit Operation="PasskeyOperation.Request" Name="Input.Passkey" EmailName="Input.Email" class="btn btn-link mx-auto">Đăng nhập bằng passkey</PasskeySubmit>
                 </div>
                 <hr />
                 <div>
                     <p>
-                        <a href="Account/ForgotPassword">Forgot your password?</a>
+                        <a href="Account/ForgotPassword">Quên mật khẩu?</a>
                     </p>
                     <p>
-                        <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</a>
+                        <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Đăng ký tài khoản mới</a>
                     </p>
                     <p>
-                        <a href="Account/ResendEmailConfirmation">Resend email confirmation</a>
+                        <a href="Account/ResendEmailConfirmation">Gửi lại email xác nhận</a>
                     </p>
                 </div>
             </EditForm>
@@ -64,7 +64,7 @@
     </div>
     <div class="col-lg-4 col-lg-offset-2">
         <section>
-            <h3>Use another service to log in.</h3>
+            <h3>Đăng nhập bằng dịch vụ khác.</h3>
             <hr />
             <ExternalLoginPicker />
         </section>
@@ -101,7 +101,7 @@
     {
         if (!string.IsNullOrEmpty(Input.Passkey?.Error))
         {
-            errorMessage = $"Error: {Input.Passkey.Error}";
+            errorMessage = $"Lỗi: {Input.Passkey.Error}";
             return;
         }
 
@@ -142,21 +142,21 @@
         }
         else
         {
-            errorMessage = "Error: Invalid login attempt.";
+            errorMessage = "Lỗi: Email hoặc mật khẩu không đúng.";
         }
     }
 
     private sealed class InputModel
     {
-        [Required]
-        [EmailAddress]
+        [Required(ErrorMessage = "Vui lòng nhập email.")]
+        [EmailAddress(ErrorMessage = "Email không hợp lệ.")]
         public string Email { get; set; } = "";
 
-        [Required]
+        [Required(ErrorMessage = "Vui lòng nhập mật khẩu.")]
         [DataType(DataType.Password)]
         public string Password { get; set; } = "";
 
-        [Display(Name = "Remember me?")]
+        [Display(Name = "Ghi nhớ đăng nhập?")]
         public bool RememberMe { get; set; }
 
         public PasskeyInputModel? Passkey { get; set; }

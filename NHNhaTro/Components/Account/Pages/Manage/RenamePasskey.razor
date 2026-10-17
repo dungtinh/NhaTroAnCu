@@ -12,21 +12,21 @@
     <DataAnnotationsValidator />
     @if (passkey?.Name is { } name)
     {
-        <h4>Enter a new name for your "@name" passkey</h4>
+        <h4>Nhập tên mới cho passkey "@name"</h4>
     }
     else
     {
-        <h4>Enter a name for your passkey</h4>
+        <h4>Nhập tên cho passkey</h4>
     }
     <hr />
     <ValidationSummary class="text-danger" role="alert" />
     <div class="form-floating mb-3">
-        <InputText @bind-Value="Input.Name" id="Input.Name" class="form-control" aria-required="true" placeholder="My passkey" />
-        <label for="Input.Name" class="form-label">Passkey name</label>
+        <InputText @bind-Value="Input.Name" id="Input.Name" class="form-control" aria-required="true" placeholder="Passkey của tôi" />
+        <label for="Input.Name" class="form-label">Tên passkey</label>
         <ValidationMessage For="() => Input.Name" class="text-danger" />
     </div>
     <div>
-        <button type="submit" class="w-100 btn btn-lg btn-primary">Continue</button>
+        <button type="submit" class="w-100 btn btn-lg btn-primary">Tiếp tục</button>
     </div>
 </EditForm>
 
@@ -61,14 +61,14 @@
         }
         catch (FormatException)
         {
-            RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", "Error: The specified passkey ID had an invalid format.", HttpContext);
+            RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", "Lỗi: ID passkey không đúng định dạng.", HttpContext);
             return;
         }
 
         passkey = await UserManager.GetPasskeyAsync(user, credentialId);
         if (passkey is null)
         {
-            RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", "Error: The specified passkey could not be found.", HttpContext);
+            RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", "Lỗi: Không tìm thấy passkey.", HttpContext);
             return;
         }
     }
@@ -79,17 +79,17 @@
         var result = await UserManager.AddOrUpdatePasskeyAsync(user!, passkey);
         if (!result.Succeeded)
         {
-            RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", "Error: The passkey could not be updated.", HttpContext);
+            RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", "Lỗi: Không cập nhật được passkey.", HttpContext);
             return;
         }
 
-        RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", "Passkey updated successfully.", HttpContext);
+        RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", "Đã cập nhật passkey.", HttpContext);
     }
 
     private sealed class InputModel
     {
-        [Required]
-        [StringLength(200, ErrorMessage = "Passkey names must be no longer than {1} characters.")]
+        [Required(ErrorMessage = "Vui lòng nhập tên passkey.")]
+        [StringLength(200, ErrorMessage = "Tên passkey không được dài quá {1} ký tự.")]
         public string Name { get; set; } = "";
     }
 }

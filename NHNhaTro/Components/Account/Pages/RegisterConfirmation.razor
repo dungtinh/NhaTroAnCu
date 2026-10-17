@@ -10,22 +10,22 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Register confirmation</PageTitle>
+<PageTitle>Xác nhận đăng ký</PageTitle>
 
-<h1>Register confirmation</h1>
+<h1>Xác nhận đăng ký</h1>
 
 <StatusMessage Message="@statusMessage" />
 
 @if (emailConfirmationLink is not null)
 {
     <p>
-        This app does not currently have a real email sender registered, see <a href="https://aka.ms/aspaccountconf">these docs</a> for how to configure a real email sender.
-        Normally this would be emailed: <a href="@emailConfirmationLink">Click here to confirm your account</a>
+        Ứng dụng chưa cấu hình dịch vụ gửi email, xem <a href="https://aka.ms/aspaccountconf">tài liệu này</a> để biết cách cấu hình.
+        Bình thường liên kết sau sẽ được gửi qua email: <a href="@emailConfirmationLink">Bấm vào đây để xác nhận tài khoản</a>
     </p>
 }
 else
 {
-    <p role="alert">Please check your email to confirm your account.</p>
+    <p role="alert">Vui lòng kiểm tra email để xác nhận tài khoản.</p>
 }
 
 @code {
@@ -53,7 +53,7 @@ else
         if (user is null)
         {
             HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-            statusMessage = "Error finding user for unspecified email";
+            statusMessage = "Lỗi: Không tìm thấy người dùng với email này.";
         }
         else if (EmailSender is IdentityNoOpEmailSender)
         {

@@ -12,7 +12,7 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<EnableAuthenticator> Logger
 
-<PageTitle>Configure authenticator app</PageTitle>
+<PageTitle>Thiết lập ứng dụng xác thực</PageTitle>
 
 @if (recoveryCodes is not null)
 {
@@ -21,41 +21,41 @@
 else
 {
     <StatusMessage Message="@message" />
-    <h3>Configure authenticator app</h3>
+    <h3>Thiết lập ứng dụng xác thực</h3>
     <div>
-        <p>To use an authenticator app go through the following steps:</p>
+        <p>Để dùng ứng dụng xác thực, làm theo các bước sau:</p>
         <ol class="list">
             <li>
                 <p>
-                    Download a two-factor authenticator app like Microsoft Authenticator for
-                    <a href="https://go.microsoft.com/fwlink/?Linkid=825072">Android</a> and
-                    <a href="https://go.microsoft.com/fwlink/?Linkid=825073">iOS</a> or
-                    Google Authenticator for
-                    <a href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&amp;hl=en">Android</a> and
+                    Tải ứng dụng xác thực hai bước như Microsoft Authenticator cho
+                    <a href="https://go.microsoft.com/fwlink/?Linkid=825072">Android</a> và
+                    <a href="https://go.microsoft.com/fwlink/?Linkid=825073">iOS</a> hoặc
+                    Google Authenticator cho
+                    <a href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&amp;hl=en">Android</a> và
                     <a href="https://itunes.apple.com/us/app/google-authenticator/id388497605?mt=8">iOS</a>.
                 </p>
             </li>
             <li>
-                <p>Scan the QR Code or enter this key <kbd>@sharedKey</kbd> into your two factor authenticator app. Spaces and casing do not matter.</p>
-                <div class="alert alert-info">Learn how to <a href="https://go.microsoft.com/fwlink/?Linkid=852423">enable QR code generation</a>.</div>
+                <p>Quét mã QR hoặc nhập khóa <kbd>@sharedKey</kbd> vào ứng dụng xác thực. Không phân biệt khoảng trắng và chữ hoa/thường.</p>
+                <div class="alert alert-info">Xem cách <a href="https://go.microsoft.com/fwlink/?Linkid=852423">bật tạo mã QR</a>.</div>
                 <div></div>
                 <div data-url="@authenticatorUri"></div>
             </li>
             <li>
                 <p>
-                    Once you have scanned the QR code or input the key above, your two factor authentication app will provide you
-                    with a unique code. Enter the code in the confirmation box below.
+                    Sau khi quét mã QR hoặc nhập khóa ở trên, ứng dụng xác thực sẽ cho bạn
+                    một mã. Nhập mã đó vào ô xác nhận bên dưới.
                 </p>
                 <div class="row">
                     <div class="col-xl-6">
                         <EditForm Model="Input" FormName="send-code" OnValidSubmit="OnValidSubmitAsync" method="post">
                             <DataAnnotationsValidator />
                             <div class="form-floating mb-3">
-                                <InputText @bind-Value="Input.Code" id="Input.Code" class="form-control" autocomplete="off" placeholder="Enter the code" />
-                                <label for="Input.Code" class="control-label form-label">Verification Code</label>
+                                <InputText @bind-Value="Input.Code" id="Input.Code" class="form-control" autocomplete="off" placeholder="Nhập mã" />
+                                <label for="Input.Code" class="control-label form-label">Mã xác nhận</label>
                                 <ValidationMessage For="() => Input.Code" class="text-danger" />
                             </div>
-                            <button type="submit" class="w-100 btn btn-lg btn-primary">Verify</button>
+                            <button type="submit" class="w-100 btn btn-lg btn-primary">Xác nhận</button>
                             <ValidationSummary class="text-danger" role="alert" />
                         </EditForm>
                     </div>
@@ -110,7 +110,7 @@ else
 
         if (!is2faTokenValid)
         {
-            message = "Error: Verification code is invalid.";
+            message = "Lỗi: Mã xác nhận không đúng.";
             return;
         }
 
@@ -118,7 +118,7 @@ else
         var userId = await UserManager.GetUserIdAsync(user);
         Logger.LogInformation("User with ID '{UserId}' has enabled 2FA with an authenticator app.", userId);
 
-        message = "Your authenticator app has been verified.";
+        message = "Đã xác nhận ứng dụng xác thực.";
 
         if (await UserManager.CountRecoveryCodesAsync(user) == 0)
         {
@@ -175,10 +175,10 @@ else
 
     private sealed class InputModel
     {
-        [Required]
-        [StringLength(7, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [Required(ErrorMessage = "Vui lòng nhập mã xác nhận.")]
+        [StringLength(7, ErrorMessage = "Mã phải dài từ {2} đến {1} ký tự.", MinimumLength = 6)]
         [DataType(DataType.Text)]
-        [Display(Name = "Verification Code")]
+        [Display(Name = "Mã xác nhận")]
         public string Code { get; set; } = "";
     }
 }

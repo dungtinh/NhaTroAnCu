@@ -8,24 +8,24 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<ResetAuthenticator> Logger
 
-<PageTitle>Reset authenticator key</PageTitle>
+<PageTitle>Đặt lại khóa xác thực</PageTitle>
 
 <StatusMessage />
-<h3>Reset authenticator key</h3>
+<h3>Đặt lại khóa xác thực</h3>
 <div class="alert alert-warning" role="alert">
     <p>
         <span class="glyphicon glyphicon-warning-sign"></span>
-        <strong>If you reset your authenticator key your authenticator app will not work until you reconfigure it.</strong>
+        <strong>Nếu đặt lại khóa xác thực, ứng dụng xác thực sẽ không dùng được cho đến khi bạn thiết lập lại.</strong>
     </p>
     <p>
-        This process disables 2FA until you verify your authenticator app.
-        If you do not complete your authenticator app configuration you may lose access to your account.
+        Thao tác này tắt 2FA cho đến khi bạn xác nhận lại ứng dụng xác thực.
+        Nếu không hoàn tất thiết lập ứng dụng xác thực, bạn có thể không vào được tài khoản.
     </p>
 </div>
 <div>
     <form @formname="reset-authenticator" @onsubmit="OnSubmitAsync" method="post">
         <AntiforgeryToken />
-        <button class="btn btn-danger" type="submit">Reset authenticator key</button>
+        <button class="btn btn-danger" type="submit">Đặt lại khóa xác thực</button>
     </form>
 </div>
 
@@ -51,7 +51,7 @@
 
         RedirectManager.RedirectToWithStatus(
             "Account/Manage/EnableAuthenticator",
-            "Your authenticator app key has been reset, you will need to configure your authenticator app using the new key.",
+            "Đã đặt lại khóa xác thực, bạn cần thiết lập lại ứng dụng xác thực bằng khóa mới.",
             HttpContext);
     }
 }

@@ -9,15 +9,15 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<DeletePersonalData> Logger
 
-<PageTitle>Delete Personal Data</PageTitle>
+<PageTitle>Xóa dữ liệu cá nhân</PageTitle>
 
 <StatusMessage Message="@message" />
 
-<h3>Delete Personal Data</h3>
+<h3>Xóa dữ liệu cá nhân</h3>
 
 <div class="alert alert-warning" role="alert">
     <p>
-        <strong>Deleting this data will permanently remove your account, and this cannot be recovered.</strong>
+        <strong>Xóa dữ liệu này sẽ xóa vĩnh viễn tài khoản của bạn và không thể khôi phục.</strong>
     </p>
 </div>
 
@@ -28,12 +28,12 @@
         @if (requirePassword)
         {
             <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="Please enter your password." />
-                <label for="Input.Password" class="form-label">Password</label>
+                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="Nhập mật khẩu." />
+                <label for="Input.Password" class="form-label">Mật khẩu</label>
                 <ValidationMessage For="() => Input.Password" class="text-danger" />
             </div>
         }
-        <button class="w-100 btn btn-lg btn-danger" type="submit">Delete data and close my account</button>
+        <button class="w-100 btn btn-lg btn-danger" type="submit">Xóa dữ liệu và đóng tài khoản</button>
     </EditForm>
 </div>
 
@@ -71,7 +71,7 @@
 
         if (requirePassword && !await UserManager.CheckPasswordAsync(user, Input.Password))
         {
-            message = "Error: Incorrect password.";
+            message = "Lỗi: Mật khẩu không đúng.";
             return;
         }
 
