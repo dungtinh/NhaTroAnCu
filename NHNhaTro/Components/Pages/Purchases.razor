@@ -31,8 +31,8 @@
             </div>
             <div class="col-12"><FileUpload Kind="Receipts" Label="Ảnh hóa đơn/chứng từ" Camera="true" Required="true" @bind-Files="form.Receipts" Scanned="OnScanned" /></div>
         </div>
-        <div class="text-end mt-2">
-            <button type="button" class="btn btn-secondary me-2" @onclick="() => form = null">Hủy</button>
+        <div class="nh-action-bar justify-content-end">
+            <button type="button" class="btn btn-secondary" @onclick="() => form = null">Hủy</button>
             <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="SaveAsync"><i class="fas fa-check"></i> Lưu</button>
         </div>
     </div>
@@ -47,7 +47,23 @@
         <div class="col-6 col-md-3"><label class="form-label small">Tìm</label><input class="form-control" @bind="search" @bind:after="LoadAsync" /></div>
         <div class="col-md-2 align-self-end text-end small">@list.Count khoản · <strong>@Fmt.Vnd(list.Sum(r => r.Amount))</strong></div>
     </div>
-    <div class="table-responsive">
+    <div class="d-md-none">
+        @foreach (var r in list)
+        {
+            <div class="nh-list-item py-2" @key="r.Id">
+                <div class="top">
+                    <div class="small text-muted">@Fmt.Date(r.Date)@(r.RoomCode != null ? " · " + r.RoomCode : "") · @r.AccountName</div>
+                    <div class="fw-bold text-danger text-nowrap">@Fmt.Money(r.Amount)</div>
+                </div>
+                <div>@r.Description @if (r.IsAdvertising) {<span class="badge bg-info">Quảng cáo</span>}</div>
+                <div class="small text-muted">@r.Supplier</div>
+                <AttachmentList EntityType="@AttachmentOwner.Purchase" EntityId="r.Id" ShowEmpty="false" CanDelete="isAdmin" />
+                @if (isAdmin) { <button type="button" class="btn btn-link btn-sm p-0 text-danger" @onclick="() => DeleteAsync(r)">Xóa</button> }
+            </div>
+        }
+        @if (list.Count == 0) { <div class="text-center text-muted py-3">Chưa có khoản mua sắm.</div> }
+    </div>
+    <div class="table-responsive d-none d-md-block">
         <table class="nh-table">
             <thead><tr><th>Ngày</th><th>Nội dung</th><th>Nơi bán</th><th>Phòng</th><th class="text-end">Số tiền</th><th>Tài khoản</th><th>Chứng từ</th><th>Người ghi</th><th></th></tr></thead>
             <tbody>

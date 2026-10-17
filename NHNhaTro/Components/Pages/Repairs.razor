@@ -44,8 +44,8 @@
         </div>
         @if (RepeatWarning is { } w) { <div class="alert alert-warning small py-2 mt-2 mb-0"><i class="fas fa-exclamation-triangle"></i> @w</div> }
         <div class="small text-muted mt-2">Bắt buộc có ảnh; có chi tiền thì bắt buộc chứng từ. Phiếu ghi lại người tạo và thời điểm, chỉ Quản trị được xóa.</div>
-        <div class="text-end mt-2">
-            <button type="button" class="btn btn-secondary me-2" @onclick="CancelForm">Hủy</button>
+        <div class="nh-action-bar justify-content-end">
+            <button type="button" class="btn btn-secondary" @onclick="CancelForm">Hủy</button>
             <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="SaveAsync"><i class="fas fa-check"></i> Lưu phiếu</button>
         </div>
     </div>
@@ -63,7 +63,22 @@
         <div class="col-6 col-md-3"><label class="form-label small">Tìm</label><input class="form-control" @bind="search" @bind:after="LoadAsync" /></div>
         <div class="col-md-2 align-self-end text-end small">@list.Count phiếu · <strong>@Fmt.Vnd(list.Sum(r => r.Amount))</strong></div>
     </div>
-    <div class="table-responsive">
+    <div class="d-md-none">
+        @foreach (var r in list)
+        {
+            <a class="nh-list-item d-block text-reset text-decoration-none py-2 @(r.ReceiptCount == 0 && r.Amount > 0 ? "border-danger" : "")" href="@($"sua-chua/{r.Id}")" @key="r.Id">
+                <div class="top">
+                    <div class="small text-muted">@Fmt.Date(r.Date) · @r.Place</div>
+                    <div class="fw-bold text-danger text-nowrap">@Fmt.Money(r.Amount)</div>
+                </div>
+                <div>@r.Description @if (r.Item != null) {<span class="badge bg-light text-dark border">@r.Item</span>}
+                    @if (r.RepeatCount > 1) { <span class="badge bg-warning text-dark">@r.RepeatCount lần/180 ngày</span> }</div>
+                <div class="small text-muted"><i class="fas fa-image"></i> @r.PhotoCount · <i class="fas fa-receipt"></i> @r.ReceiptCount · @r.PerformedBy · @r.CreatedBy</div>
+            </a>
+        }
+        @if (list.Count == 0) { <div class="text-center text-muted py-3">Chưa có phiếu sửa chữa.</div> }
+    </div>
+    <div class="table-responsive d-none d-md-block">
         <table class="nh-table">
             <thead><tr><th>Ngày</th><th>Phạm vi</th><th>Đồ đạc</th><th>Nội dung</th><th>Người sửa</th><th class="text-end">Số tiền</th><th>Ảnh/CT</th><th>Người ghi</th><th></th></tr></thead>
             <tbody>

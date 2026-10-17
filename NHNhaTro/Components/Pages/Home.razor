@@ -8,7 +8,7 @@
 
 <div class="nh-page-title">
     <h2><i class="fas fa-th"></i> Sơ đồ phòng</h2>
-    <div class="d-flex gap-2">
+    <div class="d-none d-lg-flex gap-2">
         <a class="btn btn-primary" href="nhan-phong"><i class="fas fa-door-open"></i> Nhận phòng</a>
         <a class="btn btn-success" href="thu-tien"><i class="fas fa-file-invoice-dollar"></i> Thu tiền tháng</a>
     </div>
@@ -36,10 +36,22 @@ else
         <span><i class="fas fa-exclamation-triangle text-warning"></i> Đồ đạc khác mặc định</span>
     </div>
 
-    <div class="row g-3">
-        @foreach (var block in map.Rooms.GroupBy(r => r.BlockCode))
+    <div class="nh-chips mb-3">
+        @foreach (var b in new[] { "" }.Concat(map.Rooms.Select(r => r.BlockCode).Distinct()))
         {
-            <div class="col-xl-6">
+            <button type="button" class="btn btn-sm @(blockFilter == b ? "btn-primary" : "btn-outline-primary")" @onclick="() => blockFilter = b">@(b == "" ? "Cả 2 dãy" : "Dãy " + b)</button>
+        }
+        <span class="vr mx-1"></span>
+        @foreach (var (c, label) in ColorFilters)
+        {
+            <button type="button" class="btn btn-sm @(colorFilter == c ? "btn-dark" : "btn-outline-secondary")" @onclick="() => colorFilter = colorFilter == c ? null : c">@label (@map.Rooms.Count(r => r.Color == c))</button>
+        }
+    </div>
+
+    <div class="row g-3">
+        @foreach (var block in map.Rooms.Where(r => blockFilter == "" || r.BlockCode == blockFilter).GroupBy(r => r.BlockCode))
+        {
+            <div class="@(blockFilter == "" ? "col-xl-6" : "col-12")">
                 <div class="nh-card">
                     <h5><i class="fas fa-building"></i> Dãy @block.Key
                         <small class="text-muted fw-normal ms-2">@block.Count(r => r.LeaseId != null)/@block.Count() phòng đang thuê</small>
@@ -50,12 +62,12 @@ else
                             <div class="nh-floor-label">Tầng @(floor.Key + 1)</div>
                             @foreach (var r in floor.OrderBy(r => r.Number))
                             {
-                                <a class="nh-room @r.Color" href="@($"phong/{r.Code}")" @key="r.Id" title="@Tooltip(r)">
+                                <a class="nh-room @r.Color" style="@(colorFilter != null && r.Color != colorFilter ? "opacity:.18" : null)" href="@($"phong/{r.Code}")" @key="r.Id" title="@Tooltip(r)">
                                     @if (r.FurnitureDiffers) { <i class="fas fa-exclamation-triangle warn text-warning"></i> }
                                     <span class="code">@r.Code</span>
                                     <span class="who">@(r.RepresentativeName ?? (r.Status == RoomStatus.Maintenance ? "Đang sửa" : "Trống"))</span>
                                     <span class="meta">
-                                        <span>@(r.LeaseId != null ? $"{r.PersonCount} người" : Fmt.Money(r.Rent / 1000) + "k")</span>
+                                        <span>@if (r.LeaseId != null) {<i class="fas fa-user"></i> @r.PersonCount} else {@(Fmt.Money(r.Rent / 1000) + "k")}</span>
                                         @if (r.Outstanding > 0) { <span>-@Fmt.Money(r.Outstanding / 1000)k</span> }
                                     </span>
                                 </a>
@@ -70,6 +82,10 @@ else
 
 @code {
     private RoomMap? map;
+    private string blockFilter = "";
+    private string? colorFilter;
+    private static readonly (string, string)[] ColorFilters =
+        [(RoomColor.Empty, "Trống"), (RoomColor.NoBill, "Chưa lập phiếu"), (RoomColor.Unpaid, "Còn nợ"), (RoomColor.Paid, "Đã thu đủ")];
 
     protected override async Task OnInitializedAsync() => map = await Rooms.GetMapAsync();
 

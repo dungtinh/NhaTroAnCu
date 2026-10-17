@@ -40,21 +40,48 @@
 </div>
 
 <div class="nh-card">
-    <div class="row g-2 mb-3">
+    <div class="row g-2 mb-3 @(showFilters ? "" : "nh-filters-collapsed")">
         <div class="col-6 col-md-2"><label class="form-label small">Từ ngày</label><input type="date" class="form-control" @bind="filter.From" @bind:after="SearchAsync" /></div>
         <div class="col-6 col-md-2"><label class="form-label small">Đến ngày</label><input type="date" class="form-control" @bind="filter.To" @bind:after="SearchAsync" /></div>
-        <div class="col-6 col-md-2"><label class="form-label small">Tài khoản</label>
+        <div class="col-6 col-md-2 nh-adv"><label class="form-label small">Tài khoản</label>
             <select class="form-select" @bind="filter.AccountId" @bind:after="SearchAsync"><option value="">Tất cả</option>@foreach (var a in accounts) {<option value="@a.Id">@a.Name</option>}</select></div>
-        <div class="col-6 col-md-2"><label class="form-label small">Loại</label>
+        <div class="col-6 col-md-2 nh-adv"><label class="form-label small">Loại</label>
             <select class="form-select" @bind="filter.Category" @bind:after="SearchAsync"><option value="">Tất cả</option>@foreach (var c in TxCategory.All) {<option value="@c">@TxCategory.Display(c)</option>}</select></div>
-        <div class="col-6 col-md-2"><label class="form-label small">Thu/chi</label>
+        <div class="col-6 col-md-2 nh-adv"><label class="form-label small">Thu/chi</label>
             <select class="form-select" @bind="filter.Direction" @bind:after="SearchAsync"><option value="">Cả hai</option><option value="in">Thu</option><option value="out">Chi</option></select></div>
-        <div class="col-6 col-md-2"><label class="form-label small">Tìm</label><input class="form-control" placeholder="Nội dung, phòng" @bind="filter.Search" @bind:after="SearchAsync" /></div>
+        <div class="col-12 col-md-2"><label class="form-label small">Tìm</label>
+            <div class="input-group">
+                <input class="form-control" placeholder="Nội dung, phòng" @bind="filter.Search" @bind:after="SearchAsync" />
+                <button type="button" class="btn btn-outline-secondary d-md-none" title="Thêm bộ lọc" @onclick="() => showFilters = !showFilters"><i class="fas fa-sliders-h"></i></button>
+            </div></div>
     </div>
     @if (ledger != null)
     {
         <div class="small mb-2">@ledger.Total giao dịch · Thu <strong class="text-success">@Fmt.Money(ledger.SumIn)</strong> · Chi <strong class="text-danger">@Fmt.Money(ledger.SumOut)</strong> · Chênh lệch <strong>@Fmt.Money(ledger.SumIn - ledger.SumOut)</strong></div>
-        <div class="table-responsive">
+        @* Điện thoại: danh sách gọn *@
+        <div class="d-md-none">
+            @foreach (var r in ledger.Rows)
+            {
+                <div class="nh-list-item py-2" @key="r.Id">
+                    <div class="top">
+                        <div class="small text-muted">@Fmt.Date(r.Date) · @TxCategory.Display(r.Category)@(r.RoomCode != null ? " · " + r.RoomCode : "")</div>
+                        <div class="fw-bold text-nowrap @(r.Amount > 0 ? "text-success" : "text-danger")">@(r.Amount > 0 ? "+" : "")@Fmt.Money(r.Amount)</div>
+                    </div>
+                    <div>@r.Description</div>
+                    <div class="d-flex flex-wrap gap-2 align-items-center small text-muted">
+                        <span>@r.AccountName</span>
+                        @if (r.RepairId != null) { <a href="@($"sua-chua/{r.RepairId}")">phiếu sửa</a> }
+                        @if (r.LeaseId != null) { <a href="@($"hop-dong/{r.LeaseId}")">hợp đồng</a> }
+                        @if (r.AttachmentCount > 0) { <button type="button" class="btn btn-link btn-sm p-0" @onclick="() => viewTx = viewTx == r.Id ? null : r.Id"><i class="fas fa-paperclip"></i> @r.AttachmentCount</button> }
+                        @if (isAdmin && r.RepairId == null && r.PurchaseId == null) { <button type="button" class="btn btn-link btn-sm p-0 text-danger ms-auto" @onclick="() => DeleteAsync(r)">Xóa</button> }
+                    </div>
+                    @if (viewTx == r.Id) { <div class="mt-1"><AttachmentList EntityType="@AttachmentOwner.Transaction" EntityId="r.Id" CanDelete="isAdmin" /></div> }
+                </div>
+            }
+            @if (ledger.Rows.Count == 0) { <div class="text-center text-muted py-3">Không có giao dịch.</div> }
+        </div>
+
+        <div class="table-responsive d-none d-md-block">
             <table class="nh-table">
                 <thead><tr><th>Ngày</th><th>Tài khoản</th><th>Loại</th><th>Nội dung</th><th>Phòng</th><th class="text-end">Số tiền</th><th>Người ghi</th><th>Chứng từ</th><th></th></tr></thead>
                 <tbody>
@@ -149,6 +176,7 @@
     private List<Room> rooms = [];
     private bool isAdmin;
     private int? viewTx;
+    private bool showFilters;
 
     private ManualTransactionForm? manual;
     private List<PendingFile> manualFiles = [];

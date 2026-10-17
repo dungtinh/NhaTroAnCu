@@ -36,15 +36,15 @@
         <div class="row g-2">
             <div class="col-md-5"><label class="form-label">Họ và tên <span class="text-danger">*</span></label><input class="form-control" maxlength="100" @bind="t.FullName" @bind:after="() => Changed.InvokeAsync()" /></div>
             <div class="col-md-4"><label class="form-label">Số CCCD/Hộ chiếu <span class="text-danger">*</span></label><input class="form-control" maxlength="30" @bind="t.IdentityCard" @bind:after="() => OnCardChangedAsync(t)" /></div>
-            <div class="col-md-3"><label class="form-label">Điện thoại</label><input class="form-control" maxlength="20" @bind="t.Phone" /></div>
-            <div class="col-md-3"><label class="form-label">Ngày sinh</label><input type="date" class="form-control" @bind="t.BirthDate" /></div>
-            <div class="col-md-2">
+            <div class="col-6 col-md-3"><label class="form-label">Điện thoại</label><input class="form-control" maxlength="20" type="tel" inputmode="tel" @bind="t.Phone" /></div>
+            <div class="col-6 col-md-3"><label class="form-label">Ngày sinh</label><input type="date" class="form-control" @bind="t.BirthDate" /></div>
+            <div class="col-6 col-md-2">
                 <label class="form-label">Giới tính</label>
                 <select class="form-select" @bind="t.Gender"><option value=""></option><option>Nam</option><option>Nữ</option></select>
             </div>
-            <div class="col-md-2"><label class="form-label">Dân tộc</label><input class="form-control" maxlength="50" @bind="t.Ethnicity" /></div>
-            <div class="col-md-2"><label class="form-label">Quốc tịch</label><input class="form-control" maxlength="50" @bind="t.Nationality" /></div>
-            <div class="col-md-3"><label class="form-label">Biển số xe</label><input class="form-control" maxlength="20" @bind="t.VehiclePlate" /></div>
+            <div class="col-6 col-md-2"><label class="form-label">Dân tộc</label><input class="form-control" maxlength="50" @bind="t.Ethnicity" /></div>
+            <div class="col-6 col-md-2"><label class="form-label">Quốc tịch</label><input class="form-control" maxlength="50" @bind="t.Nationality" /></div>
+            <div class="col-6 col-md-3"><label class="form-label">Biển số xe</label><input class="form-control" maxlength="20" @bind="t.VehiclePlate" /></div>
             <div class="col-12"><label class="form-label">Địa chỉ thường trú</label><input class="form-control" maxlength="300" @bind="t.PermanentAddress" /></div>
         </div>
     </div>

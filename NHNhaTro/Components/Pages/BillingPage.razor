@@ -43,10 +43,64 @@ else
                     <input class="form-check-input" type="checkbox" id="showAll" @bind="showAll" />
                     <label class="form-check-label small" for="showAll">Hiện cả phòng không cần lập</label>
                 </div>
-                <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="SaveAllAsync"><i class="fas fa-save"></i> Lưu tất cả phiếu đã nhập số điện</button>
+                <button type="button" class="btn btn-primary d-none d-md-inline-flex" disabled="@Busy" @onclick="SaveAllAsync"><i class="fas fa-save"></i> Lưu tất cả phiếu đã nhập số điện</button>
             </div>
         </div>
-        <div class="table-responsive">
+
+        @* Điện thoại: mỗi phòng một thẻ, ô số điện to *@
+        <div class="d-md-none">
+            @foreach (var r in rows)
+            {
+                var t = r.Total(sheet.ElectricityPrice, sheet.WaterPerPerson);
+                bool done = r.BillId != null && r.Paid >= t;
+                <div class="nh-list-item @(done ? "done" : "")" @key="r.LeaseId">
+                    <div class="top">
+                        <div class="text-truncate">
+                            <a href="@($"phong/{r.RoomCode}")" class="code">@r.RoomCode</a>
+                            <span class="small text-muted ms-1">@r.Representative</span>
+                        </div>
+                        <div class="text-end">
+                            <div class="fw-bold">@Fmt.Vnd(t)</div>
+                            @if (r.BillId != null) { <div class="small @(done ? "text-success" : "text-danger")">Đã thu @Fmt.Money(r.Paid)</div> }
+                            else if (r.SkipThisMonth) { <div class="small text-muted">Đã thu kỳ đầu</div> }
+                            else { <div class="small text-primary">Chưa lập phiếu</div> }
+                        </div>
+                    </div>
+                    @if (r.PreviousDebt > 0) { <div class="small text-danger">Nợ kỳ trước @Fmt.Vnd(r.PreviousDebt)</div> }
+                    <div class="row g-2 align-items-end mt-1">
+                        <div class="col-4"><label class="form-label small mb-0">Số cũ</label><div class="form-control bg-light nh-meter">@r.MeterStart</div></div>
+                        <div class="col-5"><label class="form-label small mb-0">Số mới</label>
+                            <input type="number" inputmode="numeric" min="@r.MeterStart" class="form-control nh-meter @(r.MeterEnd < r.MeterStart ? "is-invalid" : "")" @bind="r.MeterEnd" /></div>
+                        <div class="col-3"><label class="form-label small mb-0">Người</label><input type="number" inputmode="numeric" min="0" class="form-control text-center" @bind="r.PersonCount" /></div>
+                    </div>
+                    <div class="small text-muted mt-2">
+                        Phòng @Fmt.Money(r.Rent) · Điện @Fmt.Money(r.Electricity(sheet.ElectricityPrice))@(r.MeterEnd >= r.MeterStart ? $" ({r.MeterEnd - r.MeterStart} số)" : "") · Nước @Fmt.Money(r.Water(sheet.WaterPerPerson))
+                        @if (r.OtherAmount != 0 || r.Discount != 0) { <span> · Khác @Fmt.Money(r.OtherAmount - r.Discount)</span> }
+                    </div>
+                    <details class="mt-1">
+                        <summary class="small text-primary">Sửa tiền phòng, khoản khác, giảm trừ</summary>
+                        <div class="row g-2 mt-1">
+                            <div class="col-12"><label class="form-label small mb-0">Tiền phòng</label><MoneyInput @bind-Value="r.Rent" /></div>
+                            <div class="col-6"><label class="form-label small mb-0">Khác (rác, xe...)</label><MoneyInput @bind-Value="r.OtherAmount" /></div>
+                            <div class="col-6"><label class="form-label small mb-0">Giảm trừ</label><MoneyInput @bind-Value="r.Discount" /></div>
+                            <div class="col-12"><label class="form-label small mb-0">Ghi chú</label><input class="form-control" @bind="r.Note" /></div>
+                        </div>
+                    </details>
+                    <div class="d-flex gap-2 mt-2">
+                        <button type="button" class="btn btn-primary flex-fill" disabled="@Busy" @onclick="() => SaveRowAsync(r)"><i class="fas fa-save"></i> @(r.BillId == null ? "Lập phiếu" : "Lưu")</button>
+                        @if (r.BillId != null && r.Paid < t) { <button type="button" class="btn btn-success flex-fill" @onclick="() => OpenPayAsync(r)"><i class="fas fa-hand-holding-usd"></i> Thu tiền</button> }
+                        @if (r.BillId != null) { <a class="btn btn-outline-secondary" title="In phiếu" href="@($"files/bills/{r.BillId}")" target="_blank"><i class="fas fa-print"></i></a> }
+                    </div>
+                </div>
+            }
+            @if (rows.Count == 0) { <div class="text-center text-muted py-3">Không có phòng nào cần lập phiếu tháng này.</div> }
+            @if (rows.Any(r => r.MeterEnd != null && r.BillId == null))
+            {
+                <div class="nh-action-bar"><button type="button" class="btn btn-primary btn-lg" disabled="@Busy" @onclick="SaveAllAsync"><i class="fas fa-save"></i> Lưu tất cả phiếu đã nhập</button></div>
+            }
+        </div>
+
+        <div class="table-responsive d-none d-md-block">
             <table class="nh-table nh-billing">
                 <thead>
                     <tr>

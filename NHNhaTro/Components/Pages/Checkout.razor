@@ -30,9 +30,9 @@ else
             <div class="nh-card">
                 <h5>1. Chốt điện</h5>
                 <div class="row g-2">
-                    <div class="col-md-4"><label class="form-label">Ngày trả phòng</label><input type="date" class="form-control" @bind="form.EndDate" /></div>
-                    <div class="col-md-4"><label class="form-label">Số điện cuối <span class="text-danger">*</span></label>
-                        <input type="number" min="0" class="form-control" @bind="form.EndMeterReading" @bind:after="RefreshAsync" /></div>
+                    <div class="col-6 col-md-4"><label class="form-label">Ngày trả phòng</label><input type="date" class="form-control" @bind="form.EndDate" /></div>
+                    <div class="col-6 col-md-4"><label class="form-label">Số điện cuối <span class="text-danger">*</span></label>
+                        <input type="number" inputmode="numeric" min="0" class="form-control nh-meter" @bind="form.EndMeterReading" @bind:after="RefreshAsync" /></div>
                     <div class="col-md-4 small text-muted pt-md-4">Số đã chốt gần nhất: <strong>@preview?.LastMeter</strong><br />Dùng @preview?.UsedKwh số = @Fmt.Money(preview?.Electricity ?? 0)đ</div>
                 </div>
             </div>
@@ -136,12 +136,17 @@ else
                         <div class="alert alert-warning small py-2 mt-2 mb-0">Số trả/thu lệch quyết toán @Fmt.Vnd(Mismatch). Phần thiếu sẽ để lại thành nợ, phần thừa ghi thu khác.</div>
                     }
                 }
-                <button type="button" class="btn btn-danger btn-lg w-100 mt-3" disabled="@Busy" @onclick="SaveAsync">
+                <button type="button" class="btn btn-danger btn-lg w-100 mt-3 d-none d-lg-block" disabled="@Busy" @onclick="SaveAsync">
                     <i class="fas @(Busy ? "fa-spinner fa-spin" : "fa-check")"></i> Hoàn tất trả phòng
                 </button>
                 <div class="small text-muted mt-2">Sau khi hoàn tất, phòng chuyển về trạng thái trống và số điện cuối thành số đầu cho khách sau.</div>
             </div>
         </div>
+    </div>
+    <div class="nh-action-bar d-lg-none">
+        <button type="button" class="btn btn-danger btn-lg" disabled="@Busy" @onclick="SaveAsync">
+            <i class="fas @(Busy ? "fa-spinner fa-spin" : "fa-check")"></i> Hoàn tất trả phòng
+        </button>
     </div>
 }
 

@@ -1,65 +1,86 @@
 ﻿@inherits LayoutComponentBase
 @inject SetupService Setup
 
-<nav class="navbar navbar-expand-lg navbar-dark nh-navbar">
-    <div class="container-fluid px-lg-4">
-        <a class="navbar-brand fw-bold" href=""><i class="fas fa-building"></i> @(settings?.Name ?? "Nhà trọ")</a>
-        <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Mở menu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="mainNav">
-            <AuthorizeView>
-                <Authorized>
-                    <ul class="navbar-nav me-auto">
-                        <li class="nav-item"><NavLink class="nav-link" href="" Match="NavLinkMatch.All"><i class="fas fa-th"></i> Sơ đồ phòng</NavLink></li>
-                        <li class="nav-item"><NavLink class="nav-link" href="thu-tien"><i class="fas fa-file-invoice-dollar"></i> Thu tiền</NavLink></li>
-                        <li class="nav-item"><NavLink class="nav-link" href="khach-thue"><i class="fas fa-users"></i> Khách thuê</NavLink></li>
-                        <li class="nav-item"><NavLink class="nav-link" href="sua-chua"><i class="fas fa-tools"></i> Sửa chữa</NavLink></li>
-                        <li class="nav-item"><NavLink class="nav-link" href="mua-sam"><i class="fas fa-shopping-cart"></i> Mua sắm</NavLink></li>
-                        <li class="nav-item"><NavLink class="nav-link" href="thu-chi"><i class="fas fa-wallet"></i> Thu chi</NavLink></li>
-                        <li class="nav-item"><NavLink class="nav-link" href="quang-cao"><i class="fas fa-bullhorn"></i> Quảng cáo</NavLink></li>
-                        @if (context.User.IsInRole(Roles.Admin))
-                        {
-                            <li class="nav-item"><NavLink class="nav-link" href="cau-hinh"><i class="fas fa-cog"></i> Cấu hình</NavLink></li>
-                        }
-                    </ul>
-                    <ul class="navbar-nav">
-                        <li class="nav-item">
-                            <NavLink class="nav-link" href="Account/Manage" title="@(context.User.IsInRole(Roles.Admin) ? "Quản trị" : "Nhân viên")">
-                                <i class="fas fa-user-circle"></i> @context.User.Identity?.Name
-                            </NavLink>
-                        </li>
-                        <li class="nav-item">
-                            <form action="Account/Logout" method="post" class="d-inline">
-                                <AntiforgeryToken />
-                                <input type="hidden" name="ReturnUrl" value="" />
-                                <button type="submit" class="nav-link btn btn-link"><i class="fas fa-sign-out-alt"></i> Thoát</button>
-                            </form>
-                        </li>
-                    </ul>
-                </Authorized>
-                <NotAuthorized>
-                    <ul class="navbar-nav ms-auto">
-                        <li class="nav-item"><NavLink class="nav-link" href="gioi-thieu"><i class="fas fa-home"></i> Giới thiệu</NavLink></li>
-                        <li class="nav-item"><NavLink class="nav-link" href="Account/Login"><i class="fas fa-sign-in-alt"></i> Đăng nhập</NavLink></li>
-                    </ul>
-                </NotAuthorized>
-            </AuthorizeView>
-        </div>
+@* Máy tính (≥ 992px): thanh menu trên. Điện thoại: thanh trên gọn + thanh điều hướng dưới + bảng "Thêm". *@
+<nav class="navbar navbar-dark nh-navbar">
+    <div class="container-fluid px-3 px-lg-4">
+        <a class="navbar-brand fw-bold text-truncate" href=""><i class="fas fa-building"></i> @(settings?.Name ?? "Nhà trọ")</a>
+        <AuthorizeView>
+            <Authorized>
+                <ul class="navbar-nav flex-row gap-1 me-auto d-none d-lg-flex">
+                    @foreach (var m in Menu.Where(m => !m.AdminOnly || context.User.IsInRole(Roles.Admin)))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="@m.Href" Match="@(m.Href == "" ? NavLinkMatch.All : NavLinkMatch.Prefix)"><i class="fas @m.Icon"></i> @m.Text</NavLink></li>
+                    }
+                </ul>
+                <div class="d-flex align-items-center gap-1">
+                    <NavLink class="nav-link nh-user d-none d-lg-inline-flex" href="Account/Manage" title="@(context.User.IsInRole(Roles.Admin) ? "Quản trị" : "Nhân viên")">
+                        <i class="fas fa-user-circle"></i> <span class="d-none d-xl-inline ms-1">@context.User.Identity?.Name</span>
+                    </NavLink>
+                    <form action="Account/Logout" method="post" class="d-none d-lg-inline">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="ReturnUrl" value="" />
+                        <button type="submit" class="nav-link btn btn-link" title="Đăng xuất"><i class="fas fa-sign-out-alt"></i></button>
+                    </form>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="d-flex gap-1">
+                    <NavLink class="nav-link" href="gioi-thieu"><i class="fas fa-home"></i><span class="d-none d-sm-inline"> Giới thiệu</span></NavLink>
+                    <NavLink class="nav-link" href="Account/Login"><i class="fas fa-sign-in-alt"></i> Đăng nhập</NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     </div>
 </nav>
 
-<main class="container-fluid px-lg-4 nh-main">
+<main class="container-fluid px-3 px-lg-4 nh-main">
     @Body
 </main>
 
-<footer class="nh-footer">
+<footer class="nh-footer d-none d-lg-block">
     <div class="container-fluid px-lg-4">
         <strong>@(settings?.Name)</strong>
         @if (!string.IsNullOrWhiteSpace(settings?.Address)) { <span> · <i class="fas fa-map-marker-alt"></i> @settings.Address</span> }
         @if (!string.IsNullOrWhiteSpace(settings?.Phone)) { <span> · <i class="fas fa-phone"></i> @settings.Phone</span> }
     </div>
 </footer>
+
+<AuthorizeView>
+    <Authorized>
+        <nav class="nh-bottomnav d-lg-none" aria-label="Điều hướng chính">
+            <NavLink href="" Match="NavLinkMatch.All"><i class="fas fa-th-large"></i><span>Sơ đồ</span></NavLink>
+            <NavLink href="thu-tien"><i class="fas fa-file-invoice-dollar"></i><span>Thu tiền</span></NavLink>
+            <NavLink href="nhan-phong" class="nh-fab" title="Nhận phòng"><i class="fas fa-plus"></i><span>Nhận phòng</span></NavLink>
+            <NavLink href="thu-chi"><i class="fas fa-wallet"></i><span>Thu chi</span></NavLink>
+            <button type="button" data-bs-toggle="offcanvas" data-bs-target="#nhMore" aria-controls="nhMore"><i class="fas fa-bars"></i><span>Thêm</span></button>
+        </nav>
+
+        <div class="offcanvas offcanvas-bottom nh-more d-lg-none" tabindex="-1" id="nhMore" aria-labelledby="nhMoreTitle">
+            <div class="offcanvas-header pb-1">
+                <h6 class="offcanvas-title fw-bold" id="nhMoreTitle"><i class="fas fa-user-circle"></i> @context.User.Identity?.Name
+                    <small class="text-muted fw-normal">(@(context.User.IsInRole(Roles.Admin) ? "Quản trị" : "Nhân viên"))</small></h6>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Đóng"></button>
+            </div>
+            <div class="offcanvas-body pt-2">
+                <div class="nh-more-grid">
+                    @foreach (var m in Menu.Where(m => !m.AdminOnly || context.User.IsInRole(Roles.Admin)))
+                    {
+                        <a href="@m.Href"><i class="fas @m.Icon"></i><span>@m.Text</span></a>
+                    }
+                    <a href="bao-cao"><i class="fas fa-chart-bar"></i><span>Báo cáo</span></a>
+                    <a href="gioi-thieu"><i class="fas fa-globe-asia"></i><span>Trang khách xem</span></a>
+                    <a href="Account/Manage"><i class="fas fa-user-cog"></i><span>Tài khoản</span></a>
+                </div>
+                <form action="Account/Logout" method="post" class="mt-3">
+                    <AntiforgeryToken />
+                    <input type="hidden" name="ReturnUrl" value="" />
+                    <button type="submit" class="btn btn-outline-danger w-100"><i class="fas fa-sign-out-alt"></i> Đăng xuất</button>
+                </form>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
 
 <Toasts @rendermode="InteractiveServer" />
 
@@ -70,6 +91,20 @@
 </div>
 
 @code {
+    private record MenuItem(string Href, string Icon, string Text, bool AdminOnly = false);
+
+    private static readonly MenuItem[] Menu =
+    [
+        new("", "fa-th-large", "Sơ đồ phòng"),
+        new("thu-tien", "fa-file-invoice-dollar", "Thu tiền"),
+        new("khach-thue", "fa-users", "Khách thuê"),
+        new("sua-chua", "fa-tools", "Sửa chữa"),
+        new("mua-sam", "fa-shopping-cart", "Mua sắm"),
+        new("thu-chi", "fa-wallet", "Thu chi"),
+        new("quang-cao", "fa-bullhorn", "Quảng cáo"),
+        new("cau-hinh", "fa-cog", "Cấu hình", AdminOnly: true),
+    ];
+
     private AppSetting? settings;
 
     protected override async Task OnInitializedAsync()

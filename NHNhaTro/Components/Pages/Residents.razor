@@ -23,7 +23,24 @@
         </select>
         <span class="align-self-center small text-muted">@rows.Count người · @rows.Count(r => Nationality.IsForeign(r.Nationality, r.Ethnicity)) người nước ngoài</span>
     </div>
-    <div class="table-responsive">
+    <div class="d-md-none">
+        @foreach (var r in rows)
+        {
+            <a class="nh-list-item d-flex gap-2 align-items-center text-reset text-decoration-none py-2 @(r.MoveOutDate != null ? "opacity-50" : "")" href="@($"hop-dong/{r.LeaseId}")">
+                @if (r.Photo != null) { <img src="@r.Photo" alt="" class="nh-mini-thumb" style="width:48px;height:48px" /> }
+                else { <div class="nh-mini-thumb bg-light d-grid" style="width:48px;height:48px;place-items:center"><i class="fas fa-user text-muted"></i></div> }
+                <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex justify-content-between"><strong class="text-truncate">@r.FullName</strong><span class="fw-bold text-primary">@r.RoomCode</span></div>
+                    <div class="small text-muted text-truncate">@r.IdentityCard · @r.Phone
+                        @if (r.IsRepresentative) {<span class="badge bg-info">Đại diện</span>}
+                        @if (Nationality.IsForeign(r.Nationality, r.Ethnicity)) {<span class="badge bg-warning text-dark">@r.Nationality</span>}</div>
+                    <div class="small text-muted">Vào @Fmt.Date(r.MoveInDate)@(r.MoveOutDate != null ? " · ra " + Fmt.Date(r.MoveOutDate) : "")</div>
+                </div>
+            </a>
+        }
+        @if (rows.Count == 0) { <div class="text-center text-muted py-3">Không có dữ liệu.</div> }
+    </div>
+    <div class="table-responsive d-none d-md-block">
         <table class="nh-table">
             <thead><tr><th></th><th>Phòng</th><th>Họ tên</th><th>CCCD/Hộ chiếu</th><th>Ngày sinh</th><th>Giới tính</th><th>Điện thoại</th><th>Quê quán/Thường trú</th><th>Biển số xe</th><th>Vào</th><th>Ra</th></tr></thead>
             <tbody>
