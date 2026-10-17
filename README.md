@@ -56,6 +56,13 @@ Cài đủ bản cập nhật Windows thì có thể xóa các file này.
 | `NhaTro:AllowRegistration` | Cho phép tự đăng ký tài khoản (mặc định `false`) |
 | `Storage:UploadsPath` | Thư mục lưu ảnh CCCD và scan hợp đồng (mặc định `NHNhaTro/Uploads`) |
 
+**Chặn lộ mật khẩu**: thư mục `.githooks` có hook chặn commit và push nếu nội dung có mật khẩu hoặc chuỗi kết nối kèm mật khẩu.
+Sau khi clone, bật hook một lần:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 **Quét CCCD**: thêm API key FPT.AI vào bảng `FPTReaderAPI` (giống bản cũ):
 
 ```sql

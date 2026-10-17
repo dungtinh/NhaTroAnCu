@@ -486,3 +486,9 @@ $RECYCLE.BIN/
 
 # File tải lên (ảnh CCCD, scan hợp đồng): dữ liệu cá nhân, không đưa lên git
 NHNhaTro/Uploads/
+
+# Bí mật: không bao giờ đưa lên git (chuỗi kết nối thật để trong User Secrets hoặc biến môi trường)
+secrets.json
+appsettings.*.local.json
+*.pubxml.user
+.env

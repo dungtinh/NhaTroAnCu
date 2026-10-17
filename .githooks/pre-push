@@ -1,0 +1,13 @@
+#!/bin/sh
+# Chặn push nếu bất kỳ commit sắp đẩy lên có thêm mật khẩu (phòng trường hợp commit bằng --no-verify).
+z=0000000000000000000000000000000000000000
+fail=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ "$local_sha" = "$z" ] && continue
+  if [ "$remote_sha" = "$z" ]; then range="$local_sha"; else range="$remote_sha..$local_sha"; fi
+  if ! git log -p --no-color -U0 --format= "$range" | sh "$(git rev-parse --show-toplevel)/.githooks/scan-secrets.sh"; then fail=1; fi
+done
+if [ $fail -ne 0 ]; then
+  echo "LỖI: push bị chặn vì có commit chứa mật khẩu (các dòng ở trên). Sửa lịch sử commit trước khi push."
+  exit 1
+fi

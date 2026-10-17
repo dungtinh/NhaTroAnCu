@@ -1,0 +1,7 @@
+#!/bin/sh
+# Chặn commit có mật khẩu. Chuỗi kết nối thật để trong User Secrets hoặc biến môi trường, không để trong repo.
+if ! git diff --cached --no-color -U0 | sh "$(git rev-parse --show-toplevel)/.githooks/scan-secrets.sh"; then
+  echo "LỖI: commit bị chặn vì có vẻ chứa mật khẩu (các dòng ở trên)."
+  echo "Hãy đưa mật khẩu vào User Secrets: dotnet user-secrets set \"ConnectionStrings:DefaultConnection\" \"...\" --project NHNhaTro"
+  exit 1
+fi
