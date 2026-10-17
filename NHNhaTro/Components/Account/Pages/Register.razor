@@ -4,6 +4,7 @@
 @using System.Text
 @using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.WebUtilities
 @using NHNhaTro.Data
 
@@ -107,6 +108,10 @@
         }
 
         Logger.LogInformation("User created a new account with password.");
+
+        // Tài khoản đầu tiên là Quản trị (chủ nhà); các tài khoản tự đăng ký sau đó là Nhân viên.
+        var isFirst = await UserManager.Users.CountAsync() == 1;
+        await UserManager.AddToRoleAsync(user, isFirst ? NHNhaTro.Data.Entities.Roles.Admin : NHNhaTro.Data.Entities.Roles.Staff);
 
         var userId = await UserManager.GetUserIdAsync(user);
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);

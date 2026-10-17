@@ -1,0 +1,83 @@
+@* Hộp thoại ghi nhận thu tiền cho một phiếu, kèm chứng từ (tùy chọn). *@
+@inject BillingService Billing
+@inject SetupService Setup
+@inject ToastService Toast
+@inject AuthenticationStateProvider AuthProvider
+
+@if (Bill != null)
+{
+    var due = Math.Max(0, Bill.TotalAmount - Paid);
+    <div class="nh-modal-backdrop" @onclick="CloseAsync">
+        <div class="nh-modal" style="max-width: 560px" @onclick:stopPropagation="true">
+            <div class="nh-modal-header bg-success">
+                <h5><i class="fas fa-hand-holding-usd"></i> Thu tiền phòng @RoomCode - @BillKind.Display(Bill.Kind) @Bill.Month.ToString("00")/@Bill.Year</h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="CloseAsync"></button>
+            </div>
+            <div class="nh-modal-body">
+                <div class="d-flex justify-content-between mb-2"><span>Tổng phiếu</span><strong>@Fmt.Vnd(Bill.TotalAmount)</strong></div>
+                <div class="d-flex justify-content-between mb-2"><span>Đã thu</span><span>@Fmt.Vnd(Paid)</span></div>
+                <div class="d-flex justify-content-between mb-3 text-danger"><span>Còn phải thu</span><strong>@Fmt.Vnd(due)</strong></div>
+                <div class="row g-2">
+                    <div class="col-6"><label class="form-label">Số tiền thu</label><MoneyInput @bind-Value="form.Amount" /></div>
+                    <div class="col-6"><label class="form-label">Ngày thu</label><input type="date" class="form-control" @bind="form.Date" /></div>
+                    <div class="col-12">
+                        <label class="form-label">Vào tài khoản</label>
+                        <select class="form-select" @bind="form.AccountId">
+                            @foreach (var a in accounts) { <option value="@a.Id">@a.Name</option> }
+                        </select>
+                    </div>
+                    <div class="col-12"><label class="form-label">Ghi chú</label><input class="form-control" maxlength="200" @bind="form.Note" /></div>
+                    <div class="col-12"><FileUpload Kind="Receipts" Label="Chứng từ thu tiền (tùy chọn)" @bind-Files="form.Receipts" /></div>
+                </div>
+                <div class="text-end mt-3">
+                    <button type="button" class="btn btn-secondary me-2" @onclick="CloseAsync">Hủy</button>
+                    <button type="button" class="btn btn-success" disabled="@busy" @onclick="SaveAsync"><i class="fas fa-check"></i> Ghi nhận</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Bill? Bill { get; set; }
+    [Parameter] public decimal Paid { get; set; }
+    [Parameter] public string RoomCode { get; set; } = "";
+    [Parameter] public EventCallback Closed { get; set; }
+    [Parameter] public EventCallback Saved { get; set; }
+
+    private PaymentForm form = new();
+    private List<MoneyAccount> accounts = [];
+    private int? currentBillId;
+    private bool busy;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Bill == null) { currentBillId = null; return; }
+        if (currentBillId == Bill.Id) return;
+        currentBillId = Bill.Id;
+        accounts = (await Setup.GetAccountsAsync()).Where(a => a.IsActive).ToList();
+        var s = await Setup.GetSettingsAsync();
+        form = new PaymentForm { BillId = Bill.Id, Amount = Math.Max(0, Bill.TotalAmount - Paid), AccountId = s.BusinessAccountId };
+    }
+
+    private async Task CloseAsync()
+    {
+        currentBillId = null;
+        await Closed.InvokeAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        busy = true;
+        try
+        {
+            var user = (await AuthProvider.GetAuthenticationStateAsync()).User.Identity?.Name;
+            await Billing.RecordPaymentAsync(form, user);
+            Toast.Success($"Đã thu {Fmt.Vnd(form.Amount)} phòng {RoomCode}.");
+            currentBillId = null;
+            await Saved.InvokeAsync();
+        }
+        catch (InvalidOperationException ex) { Toast.Error(ex.Message); }
+        finally { busy = false; }
+    }
+}

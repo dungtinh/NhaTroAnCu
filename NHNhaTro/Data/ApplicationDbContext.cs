@@ -6,143 +6,183 @@ namespace NHNhaTro.Data
 {
     public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
     {
+        public DbSet<AppSetting> Settings => Set<AppSetting>();
+        public DbSet<Block> Blocks => Set<Block>();
+        public DbSet<FurnitureItem> FurnitureItems => Set<FurnitureItem>();
+        public DbSet<BlockFurniture> BlockFurniture => Set<BlockFurniture>();
         public DbSet<Room> Rooms => Set<Room>();
-        public DbSet<Company> Companies => Set<Company>();
-        public DbSet<Contract> Contracts => Set<Contract>();
-        public DbSet<ContractRoom> ContractRooms => Set<ContractRoom>();
+        public DbSet<RoomFurniture> RoomFurniture => Set<RoomFurniture>();
+        public DbSet<Lease> Leases => Set<Lease>();
         public DbSet<Tenant> Tenants => Set<Tenant>();
-        public DbSet<ContractTenant> ContractTenants => Set<ContractTenant>();
-        public DbSet<ContractExtensionHistory> ContractExtensionHistories => Set<ContractExtensionHistory>();
-        public DbSet<UtilityBill> UtilityBills => Set<UtilityBill>();
-        public DbSet<IncomeExpenseCategory> IncomeExpenseCategories => Set<IncomeExpenseCategory>();
-        public DbSet<IncomeExpense> IncomeExpenses => Set<IncomeExpense>();
+        public DbSet<LeaseTenant> LeaseTenants => Set<LeaseTenant>();
+        public DbSet<LeasePenalty> LeasePenalties => Set<LeasePenalty>();
+        public DbSet<Bill> Bills => Set<Bill>();
+        public DbSet<MoneyAccount> Accounts => Set<MoneyAccount>();
+        public DbSet<MoneyTransaction> Transactions => Set<MoneyTransaction>();
+        public DbSet<Repair> Repairs => Set<Repair>();
+        public DbSet<Purchase> Purchases => Set<Purchase>();
+        public DbSet<Attachment> Attachments => Set<Attachment>();
         public DbSet<FptReaderApi> FptReaderApis => Set<FptReaderApi>();
+
+        protected override void ConfigureConventions(ModelConfigurationBuilder b)
+        {
+            b.Properties<decimal>().HavePrecision(18, 0);
+            b.Properties<decimal?>().HavePrecision(18, 0);
+        }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
-            // Database cũ không dùng cascade delete: mọi xóa dây chuyền do code xử lý.
+            builder.Entity<AppSetting>(e =>
+            {
+                e.Property(x => x.Id).ValueGeneratedNever();
+                e.Property(x => x.Name).HasMaxLength(200);
+                e.Property(x => x.Address).HasMaxLength(500);
+                e.Property(x => x.Owner).HasMaxLength(100);
+                e.Property(x => x.Phone).HasMaxLength(30);
+                e.Property(x => x.ZaloPhone).HasMaxLength(30);
+                e.Property(x => x.RegisterArea).HasMaxLength(200);
+                e.Property(x => x.AdTitle).HasMaxLength(200);
+                e.Property(x => x.MapUrl).HasMaxLength(1000);
+            });
+
+            builder.Entity<Block>(e =>
+            {
+                e.Property(x => x.Code).HasMaxLength(5).IsRequired();
+                e.Property(x => x.Name).HasMaxLength(100);
+                e.HasIndex(x => x.Code).IsUnique();
+            });
+
+            builder.Entity<FurnitureItem>(e => e.Property(x => x.Name).HasMaxLength(100).IsRequired());
+
+            builder.Entity<BlockFurniture>(e =>
+            {
+                e.HasIndex(x => new { x.BlockId, x.FurnitureItemId }).IsUnique();
+                e.HasOne(x => x.Block).WithMany(x => x.DefaultFurniture).HasForeignKey(x => x.BlockId).OnDelete(DeleteBehavior.Cascade);
+            });
+
             builder.Entity<Room>(e =>
             {
-                e.ToTable("Rooms");
-                e.Property(x => x.Name).HasMaxLength(10).IsRequired();
-                e.Property(x => x.Area).HasColumnType("char(1)").HasMaxLength(1).IsFixedLength().IsUnicode(false).IsRequired();
-                e.Property(x => x.DefaultPrice).HasPrecision(18, 2);
+                e.Property(x => x.Code).HasMaxLength(10).IsRequired();
+                e.HasIndex(x => x.Code).IsUnique();
+                e.Property(x => x.Status).HasMaxLength(20);
+                e.Property(x => x.Note).HasMaxLength(500);
+                e.HasOne(x => x.Block).WithMany(x => x.Rooms).HasForeignKey(x => x.BlockId);
             });
 
-            builder.Entity<Company>(e =>
+            builder.Entity<RoomFurniture>(e =>
             {
-                e.ToTable("Companies");
-                e.Property(x => x.CompanyName).HasMaxLength(200).IsRequired();
-                e.Property(x => x.TaxCode).HasMaxLength(50);
-                e.Property(x => x.Address).HasMaxLength(500);
-                e.Property(x => x.Phone).HasMaxLength(20);
-                e.Property(x => x.Email).HasMaxLength(100);
-                e.Property(x => x.Representative).HasMaxLength(100);
-                e.Property(x => x.RepresentativePhone).HasMaxLength(20);
-                e.Property(x => x.RepresentativeEmail).HasMaxLength(100);
-                e.Property(x => x.BankAccount).HasMaxLength(50);
-                e.Property(x => x.BankName).HasMaxLength(200);
-                e.Property(x => x.CreatedAt).HasColumnType("datetime");
-                e.Property(x => x.UpdatedAt).HasColumnType("datetime");
+                e.HasIndex(x => new { x.RoomId, x.FurnitureItemId }).IsUnique();
+                e.HasOne(x => x.Room).WithMany(x => x.Furniture).HasForeignKey(x => x.RoomId).OnDelete(DeleteBehavior.Cascade);
             });
 
-            builder.Entity<Contract>(e =>
+            builder.Entity<Lease>(e =>
             {
-                e.ToTable("Contracts");
-                e.Property(x => x.PriceAgreed).HasPrecision(18, 2);
-                e.Property(x => x.ElectricityPrice).HasPrecision(18, 2);
-                e.Property(x => x.WaterPrice).HasPrecision(18, 2);
                 e.Property(x => x.StartDate).HasColumnType("date");
                 e.Property(x => x.EndDate).HasColumnType("date");
-                e.Property(x => x.MoveInDate).HasColumnType("date");
-                e.Property(x => x.Status).HasMaxLength(20).IsRequired();
-                e.Property(x => x.Note).HasMaxLength(500);
-                e.Property(x => x.ContractScanFilePath).HasMaxLength(250);
-                e.Property(x => x.ContractType).HasMaxLength(20);
-                e.HasOne(x => x.Company).WithMany(x => x.Contracts).HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.NoAction);
-            });
-
-            builder.Entity<ContractRoom>(e =>
-            {
-                e.ToTable("ContractRooms");
-                e.Property(x => x.PriceAgreed).HasPrecision(18, 2);
-                e.HasOne(x => x.Contract).WithMany(x => x.ContractRooms).HasForeignKey(x => x.ContractId).OnDelete(DeleteBehavior.NoAction);
-                e.HasOne(x => x.Room).WithMany(x => x.ContractRooms).HasForeignKey(x => x.RoomId).OnDelete(DeleteBehavior.NoAction);
+                e.Property(x => x.Status).HasMaxLength(20);
+                e.Property(x => x.ContractScanPath).HasMaxLength(300);
+                e.Property(x => x.Note).HasMaxLength(1000);
+                e.Property(x => x.CheckoutNote).HasMaxLength(1000);
+                e.Property(x => x.FurnitureWarnings).HasMaxLength(1000);
+                e.Property(x => x.CreatedBy).HasMaxLength(256);
+                e.HasOne(x => x.Room).WithMany(x => x.Leases).HasForeignKey(x => x.RoomId);
+                e.HasIndex(x => new { x.RoomId, x.Status });
             });
 
             builder.Entity<Tenant>(e =>
             {
-                e.ToTable("Tenants");
                 e.Property(x => x.FullName).HasMaxLength(100).IsRequired();
-                e.Property(x => x.IdentityCard).HasMaxLength(20).IsRequired();
-                e.Property(x => x.PhoneNumber).HasMaxLength(20);
+                e.Property(x => x.IdentityCard).HasMaxLength(30).IsRequired();
+                e.HasIndex(x => x.IdentityCard).IsUnique();
                 e.Property(x => x.BirthDate).HasColumnType("date");
                 e.Property(x => x.Gender).HasMaxLength(10);
-                e.Property(x => x.PermanentAddress).HasMaxLength(255);
+                e.Property(x => x.Phone).HasMaxLength(20);
+                e.Property(x => x.PermanentAddress).HasMaxLength(300);
                 e.Property(x => x.Ethnicity).HasMaxLength(50);
+                e.Property(x => x.Nationality).HasMaxLength(50);
                 e.Property(x => x.VehiclePlate).HasMaxLength(20);
-                e.HasOne(x => x.Company).WithMany(x => x.Tenants).HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.NoAction);
             });
 
-            builder.Entity<ContractTenant>(e =>
+            builder.Entity<LeaseTenant>(e =>
             {
-                e.ToTable("ContractTenants");
-                e.Property(x => x.CreatedAt).HasColumnType("datetime");
-                e.HasOne(x => x.Contract).WithMany(x => x.ContractTenants).HasForeignKey(x => x.ContractId).OnDelete(DeleteBehavior.NoAction);
-                e.HasOne(x => x.Room).WithMany(x => x.ContractTenants).HasForeignKey(x => x.RoomId).OnDelete(DeleteBehavior.NoAction);
-                e.HasOne(x => x.Tenant).WithMany(x => x.ContractTenants).HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.NoAction);
+                e.Property(x => x.MoveInDate).HasColumnType("date");
+                e.Property(x => x.MoveOutDate).HasColumnType("date");
+                e.HasOne(x => x.Lease).WithMany(x => x.Tenants).HasForeignKey(x => x.LeaseId).OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(x => x.Tenant).WithMany(x => x.Leases).HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
             });
 
-            builder.Entity<ContractExtensionHistory>(e =>
+            builder.Entity<LeasePenalty>(e =>
             {
-                e.ToTable("ContractExtensionHistory");
-                e.Property(x => x.ExtendedAt).HasColumnType("datetime");
-                e.Property(x => x.OldEndDate).HasColumnType("datetime");
-                e.Property(x => x.NewEndDate).HasColumnType("datetime");
-                e.Property(x => x.Note).HasMaxLength(255);
-                e.HasOne(x => x.Contract).WithMany(x => x.ContractExtensionHistories).HasForeignKey(x => x.ContractId).OnDelete(DeleteBehavior.NoAction);
+                e.Property(x => x.Description).HasMaxLength(300);
+                e.HasOne(x => x.Lease).WithMany(x => x.Penalties).HasForeignKey(x => x.LeaseId).OnDelete(DeleteBehavior.Cascade);
             });
 
-            builder.Entity<UtilityBill>(e =>
+            builder.Entity<Bill>(e =>
             {
-                e.ToTable("UtilityBills");
-                e.Property(x => x.ElectricityAmount).HasPrecision(18, 2);
-                e.Property(x => x.WaterAmount).HasPrecision(18, 2);
-                e.Property(x => x.RentAmount).HasPrecision(18, 2);
-                e.Property(x => x.ExtraCharge).HasPrecision(18, 2);
-                e.Property(x => x.Discount).HasPrecision(18, 2);
-                e.Property(x => x.TotalAmount).HasPrecision(18, 2);
-                e.Property(x => x.BillNote).HasMaxLength(250);
-                e.Property(x => x.BillStatus).HasMaxLength(50);
-                e.Property(x => x.CreatedAt).HasColumnType("datetime");
-                e.Property(x => x.UpdatedAt).HasColumnType("datetime");
-                e.HasOne(x => x.Contract).WithMany(x => x.UtilityBills).HasForeignKey(x => x.ContractId).OnDelete(DeleteBehavior.NoAction);
-                e.HasOne(x => x.Room).WithMany(x => x.UtilityBills).HasForeignKey(x => x.RoomId).OnDelete(DeleteBehavior.NoAction);
+                e.Property(x => x.Kind).HasMaxLength(20);
+                e.Property(x => x.PeriodFrom).HasColumnType("date");
+                e.Property(x => x.PeriodTo).HasColumnType("date");
+                e.Property(x => x.Note).HasMaxLength(500);
+                e.Property(x => x.CreatedBy).HasMaxLength(256);
+                e.HasOne(x => x.Lease).WithMany(x => x.Bills).HasForeignKey(x => x.LeaseId);
+                e.HasIndex(x => new { x.LeaseId, x.Year, x.Month, x.Kind });
             });
 
-            builder.Entity<IncomeExpenseCategory>(e =>
+            builder.Entity<MoneyAccount>(e =>
             {
-                e.ToTable("IncomeExpenseCategories");
                 e.Property(x => x.Name).HasMaxLength(100).IsRequired();
-                e.Property(x => x.Type).HasMaxLength(10).IsRequired();
-                e.Property(x => x.CreatedAt).HasColumnType("datetime");
-                e.Property(x => x.UpdatedAt).HasColumnType("datetime");
+                e.Property(x => x.Kind).HasMaxLength(20);
+                e.Property(x => x.OpeningDate).HasColumnType("date");
+                e.Property(x => x.BankName).HasMaxLength(100);
+                e.Property(x => x.AccountNumber).HasMaxLength(50);
+                e.Property(x => x.AccountHolder).HasMaxLength(100);
             });
 
-            builder.Entity<IncomeExpense>(e =>
+            builder.Entity<MoneyTransaction>(e =>
             {
-                e.ToTable("IncomeExpenses");
-                e.Property(x => x.Amount).HasPrecision(18, 2);
-                e.Property(x => x.TransactionDate).HasColumnType("date");
+                e.Property(x => x.Date).HasColumnType("date");
+                e.Property(x => x.Category).HasMaxLength(30);
                 e.Property(x => x.Description).HasMaxLength(500);
-                e.Property(x => x.ReferenceNumber).HasMaxLength(50);
-                e.Property(x => x.CreatedBy).HasMaxLength(128);
-                e.Property(x => x.CreatedAt).HasColumnType("datetime");
-                e.Property(x => x.UpdatedAt).HasColumnType("datetime");
-                e.HasOne(x => x.Category).WithMany(x => x.IncomeExpenses).HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.NoAction);
-                e.HasOne(x => x.Contract).WithMany(x => x.IncomeExpenses).HasForeignKey(x => x.ContractId).OnDelete(DeleteBehavior.NoAction);
+                e.Property(x => x.CreatedBy).HasMaxLength(256);
+                e.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId);
+                e.HasOne(x => x.Room).WithMany().HasForeignKey(x => x.RoomId);
+                e.HasOne(x => x.Lease).WithMany().HasForeignKey(x => x.LeaseId);
+                e.HasOne(x => x.Bill).WithMany(x => x.Payments).HasForeignKey(x => x.BillId);
+                e.HasOne(x => x.Repair).WithMany().HasForeignKey(x => x.RepairId);
+                e.HasOne(x => x.Purchase).WithMany().HasForeignKey(x => x.PurchaseId);
+                e.HasIndex(x => new { x.AccountId, x.Date });
+            });
+
+            builder.Entity<Repair>(e =>
+            {
+                e.Property(x => x.Date).HasColumnType("date");
+                e.Property(x => x.Location).HasMaxLength(200);
+                e.Property(x => x.Description).HasMaxLength(1000).IsRequired();
+                e.Property(x => x.PerformedBy).HasMaxLength(100);
+                e.Property(x => x.CreatedBy).HasMaxLength(256);
+                e.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId);
+            });
+
+            builder.Entity<Purchase>(e =>
+            {
+                e.Property(x => x.Date).HasColumnType("date");
+                e.Property(x => x.Description).HasMaxLength(1000).IsRequired();
+                e.Property(x => x.Supplier).HasMaxLength(200);
+                e.Property(x => x.CreatedBy).HasMaxLength(256);
+                e.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId);
+            });
+
+            builder.Entity<Attachment>(e =>
+            {
+                e.Property(x => x.EntityType).HasMaxLength(30).IsRequired();
+                e.Property(x => x.Kind).HasMaxLength(30).IsRequired();
+                e.Property(x => x.Path).HasMaxLength(300).IsRequired();
+                e.Property(x => x.FileName).HasMaxLength(200);
+                e.Property(x => x.Caption).HasMaxLength(300);
+                e.Property(x => x.CreatedBy).HasMaxLength(256);
+                e.HasIndex(x => new { x.EntityType, x.EntityId });
             });
 
             builder.Entity<FptReaderApi>(e =>
@@ -152,6 +192,13 @@ namespace NHNhaTro.Data
                 e.Property(x => x.ApiKey).HasMaxLength(150);
                 e.Property(x => x.Email).HasMaxLength(150);
             });
+
+            // Không xóa dây chuyền (trừ các bảng con thuần túy): mọi xóa do nghiệp vụ xử lý có kiểm soát.
+            Type[] cascadeChildren = [typeof(BlockFurniture), typeof(RoomFurniture), typeof(LeaseTenant), typeof(LeasePenalty)];
+            foreach (var fk in builder.Model.GetEntityTypes()
+                         .Where(t => t.ClrType.Namespace == typeof(Room).Namespace && !cascadeChildren.Contains(t.ClrType))
+                         .SelectMany(t => t.GetForeignKeys()))
+                fk.DeleteBehavior = DeleteBehavior.Restrict;
         }
     }
 }

@@ -1,0 +1,78 @@
+@* Hiển thị ảnh/chứng từ đã lưu của một đối tượng. *@
+@inject AttachmentService Attachments
+@inject ToastService Toast
+@inject IJSRuntime JS
+
+@if (items.Count == 0)
+{
+    @if (ShowEmpty) { <span class="text-muted small">Chưa có file.</span> }
+}
+else
+{
+    <div class="d-flex flex-wrap gap-2">
+        @foreach (var a in items)
+        {
+            <div class="nh-thumb" @key="a.Id" title="@($"{a.FileName} - {a.CreatedBy} {a.CreatedAt:dd/MM/yyyy HH:mm}")">
+                @if (a.IsImage)
+                {
+                    <a href="@a.Path" target="_blank"><img src="@a.Path" alt="@a.FileName" /></a>
+                }
+                else
+                {
+                    <a href="@a.Path" target="_blank" class="nh-thumb-file"><i class="fas fa-file-pdf"></i><span>@a.FileName</span></a>
+                }
+                @if (ShowKind && KindName(a.Kind) is { } k)
+                {
+                    <span class="nh-thumb-tag">@k</span>
+                }
+                @if (CanDelete)
+                {
+                    <button type="button" class="nh-thumb-remove" title="Xóa file" @onclick="() => DeleteAsync(a)">×</button>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public string EntityType { get; set; } = "";
+    [Parameter, EditorRequired] public int EntityId { get; set; }
+    [Parameter] public string? Kind { get; set; }
+    [Parameter] public bool CanDelete { get; set; }
+    [Parameter] public bool ShowKind { get; set; }
+    [Parameter] public bool ShowEmpty { get; set; } = true;
+    /// <summary>Đổi giá trị này để nạp lại danh sách.</summary>
+    [Parameter] public int Version { get; set; }
+
+    private List<Attachment> items = [];
+    private (string, int, int)? loaded;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loaded == (EntityType, EntityId, Version)) return;
+        loaded = (EntityType, EntityId, Version);
+        var all = await Attachments.ListAsync(EntityType, EntityId);
+        items = Kind == null ? all : all.Where(a => a.Kind == Kind).ToList();
+    }
+
+    private static string? KindName(string kind) => kind switch
+    {
+        AttachmentKind.RepairBefore => "Trước",
+        AttachmentKind.RepairAfter => "Sau",
+        AttachmentKind.RepairReceipt => "Chứng từ",
+        AttachmentKind.ContractScan => "HĐ",
+        AttachmentKind.CheckoutPhoto => "Hiện trạng",
+        _ => null
+    };
+
+    private async Task DeleteAsync(Attachment a)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"Xóa file {a.FileName}?")) return;
+        try
+        {
+            await Attachments.DeleteAsync(a.Id);
+            items.Remove(a);
+        }
+        catch (InvalidOperationException ex) { Toast.Error(ex.Message); }
+    }
+}

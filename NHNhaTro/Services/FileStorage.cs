@@ -1,20 +1,19 @@
 namespace NHNhaTro.Services;
 
 /// <summary>
-/// Lưu file upload (ảnh CCCD, scan hợp đồng) vào thư mục Uploads, giữ dạng đường dẫn "/Uploads/..."
-/// giống bản MVC cũ để dữ liệu cũ trong database vẫn dùng được. File được phục vụ qua endpoint /Uploads
-/// có yêu cầu đăng nhập (xem Program.cs) vì chứa thông tin cá nhân.
+/// Lưu file tải lên (ảnh CCCD, chứng từ, ảnh hiện trạng, ảnh sửa chữa...) vào thư mục Uploads, trả về đường dẫn web "/Uploads/...".
+/// File được phục vụ qua endpoint /Uploads có yêu cầu đăng nhập, trừ thư mục "Public" (ảnh quảng cáo).
 /// </summary>
 public class FileStorage(IConfiguration config, IWebHostEnvironment env)
 {
     public const string WebPrefix = "/Uploads";
-    public const long MaxImageSize = 5 * 1024 * 1024;
-    public const long MaxScanSize = 10 * 1024 * 1024;
+    public const string PublicFolder = "Public";
+    public const long MaxFileSize = 15 * 1024 * 1024;
 
-    public static readonly string[] ImageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"];
-    public static readonly string[] ScanExtensions = [".pdf", ".jpg", ".jpeg", ".png"];
+    public static readonly string[] ImageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".heic"];
+    public static readonly string[] DocumentExtensions = [.. ImageExtensions, ".pdf"];
 
-    /// <summary>Thư mục vật lý chứa Uploads. Cấu hình bằng "Storage:UploadsPath", mặc định &lt;ContentRoot&gt;/Uploads.</summary>
+    /// <summary>Thư mục vật lý chứa Uploads. Cấu hình "Storage:UploadsPath", mặc định &lt;ContentRoot&gt;/Uploads.</summary>
     public string RootPath
     {
         get
@@ -28,26 +27,17 @@ public class FileStorage(IConfiguration config, IWebHostEnvironment env)
         }
     }
 
-    public async Task<string> SaveTenantPhotoAsync(Stream content, string originalName, string? identityCard)
+    /// <summary>Lưu file vào thư mục con theo loại và tháng, ví dụ /Uploads/Repairs/2026-10/....jpg</summary>
+    public async Task<string> SaveAsync(Stream content, string originalName, string category, bool isPublic = false, string[]? allowed = null)
     {
-        var ext = CheckExtension(originalName, ImageExtensions);
-        var yearMonth = DateTime.Now.ToString("yyyy-MM");
-        var safeId = string.IsNullOrWhiteSpace(identityCard)
-            ? ""
-            : new string(identityCard.Where(char.IsLetterOrDigit).ToArray()) + "_";
-        var fileName = $"tenant_{safeId}{DateTime.Now:yyyyMMddHHmmss}_{Guid.NewGuid().ToString("N")[..6]}{ext}";
-        return await SaveAsync(content, Path.Combine("TenantPhotos", yearMonth), fileName);
-    }
+        var ext = Path.GetExtension(originalName).ToLowerInvariant();
+        allowed ??= DocumentExtensions;
+        if (!allowed.Contains(ext))
+            throw new InvalidOperationException("Định dạng file không được hỗ trợ. Chỉ chấp nhận: " + string.Join(", ", allowed));
 
-    public async Task<string> SaveContractScanAsync(Stream content, string originalName, int contractId)
-    {
-        var ext = CheckExtension(originalName, ScanExtensions);
-        var fileName = $"Contract_{contractId}_{DateTime.Now:yyyyMMddHHmmss}{ext}";
-        return await SaveAsync(content, "ContractScans", fileName);
-    }
-
-    private async Task<string> SaveAsync(Stream content, string relativeDir, string fileName)
-    {
+        var safeCategory = new string(category.Where(c => char.IsLetterOrDigit(c) || c == '-').ToArray());
+        var relativeDir = Path.Combine(isPublic ? PublicFolder : "", safeCategory, DateTime.Now.ToString("yyyy-MM"));
+        var fileName = $"{DateTime.Now:yyyyMMddHHmmss}_{Guid.NewGuid().ToString("N")[..8]}{ext}";
         var dir = Path.Combine(RootPath, relativeDir);
         Directory.CreateDirectory(dir);
         await using (var fs = File.Create(Path.Combine(dir, fileName)))
@@ -56,6 +46,9 @@ public class FileStorage(IConfiguration config, IWebHostEnvironment env)
         }
         return $"{WebPrefix}/{relativeDir.Replace('\\', '/')}/{fileName}";
     }
+
+    public static bool IsPublicPath(string relativePath) =>
+        relativePath.Replace('\\', '/').StartsWith(PublicFolder + "/", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Đổi đường dẫn web "/Uploads/..." thành đường dẫn vật lý, null nếu không hợp lệ.</summary>
     public string? ResolvePhysicalPath(string? webPath)
@@ -80,13 +73,5 @@ public class FileStorage(IConfiguration config, IWebHostEnvironment env)
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
-    }
-
-    private static string CheckExtension(string originalName, string[] allowed)
-    {
-        var ext = Path.GetExtension(originalName).ToLowerInvariant();
-        if (!allowed.Contains(ext))
-            throw new InvalidOperationException("Định dạng file không được hỗ trợ. Chỉ chấp nhận: " + string.Join(", ", allowed));
-        return ext;
     }
 }

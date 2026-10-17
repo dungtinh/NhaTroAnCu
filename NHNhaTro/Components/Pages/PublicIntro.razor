@@ -1,0 +1,91 @@
+@page "/gioi-thieu"
+@attribute [AllowAnonymous]
+@inject SetupService Setup
+@inject RoomService Rooms
+@inject AttachmentService Attachments
+
+<PageTitle>@(s?.AdTitle ?? s?.Name ?? "Nhà trọ")</PageTitle>
+<HeadContent>
+    <meta name="description" content="@(s?.AdDescription ?? s?.Name)" />
+    <meta property="og:title" content="@(s?.AdTitle ?? s?.Name)" />
+    <meta property="og:description" content="@s?.AdDescription" />
+    @if (gallery.FirstOrDefault() is { } cover) { <meta property="og:image" content="@cover.Path" /> }
+</HeadContent>
+
+@if (s != null)
+{
+    <div class="nh-hero mb-3">
+        <h1 class="fw-bold mb-2">@(s.AdTitle ?? s.Name)</h1>
+        @if (!string.IsNullOrWhiteSpace(s.AdDescription)) { <p class="fs-5 mb-3" style="white-space: pre-line">@s.AdDescription</p> }
+        <div class="d-flex flex-wrap gap-2">
+            @if (!string.IsNullOrWhiteSpace(s.Phone)) { <a class="btn btn-light btn-lg" href="tel:@s.Phone"><i class="fas fa-phone"></i> Gọi @s.Phone</a> }
+            @if (!string.IsNullOrWhiteSpace(Zalo)) { <a class="btn btn-outline-light btn-lg" href="https://zalo.me/@Zalo" target="_blank" rel="noopener"><i class="fas fa-comment"></i> Zalo</a> }
+            @if (!string.IsNullOrWhiteSpace(s.Address)) { <span class="align-self-center"><i class="fas fa-map-marker-alt"></i> @s.Address</span> }
+        </div>
+    </div>
+
+    @if (gallery.Count > 0)
+    {
+        <div class="nh-card">
+            <h5><i class="fas fa-images"></i> Hình ảnh</h5>
+            <div class="nh-gallery">
+                @foreach (var g in gallery) { <a href="@g.Path" target="_blank"><img src="@g.Path" alt="@(g.Caption ?? s.Name)" loading="lazy" /></a> }
+            </div>
+        </div>
+    }
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="nh-card">
+                <h5><i class="fas fa-door-open"></i> Phòng còn trống (@vacant.Count)</h5>
+                <div class="small text-muted mb-2">Điện @Fmt.Money(s.ElectricityPrice)đ/số · nước @Fmt.Money(s.WaterPricePerPerson)đ/người/tháng · cọc 1 tháng tiền phòng</div>
+                @if (vacant.Count == 0)
+                {
+                    <p class="mb-0">Hiện đã kín phòng. Hãy gọi để được báo khi có phòng trống.</p>
+                }
+                else
+                {
+                    <table class="nh-table">
+                        <thead><tr><th>Phòng</th><th>Tầng</th><th class="text-end">Giá/tháng</th><th>Đồ đạc</th></tr></thead>
+                        <tbody>
+                            @foreach (var r in vacant)
+                            {
+                                <tr><td class="fw-bold">@r.Code</td><td>@(r.Floor + 1)</td><td class="text-end fw-bold text-primary">@Fmt.Vnd(r.Rent)</td><td class="small">@string.Join(", ", r.Furniture)</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="nh-card">
+                <h5><i class="fas fa-map-marked-alt"></i> Vị trí</h5>
+                @if (MapEmbed != null) { <iframe class="nh-map" src="@MapEmbed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Bản đồ"></iframe> }
+                <div class="mt-2">@s.Address</div>
+                @if (!string.IsNullOrWhiteSpace(s.MapUrl)) { <a href="@s.MapUrl" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary mt-2"><i class="fas fa-directions"></i> Chỉ đường</a> }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private AppSetting? s;
+    private List<PublicRoom> vacant = [];
+    private List<Attachment> gallery = [];
+
+    private string? Zalo => string.IsNullOrWhiteSpace(s?.ZaloPhone) ? s?.Phone : s.ZaloPhone;
+
+    private string? MapEmbed => s switch
+    {
+        { Latitude: double lat, Longitude: double lng } => $"https://maps.google.com/maps?q={lat.ToString(System.Globalization.CultureInfo.InvariantCulture)},{lng.ToString(System.Globalization.CultureInfo.InvariantCulture)}&z=17&output=embed",
+        { Address: { Length: > 0 } a } => $"https://maps.google.com/maps?q={Uri.EscapeDataString(a)}&z=16&output=embed",
+        _ => null
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        s = await Setup.GetSettingsAsync();
+        vacant = await Rooms.ListVacantForAdAsync();
+        gallery = (await Attachments.ListAsync(AttachmentOwner.Site, 1)).Where(a => a.Kind == AttachmentKind.Gallery && a.IsImage).ToList();
+    }
+}

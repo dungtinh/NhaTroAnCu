@@ -1,0 +1,84 @@
+@page "/sua-chua/{Id:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject ExpenseService Expenses
+@inject AttachmentService Attachments
+
+<PageTitle>Phiếu sửa chữa</PageTitle>
+
+@if (repair == null)
+{
+    <div class="nh-loading">@(notFound ? "Không tìm thấy phiếu." : "Đang tải...")</div>
+}
+else
+{
+    <div class="nh-page-title">
+        <h2><i class="fas fa-tools"></i> Phiếu sửa chữa #@repair.Id</h2>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="sua-chua"><i class="fas fa-arrow-left"></i> Danh sách</a>
+            @if (repair.Room != null) { <a class="btn btn-outline-secondary" href="@($"phong/{repair.Room.Code}")">Phòng @repair.Room.Code</a> }
+            @if (isAdmin) { <button type="button" class="btn btn-outline-danger" @onclick="DeleteAsync"><i class="fas fa-trash"></i> Xóa phiếu</button> }
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-lg-5">
+            <div class="nh-card">
+                <table class="nh-table">
+                    <tr><td>Ngày</td><td>@Fmt.Date(repair.Date)</td></tr>
+                    <tr><td>Phạm vi</td><td>@(repair.Room != null ? "Phòng " + repair.Room.Code : "Khu vực chung: " + repair.Location)</td></tr>
+                    <tr><td>Đồ đạc</td><td>@repair.FurnitureItem?.Name</td></tr>
+                    <tr><td>Nội dung</td><td>@repair.Description</td></tr>
+                    <tr><td>Người sửa</td><td>@repair.PerformedBy</td></tr>
+                    <tr><td>Số tiền</td><td class="fw-bold">@Fmt.Vnd(repair.Amount)</td></tr>
+                    <tr><td>Chi từ</td><td>@repair.Account.Name</td></tr>
+                    <tr><td>Người ghi</td><td>@repair.CreatedBy · @Fmt.DateTime(repair.CreatedAt)</td></tr>
+                </table>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="nh-card">
+                <h5>Ảnh hư hỏng</h5>
+                <AttachmentList EntityType="@AttachmentOwner.Repair" EntityId="repair.Id" Kind="@AttachmentKind.RepairBefore" CanDelete="isAdmin" Version="version" />
+                <h5 class="mt-3">Ảnh sau khi sửa</h5>
+                <AttachmentList EntityType="@AttachmentOwner.Repair" EntityId="repair.Id" Kind="@AttachmentKind.RepairAfter" CanDelete="isAdmin" Version="version" />
+                <div class="mt-2"><FileUpload Kind="Repairs" ButtonText="Bổ sung ảnh sau khi sửa" Camera="true" Accept="image/*" Files="pendingAfter" Uploaded="f => AddAsync(f, AttachmentKind.RepairAfter)" /></div>
+                <h5 class="mt-3">Chứng từ</h5>
+                <AttachmentList EntityType="@AttachmentOwner.Repair" EntityId="repair.Id" Kind="@AttachmentKind.RepairReceipt" CanDelete="isAdmin" Version="version" />
+                <div class="mt-2"><FileUpload Kind="Receipts" ButtonText="Bổ sung chứng từ" Files="pendingReceipt" Uploaded="f => AddAsync(f, AttachmentKind.RepairReceipt)" /></div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Repair? repair;
+    private bool notFound, isAdmin;
+    private int version;
+    private List<PendingFile> pendingAfter = [], pendingReceipt = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isAdmin = await IsAdminAsync();
+        repair = await Expenses.GetRepairAsync(Id);
+        notFound = repair == null;
+    }
+
+    private async Task AddAsync(PendingFile f, string kind)
+    {
+        var user = await GetUserNameAsync();
+        if (await RunAsync(() => Attachments.AddAsync(AttachmentOwner.Repair, Id, [f with { Kind = kind }], user), "Đã bổ sung."))
+        {
+            pendingAfter.Clear();
+            pendingReceipt.Clear();
+            version++;
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (!await ConfirmAsync("Xóa phiếu sửa chữa này cùng khoản chi và ảnh/chứng từ?")) return;
+        if (await RunAsync(() => Expenses.DeleteRepairAsync(Id), "Đã xóa phiếu.")) Nav.NavigateTo("sua-chua");
+    }
+}

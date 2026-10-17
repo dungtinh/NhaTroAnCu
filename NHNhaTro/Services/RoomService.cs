@@ -4,358 +4,163 @@ using NHNhaTro.Data.Entities;
 
 namespace NHNhaTro.Services;
 
-/// <summary>Màu thẻ phòng trên sơ đồ (giữ nguyên quy ước của bản cũ).</summary>
+/// <summary>Màu ô phòng trên sơ đồ.</summary>
 public static class RoomColor
 {
-    public const string Gray = "gray";     // Phòng trống
-    public const string Blue = "blue";     // Đang thuê, chưa có phiếu báo
-    public const string Green = "green";   // Đã thanh toán đủ
-    public const string Yellow = "yellow"; // Thanh toán một phần
-    public const string Orange = "orange"; // Chưa thanh toán
-    public const string Red = "red";       // Hết hạn hợp đồng
-    public const string Purple = "purple"; // Có người ở không hợp đồng
+    public const string Empty = "empty";         // Trống
+    public const string NoBill = "nobill";       // Đang thuê, chưa lập phiếu kỳ này
+    public const string Unpaid = "unpaid";       // Còn nợ
+    public const string Paid = "paid";           // Đã thu đủ
+    public const string Maintenance = "maint";   // Đang sửa
 }
 
-public record RoomCard(Room Room, string Color, string TenantName, bool IsNearingEnd, bool IsExpired, DateTime? ContractEndDate, int? ContractId);
+public record RoomCard(int Id, string Code, int BlockId, string BlockCode, int Floor, int Number, string Status, decimal Rent, string Color,
+    int? LeaseId, string? RepresentativeName, int PersonCount, decimal Outstanding, DateTime? StartDate, bool FurnitureDiffers);
 
-public record RoomDashboard(List<RoomCard> Rooms, int Total, int Rented, int Empty, int NearExpired, int Expired, decimal OccupancyRate);
+public record PublicRoom(string Code, string BlockName, int Floor, decimal Rent, int MaxOccupants, List<string> Furniture);
 
-public class MonthlyPaymentHistory
+public record RoomMap(List<RoomCard> Rooms, int BillingMonth, int BillingYear, int Total, int Occupied, int Empty, decimal Outstanding);
+
+public record FurnitureLine(int ItemId, string Name, int Quantity, int DefaultQuantity)
 {
-    public int Month { get; set; }
-    public int Year { get; set; }
-    public List<UtilityBill> Bills { get; set; } = [];
-    public List<IncomeExpense> Payments { get; set; } = [];
-    public decimal TotalBilled { get; set; }
-    public decimal TotalPaid { get; set; }
-    public decimal MonthBalance { get; set; }
-    /// <summary>Số dư lũy kế: dương là tiền thừa (đặt cọc), âm là còn nợ.</summary>
-    public decimal CumulativeDeposit { get; set; }
+    public bool Differs => Quantity != DefaultQuantity;
 }
 
 public class RoomDetails
 {
     public required Room Room { get; init; }
-    public Contract? Contract { get; init; }
-    public decimal ActualPrice { get; init; }
-    public List<Tenant> Tenants { get; init; } = [];
-    public UtilityBill? CurrentBill { get; init; }
-    public decimal AmountDue { get; init; }
-    public List<MonthlyPaymentHistory> PaymentHistory { get; init; } = [];
+    public List<FurnitureLine> Furniture { get; init; } = [];
+    public Lease? CurrentLease { get; init; }
+    public List<Bill> Bills { get; init; } = [];
+    public Dictionary<int, decimal> BillPaid { get; init; } = [];
+    public List<Lease> PastLeases { get; init; } = [];
+    public List<Repair> Repairs { get; init; } = [];
+    public decimal Outstanding => Bills.Sum(b => Math.Max(0, b.TotalAmount - BillPaid.GetValueOrDefault(b.Id)));
 }
-
-public class RoomHistory
-{
-    public required Room Room { get; init; }
-    public List<ContractHistoryItem> Contracts { get; init; } = [];
-    public List<TenantHistoryItem> Tenants { get; init; } = [];
-    public List<PaymentHistoryItem> Payments { get; init; } = [];
-    public ContractHistoryItem? CurrentContract { get; init; }
-    public int TotalMonthsRented { get; set; }
-    public int OccupancyRate { get; set; }
-    public decimal TotalRevenue { get; set; }
-    public decimal AverageMonthlyRevenue { get; set; }
-    public int AverageContractDuration { get; set; }
-    public decimal TotalDebt { get; set; }
-    public int PaymentCompleteRate { get; set; }
-}
-
-public record ContractHistoryItem(int Id, DateTime StartDate, DateTime EndDate, string Status, decimal MonthlyRent, string? ContractType,
-    List<string> TenantNames, decimal TotalPaid, decimal TotalDebt, int PaymentRate);
-
-public record TenantHistoryItem(int Id, string FullName, string IdentityCard, string? PhoneNumber, string? Gender, DateTime MoveInDate, DateTime? MoveOutDate, bool IsCurrent);
-
-public record PaymentHistoryItem(int ContractId, int Month, int Year, decimal BillAmount, decimal PaidAmount, decimal Remaining, string Status, DateTime? PaymentDate);
 
 public class RoomService(IDbContextFactory<ApplicationDbContext> dbFactory)
 {
-    /// <summary>
-    /// Hợp đồng "hiện tại" của phòng: hợp đồng mới nhất còn Active hoặc đã quá hạn nhưng chưa kết thúc (Expired).
-    /// </summary>
-    public static IQueryable<Contract> CurrentContractsOfRoom(ApplicationDbContext db, int roomId) =>
-        db.Contracts.Where(c => (c.Status == ContractStatus.Active || c.Status == ContractStatus.Expired)
-                                && c.ContractRooms.Any(cr => cr.RoomId == roomId))
-                    .OrderByDescending(c => c.StartDate).ThenByDescending(c => c.Id);
-
-    public async Task<RoomDashboard> GetDashboardAsync(DateTime filterDate)
+    /// <summary>Kỳ thu hiện tại: từ ngày thu (mồng 10) tháng này; trước ngày đó là kỳ của tháng trước.</summary>
+    public static (int Month, int Year) CurrentBillingPeriod(int billingDay, DateTime? today = null)
     {
-        await using var db = await dbFactory.CreateDbContextAsync();
-        int month = filterDate.Month, year = filterDate.Year;
-
-        var rooms = await db.Rooms.AsNoTracking()
-            .Include(r => r.ContractRooms).ThenInclude(cr => cr.Contract).ThenInclude(c => c.Company)
-            .Include(r => r.ContractTenants).ThenInclude(ct => ct.Tenant)
-            .AsSplitQuery()
-            .ToListAsync();
-
-        var bills = await db.UtilityBills.AsNoTracking()
-            .Where(b => b.Month == month && b.Year == year)
-            .ToListAsync();
-
-        var paidByContract = await db.IncomeExpenses.AsNoTracking()
-            .Where(ie => ie.ContractId != null && ie.Category.Name == SystemCategories.RoomPayment && ie.Category.Type == CategoryType.Income
-                         && ie.TransactionDate.Month == month && ie.TransactionDate.Year == year)
-            .GroupBy(ie => ie.ContractId!.Value)
-            .Select(g => new { ContractId = g.Key, Paid = g.Sum(x => x.Amount) })
-            .ToDictionaryAsync(x => x.ContractId, x => x.Paid);
-
-        var cards = rooms.Select(room => BuildCard(room, filterDate, bills, paidByContract)).ToList();
-
-        int total = cards.Count;
-        int rented = cards.Count(c => c.Color is RoomColor.Blue or RoomColor.Green or RoomColor.Yellow or RoomColor.Orange);
-        return new RoomDashboard(cards, total, rented, total - rented,
-            cards.Count(c => c.IsNearingEnd), cards.Count(c => c.IsExpired),
-            total > 0 ? (decimal)rented / total : 0);
+        var d = (today ?? DateTime.Today).Date;
+        var m = d.Day >= billingDay ? d : d.AddMonths(-1);
+        return (m.Month, m.Year);
     }
 
-    private static RoomCard BuildCard(Room room, DateTime filterDate, List<UtilityBill> monthBills, Dictionary<int, decimal> paidByContract)
-    {
-        var contract = room.ContractRooms
-            .Select(cr => cr.Contract)
-            .Where(c => c.Status is ContractStatus.Active or ContractStatus.Expired && c.StartDate <= filterDate)
-            .OrderByDescending(c => c.StartDate).ThenByDescending(c => c.Id)
-            .FirstOrDefault();
+    /// <summary>Lượt thuê cần phiếu tháng M nếu nhận phòng trước ngày 1 của tháng M (kỳ đầu đã thu tới ngày thu tháng sau).</summary>
+    public static bool NeedsMonthlyBill(Lease lease, int month, int year) => lease.StartDate < new DateTime(year, month, 1);
 
-        if (contract == null)
-        {
-            return room.IsOccupied
-                ? new RoomCard(room, RoomColor.Purple, "Có người ở", false, false, null, null)
-                : new RoomCard(room, RoomColor.Gray, "", false, false, null, null);
-        }
-
-        string tenantName = room.ContractTenants
-            .Where(ct => ct.ContractId == contract.Id)
-            .OrderBy(ct => ct.CreatedAt)
-            .Select(ct => ct.Tenant.FullName)
-            .FirstOrDefault() ?? contract.Company?.CompanyName ?? "";
-
-        if (contract.EndDate < filterDate)
-        {
-            return new RoomCard(room, RoomColor.Red, string.IsNullOrEmpty(tenantName) ? "(Hết HĐ)" : tenantName + " (Hết HĐ)",
-                false, true, contract.EndDate, contract.Id);
-        }
-
-        bool nearing = (contract.EndDate - filterDate).TotalDays <= 31;
-
-        // Hợp đồng công ty có nhiều phòng: so tổng tiền đã thu của hợp đồng với tổng phiếu báo của hợp đồng trong tháng.
-        var contractBills = monthBills.Where(b => b.ContractId == contract.Id).ToList();
-        string color;
-        if (contractBills.Count == 0)
-        {
-            color = RoomColor.Blue;
-        }
-        else
-        {
-            decimal mustPay = contractBills.Sum(b => b.TotalAmount);
-            decimal paid = paidByContract.GetValueOrDefault(contract.Id);
-            color = paid >= mustPay ? RoomColor.Green : paid > 0 ? RoomColor.Yellow : RoomColor.Orange;
-        }
-
-        return new RoomCard(room, color, tenantName, nearing, false, contract.EndDate, contract.Id);
-    }
-
-    public async Task<RoomDetails?> GetDetailsAsync(int roomId)
+    public async Task<RoomMap> GetMapAsync()
     {
         await using var db = await dbFactory.CreateDbContextAsync();
-        var room = await db.Rooms.AsNoTracking().FirstOrDefaultAsync(r => r.Id == roomId);
+        var settings = await db.Settings.AsNoTracking().FirstAsync();
+        var (bm, by) = CurrentBillingPeriod(settings.BillingDay);
+
+        var rooms = await db.Rooms.AsNoTracking().Include(r => r.Block).ThenInclude(b => b.DefaultFurniture).Include(r => r.Furniture)
+            .OrderBy(r => r.Block.Code).ThenBy(r => r.Floor).ThenBy(r => r.Number).AsSplitQuery().ToListAsync();
+        var leases = await db.Leases.AsNoTracking().Where(l => l.Status == LeaseStatus.Active)
+            .Include(l => l.Tenants).ThenInclude(t => t.Tenant).AsSplitQuery().ToListAsync();
+        var leaseIds = leases.Select(l => l.Id).ToList();
+        var bills = await db.Bills.AsNoTracking().Where(b => leaseIds.Contains(b.LeaseId))
+            .Select(b => new { b.Id, b.LeaseId, b.Month, b.Year, b.Kind, b.TotalAmount, Paid = b.Payments.Sum(p => (decimal?)p.Amount) ?? 0 }).ToListAsync();
+
+        var cards = rooms.Select(r =>
+        {
+            var lease = leases.FirstOrDefault(l => l.RoomId == r.Id);
+            var defaults = r.Block.DefaultFurniture.ToDictionary(d => d.FurnitureItemId, d => d.Quantity);
+            var actual = r.Furniture.ToDictionary(f => f.FurnitureItemId, f => f.Quantity);
+            bool differs = defaults.Keys.Union(actual.Keys).Any(k => defaults.GetValueOrDefault(k) != actual.GetValueOrDefault(k));
+
+            if (lease == null)
+                return new RoomCard(r.Id, r.Code, r.BlockId, r.Block.Code, r.Floor, r.Number, r.Status, r.Rent,
+                    r.Status == RoomStatus.Maintenance ? RoomColor.Maintenance : RoomColor.Empty, null, null, 0, 0, null, differs);
+
+            var lb = bills.Where(b => b.LeaseId == lease.Id).ToList();
+            decimal outstanding = lb.Sum(b => Math.Max(0, b.TotalAmount - b.Paid));
+            bool hasCurrent = !NeedsMonthlyBill(lease, bm, by) || lb.Any(b => b.Kind == BillKind.Monthly && b.Month == bm && b.Year == by);
+            var color = outstanding > 0 ? RoomColor.Unpaid : hasCurrent ? RoomColor.Paid : RoomColor.NoBill;
+            var active = lease.Tenants.Where(t => t.MoveOutDate == null).ToList();
+            var rep = active.FirstOrDefault(t => t.IsRepresentative) ?? active.FirstOrDefault();
+            return new RoomCard(r.Id, r.Code, r.BlockId, r.Block.Code, r.Floor, r.Number, r.Status, lease.MonthlyRent, color, lease.Id,
+                rep?.Tenant.FullName, active.Count, outstanding, lease.StartDate, differs);
+        }).ToList();
+
+        return new RoomMap(cards, bm, by, cards.Count, cards.Count(c => c.LeaseId != null), cards.Count(c => c.LeaseId == null && c.Status != RoomStatus.Maintenance),
+            cards.Sum(c => c.Outstanding));
+    }
+
+    public async Task<RoomDetails?> GetDetailsAsync(string code)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync();
+        var room = await db.Rooms.AsNoTracking().Include(r => r.Block).ThenInclude(b => b.DefaultFurniture)
+            .Include(r => r.Furniture).FirstOrDefaultAsync(r => r.Code == code);
         if (room == null) return null;
 
-        var contract = await CurrentContractsOfRoom(db, roomId).AsNoTracking()
-            .Include(c => c.ContractRooms)
-            .Include(c => c.Company)
-            .Include(c => c.ContractExtensionHistories)
-            .FirstOrDefaultAsync();
+        var items = await db.FurnitureItems.AsNoTracking().OrderBy(i => i.SortOrder).ToListAsync();
+        var furniture = BuildFurnitureLines(items, room.Furniture.ToDictionary(f => f.FurnitureItemId, f => f.Quantity),
+            room.Block.DefaultFurniture.ToDictionary(d => d.FurnitureItemId, d => d.Quantity));
 
-        if (contract == null)
-            return new RoomDetails { Room = room, ActualPrice = room.DefaultPrice };
+        var leases = await db.Leases.AsNoTracking().Where(l => l.RoomId == room.Id)
+            .Include(l => l.Tenants).ThenInclude(t => t.Tenant).Include(l => l.Penalties)
+            .OrderByDescending(l => l.StartDate).AsSplitQuery().ToListAsync();
+        var current = leases.FirstOrDefault(l => l.Status == LeaseStatus.Active);
 
-        var now = DateTime.Today;
-        var tenants = await db.ContractTenants.AsNoTracking()
-            .Where(ct => ct.ContractId == contract.Id && ct.RoomId == roomId)
-            .OrderBy(ct => ct.CreatedAt)
-            .Select(ct => ct.Tenant)
-            .ToListAsync();
+        List<Bill> bills = [];
+        Dictionary<int, decimal> paid = [];
+        if (current != null)
+        {
+            bills = await db.Bills.AsNoTracking().Where(b => b.LeaseId == current.Id).OrderByDescending(b => b.Year).ThenByDescending(b => b.Month).ThenByDescending(b => b.Id).ToListAsync();
+            var ids = bills.Select(b => b.Id).ToList();
+            paid = await db.Transactions.Where(t => t.BillId != null && ids.Contains(t.BillId.Value)).GroupBy(t => t.BillId!.Value)
+                .Select(g => new { g.Key, Sum = g.Sum(t => t.Amount) }).ToDictionaryAsync(x => x.Key, x => x.Sum);
+        }
 
-        var bills = await db.UtilityBills.AsNoTracking()
-            .Where(b => b.ContractId == contract.Id)
-            .OrderByDescending(b => b.Year).ThenByDescending(b => b.Month)
-            .ToListAsync();
-
-        var payments = await db.IncomeExpenses.AsNoTracking()
-            .Where(ie => ie.ContractId == contract.Id && ie.Category.Name == SystemCategories.RoomPayment)
-            .OrderBy(ie => ie.TransactionDate).ThenBy(ie => ie.Id)
-            .ToListAsync();
-
-        var history = BuildPaymentHistory(bills, payments);
-        decimal due = bills.Sum(b => b.TotalAmount) - payments.Sum(p => p.Amount);
+        var repairs = await db.Repairs.AsNoTracking().Include(r => r.FurnitureItem).Where(r => r.RoomId == room.Id).OrderByDescending(r => r.Date).Take(30).ToListAsync();
 
         return new RoomDetails
         {
-            Room = room,
-            Contract = contract,
-            ActualPrice = contract.ContractRooms.FirstOrDefault(cr => cr.RoomId == roomId)?.PriceAgreed ?? room.DefaultPrice,
-            Tenants = tenants,
-            CurrentBill = bills.FirstOrDefault(b => b.RoomId == roomId && b.Month == now.Month && b.Year == now.Year),
-            AmountDue = due > 0 ? due : 0,
-            PaymentHistory = history
+            Room = room, Furniture = furniture, CurrentLease = current, Bills = bills, BillPaid = paid,
+            PastLeases = leases.Where(l => l.Status != LeaseStatus.Active).ToList(), Repairs = repairs
         };
     }
 
-    /// <summary>
-    /// Gộp phiếu báo và tiền thu theo tháng, tính số dư lũy kế theo thứ tự thời gian (bản cũ cộng dồn
-    /// theo thứ tự giảm dần nên số dư lũy kế bị ngược; ở đây cộng dồn từ tháng cũ nhất).
-    /// </summary>
-    public static List<MonthlyPaymentHistory> BuildPaymentHistory(List<UtilityBill> bills, List<IncomeExpense> payments)
-    {
-        var keys = bills.Select(b => (b.Year, b.Month))
-            .Concat(payments.Select(p => (p.TransactionDate.Year, p.TransactionDate.Month)))
-            .Distinct()
-            .OrderBy(k => k.Year).ThenBy(k => k.Month)
-            .ToList();
+    public static List<FurnitureLine> BuildFurnitureLines(List<FurnitureItem> items, Dictionary<int, int> actual, Dictionary<int, int> defaults) =>
+        items.Where(i => i.IsActive || actual.ContainsKey(i.Id) || defaults.ContainsKey(i.Id))
+             .Select(i => new FurnitureLine(i.Id, i.Name, actual.GetValueOrDefault(i.Id), defaults.GetValueOrDefault(i.Id))).ToList();
 
-        var result = new List<MonthlyPaymentHistory>();
-        decimal cumulative = 0;
-        foreach (var (year, month) in keys)
-        {
-            var monthBills = bills.Where(b => b.Year == year && b.Month == month).ToList();
-            var monthPayments = payments.Where(p => p.TransactionDate.Year == year && p.TransactionDate.Month == month).ToList();
-            decimal billed = monthBills.Sum(b => b.TotalAmount);
-            decimal paid = monthPayments.Sum(p => p.Amount);
-            cumulative += paid - billed;
-            result.Add(new MonthlyPaymentHistory
-            {
-                Year = year,
-                Month = month,
-                Bills = monthBills,
-                Payments = monthPayments,
-                TotalBilled = billed,
-                TotalPaid = paid,
-                MonthBalance = paid - billed,
-                CumulativeDeposit = cumulative
-            });
-        }
-
-        result.Reverse();
-        return result;
-    }
-
-    public async Task<Room?> GetAsync(int id)
+    /// <summary>Phòng trống kèm đồ đạc, dùng cho trang giới thiệu công khai.</summary>
+    public async Task<List<PublicRoom>> ListVacantForAdAsync()
     {
         await using var db = await dbFactory.CreateDbContextAsync();
-        return await db.Rooms.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id);
+        var rooms = await db.Rooms.AsNoTracking().Where(r => r.Status == RoomStatus.Empty)
+            .OrderBy(r => r.Block.Code).ThenBy(r => r.Floor).ThenBy(r => r.Number)
+            .Select(r => new { r.Code, Block = r.Block.Name, r.Floor, r.Rent, r.MaxOccupants,
+                Furniture = r.Furniture.OrderBy(f => f.FurnitureItem.SortOrder).Select(f => f.Quantity > 1 ? f.Quantity + " " + f.FurnitureItem.Name : f.FurnitureItem.Name).ToList() })
+            .ToListAsync();
+        return rooms.Select(r => new PublicRoom(r.Code, r.Block, r.Floor, r.Rent, r.MaxOccupants, r.Furniture)).ToList();
     }
 
-    public async Task<int> SaveAsync(Room input)
+    public async Task<List<Room>> ListRoomsAsync(string? status = null)
     {
         await using var db = await dbFactory.CreateDbContextAsync();
-        input.Area = (input.Area ?? "A").Trim().ToUpperInvariant();
-        if (input.Area.Length != 1) throw new InvalidOperationException("Dãy phải là 1 ký tự (ví dụ A, B).");
-        if (string.IsNullOrWhiteSpace(input.Name))
-            input.Name = $"P{input.Area}{input.Floor}{input.RoomNumber:00}";
-        input.Name = input.Name.Trim();
-        if (input.Name.Length > 10) throw new InvalidOperationException("Tên phòng tối đa 10 ký tự.");
+        var q = db.Rooms.AsNoTracking().Include(r => r.Block).AsQueryable();
+        if (status != null) q = q.Where(r => r.Status == status);
+        return await q.OrderBy(r => r.Block.Code).ThenBy(r => r.Floor).ThenBy(r => r.Number).ToListAsync();
+    }
 
-        if (await db.Rooms.AnyAsync(r => r.Name == input.Name && r.Id != input.Id))
-            throw new InvalidOperationException($"Đã có phòng tên {input.Name}.");
-
-        if (input.Id == 0)
-        {
-            db.Rooms.Add(input);
-        }
-        else
-        {
-            var room = await db.Rooms.FindAsync(input.Id) ?? throw new InvalidOperationException("Không tìm thấy phòng.");
-            db.Entry(room).CurrentValues.SetValues(input);
-        }
+    public async Task UpdateRoomAsync(int roomId, decimal rent, int meterReading, int maxOccupants, string? note, bool maintenance, Dictionary<int, int> furniture)
+    {
+        if (rent < 0 || meterReading < 0) throw new InvalidOperationException("Giá thuê và số điện không được âm.");
+        await using var db = await dbFactory.CreateDbContextAsync();
+        var room = await db.Rooms.Include(r => r.Furniture).FirstAsync(r => r.Id == roomId);
+        room.Rent = rent;
+        room.MeterReading = meterReading;
+        room.MaxOccupants = Math.Clamp(maxOccupants, 1, 20);
+        room.Note = note;
+        if (room.Status != RoomStatus.Occupied) room.Status = maintenance ? RoomStatus.Maintenance : RoomStatus.Empty;
+        SetupService.SyncFurniture(room.Furniture, furniture, (itemId, qty) => new RoomFurniture { RoomId = roomId, FurnitureItemId = itemId, Quantity = qty },
+            x => x.FurnitureItemId, (x, q) => x.Quantity = q, db);
         await db.SaveChangesAsync();
-        return input.Id;
-    }
-
-    public async Task<bool> ToggleOccupiedAsync(int id)
-    {
-        await using var db = await dbFactory.CreateDbContextAsync();
-        var room = await db.Rooms.FindAsync(id) ?? throw new InvalidOperationException("Không tìm thấy phòng.");
-        room.IsOccupied = !room.IsOccupied;
-        await db.SaveChangesAsync();
-        return room.IsOccupied;
-    }
-
-    public async Task<RoomHistory?> GetHistoryAsync(int roomId)
-    {
-        await using var db = await dbFactory.CreateDbContextAsync();
-        var room = await db.Rooms.AsNoTracking().FirstOrDefaultAsync(r => r.Id == roomId);
-        if (room == null) return null;
-
-        var contracts = await db.Contracts.AsNoTracking()
-            .Where(c => c.ContractRooms.Any(cr => cr.RoomId == roomId))
-            .Include(c => c.ContractTenants.Where(ct => ct.RoomId == roomId)).ThenInclude(ct => ct.Tenant)
-            .Include(c => c.ContractRooms)
-            .OrderByDescending(c => c.StartDate)
-            .AsSplitQuery()
-            .ToListAsync();
-        var contractIds = contracts.Select(c => c.Id).ToList();
-
-        var bills = await db.UtilityBills.AsNoTracking()
-            .Where(b => contractIds.Contains(b.ContractId) && b.RoomId == roomId)
-            .ToListAsync();
-        var payments = await db.IncomeExpenses.AsNoTracking()
-            .Where(ie => ie.ContractId != null && contractIds.Contains(ie.ContractId.Value) && ie.Category.Name == SystemCategories.RoomPayment)
-            .ToListAsync();
-
-        var contractItems = contracts.Select(c =>
-        {
-            var cBills = bills.Where(b => b.ContractId == c.Id).Sum(b => b.TotalAmount);
-            var cPaid = payments.Where(p => p.ContractId == c.Id).Sum(p => p.Amount);
-            return new ContractHistoryItem(c.Id, c.StartDate, c.EndDate, c.Status,
-                c.ContractRooms.FirstOrDefault(cr => cr.RoomId == roomId)?.PriceAgreed ?? c.PriceAgreed, c.ContractType,
-                c.ContractTenants.Select(ct => ct.Tenant.FullName).ToList(),
-                cPaid, cBills - cPaid, cBills > 0 ? (int)(cPaid / cBills * 100) : 100);
-        }).ToList();
-
-        var tenants = contracts
-            .SelectMany(c => c.ContractTenants.Select(ct => new TenantHistoryItem(ct.Tenant.Id, ct.Tenant.FullName, ct.Tenant.IdentityCard,
-                ct.Tenant.PhoneNumber, ct.Tenant.Gender, c.StartDate, c.Status == ContractStatus.Ended ? c.EndDate : null,
-                c.Status != ContractStatus.Ended)))
-            .GroupBy(t => t.Id).Select(g => g.OrderByDescending(t => t.MoveInDate).First())
-            .ToList();
-
-        var paymentItems = bills
-            .OrderByDescending(b => b.Year).ThenByDescending(b => b.Month)
-            .Select(b =>
-            {
-                var monthPayments = payments.Where(p => p.ContractId == b.ContractId && p.TransactionDate.Month == b.Month && p.TransactionDate.Year == b.Year).ToList();
-                var paid = monthPayments.Sum(p => p.Amount);
-                var remaining = b.TotalAmount - paid;
-                return new PaymentHistoryItem(b.ContractId, b.Month, b.Year, b.TotalAmount, paid, remaining,
-                    remaining <= 0 ? "Paid" : paid > 0 ? "Partial" : "Unpaid",
-                    monthPayments.OrderBy(p => p.TransactionDate).FirstOrDefault()?.TransactionDate);
-            }).ToList();
-
-        var current = contractItems.FirstOrDefault(c => c.Status is ContractStatus.Active or ContractStatus.Expired);
-        var model = new RoomHistory { Room = room, Contracts = contractItems, Tenants = tenants, Payments = paymentItems, CurrentContract = current };
-
-        var today = DateTime.Today;
-        foreach (var c in contractItems)
-        {
-            var end = c.EndDate < today ? c.EndDate : today;
-            if (end > c.StartDate) model.TotalMonthsRented += Math.Max(1, Fmt.MonthsBetween(c.StartDate, end));
-        }
-
-        var oneYearAgo = today.AddYears(-1);
-        double occupiedDays = 0;
-        foreach (var c in contractItems)
-        {
-            var start = c.StartDate < oneYearAgo ? oneYearAgo : c.StartDate;
-            var end = c.EndDate > today ? today : c.EndDate;
-            if (start < end) occupiedDays += (end - start).TotalDays;
-        }
-        model.OccupancyRate = Math.Min(100, (int)(occupiedDays / (today - oneYearAgo).TotalDays * 100));
-        model.TotalRevenue = payments.Sum(p => p.Amount);
-        if (model.TotalMonthsRented > 0) model.AverageMonthlyRevenue = model.TotalRevenue / model.TotalMonthsRented;
-        if (contractItems.Count > 0) model.AverageContractDuration = model.TotalMonthsRented / contractItems.Count;
-        model.TotalDebt = paymentItems.Sum(p => p.Remaining);
-        var totalBilled = paymentItems.Sum(p => p.BillAmount);
-        if (totalBilled > 0) model.PaymentCompleteRate = (int)(paymentItems.Sum(p => p.PaidAmount) / totalBilled * 100);
-        return model;
     }
 }

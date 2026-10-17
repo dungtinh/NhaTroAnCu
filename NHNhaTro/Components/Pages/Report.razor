@@ -1,0 +1,99 @@
+@page "/bao-cao"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject AccountService Accounts
+
+<PageTitle>Báo cáo tháng</PageTitle>
+
+<div class="nh-page-title">
+    <h2><i class="fas fa-chart-bar"></i> Báo cáo thu chi tháng @month.ToString("00")/@year</h2>
+    <div class="d-flex gap-2 align-items-center">
+        <button type="button" class="btn btn-outline-secondary" @onclick="() => ShiftAsync(-1)"><i class="fas fa-chevron-left"></i></button>
+        <input type="month" class="form-control" style="width: 170px" value="@($"{year:0000}-{month:00}")" @onchange="OnMonthChanged" />
+        <button type="button" class="btn btn-outline-secondary" @onclick="() => ShiftAsync(1)"><i class="fas fa-chevron-right"></i></button>
+        <a class="btn btn-outline-success" target="_blank" href="@($"files/ledger.xlsx?from={new DateTime(year, month, 1):yyyy-MM-dd}&to={new DateTime(year, month, 1).AddMonths(1).AddDays(-1):yyyy-MM-dd}")"><i class="fas fa-file-excel"></i> Chi tiết</a>
+    </div>
+</div>
+
+@if (data == null)
+{
+    <div class="nh-loading"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
+}
+else
+{
+    <div class="nh-card">
+        <h5>Số dư tài khoản</h5>
+        <table class="nh-table">
+            <thead><tr><th>Tài khoản</th><th class="text-end">Đầu tháng</th><th class="text-end">Thu</th><th class="text-end">Chi</th><th class="text-end">Cuối tháng</th></tr></thead>
+            <tbody>
+                @foreach (var a in data.Accounts)
+                {
+                    <tr><td>@a.Account.Name</td><td class="text-end">@Fmt.Money(a.Opening)</td><td class="text-end text-success">@Fmt.Money(a.Income)</td>
+                        <td class="text-end text-danger">@Fmt.Money(a.Expense)</td><td class="text-end fw-bold">@Fmt.Money(a.Closing)</td></tr>
+                }
+                <tr class="table-light fw-bold"><td>Tổng</td><td class="text-end">@Fmt.Money(data.Accounts.Sum(a => a.Opening))</td><td class="text-end">@Fmt.Money(data.Accounts.Sum(a => a.Income))</td>
+                    <td class="text-end">@Fmt.Money(data.Accounts.Sum(a => a.Expense))</td><td class="text-end">@Fmt.Money(data.Accounts.Sum(a => a.Closing))</td></tr>
+            </tbody>
+        </table>
+        <div class="small text-muted mt-1">Thu/chi của từng tài khoản đã gồm cả chuyển nội bộ (khấu trừ cọc, chuyển tiền giữa hai tài khoản).</div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="nh-card">
+                <h5>Theo loại (không tính chuyển nội bộ)</h5>
+                <table class="nh-table">
+                    <thead><tr><th>Loại</th><th class="text-end">Thu</th><th class="text-end">Chi</th></tr></thead>
+                    <tbody>
+                        @foreach (var c in data.Categories)
+                        {
+                            <tr><td>@TxCategory.Display(c.Category)</td><td class="text-end text-success">@Fmt.Money(c.Income)</td><td class="text-end text-danger">@Fmt.Money(c.Expense)</td></tr>
+                        }
+                        @{ var inc = data.Categories.Sum(c => c.Income); var exp = data.Categories.Sum(c => c.Expense); }
+                        <tr class="table-light fw-bold"><td>Tổng</td><td class="text-end">@Fmt.Money(inc)</td><td class="text-end">@Fmt.Money(exp)</td></tr>
+                        <tr class="fw-bold"><td>Chênh lệch thu − chi</td><td colspan="2" class="text-end @(inc - exp >= 0 ? "text-success" : "text-danger")">@Fmt.Vnd(inc - exp)</td></tr>
+                    </tbody>
+                </table>
+                <div class="small text-muted">Thu cọc/trả cọc là tiền giữ hộ khách, không phải doanh thu.</div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="nh-card">
+                <h5>Doanh thu theo phòng</h5>
+                <table class="nh-table">
+                    <thead><tr><th>Phòng</th><th class="text-end">Đã thu</th></tr></thead>
+                    <tbody>
+                        @foreach (var r in data.RevenueByRoom) { <tr><td><a href="@($"phong/{r.RoomCode}")">@r.RoomCode</a></td><td class="text-end">@Fmt.Money(r.Amount)</td></tr> }
+                        @if (data.RevenueByRoom.Count == 0) { <tr><td colspan="2" class="text-muted text-center">Chưa có.</td></tr> }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private int month = DateTime.Today.Month, year = DateTime.Today.Year;
+    private MonthlyReportData? data;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync() => data = await Accounts.GetMonthlyReportAsync(month, year);
+
+    private async Task ShiftAsync(int delta)
+    {
+        var d = new DateTime(year, month, 1).AddMonths(delta);
+        (month, year) = (d.Month, d.Year);
+        await LoadAsync();
+    }
+
+    private async Task OnMonthChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParseExact(e.Value?.ToString(), "yyyy-MM", null, System.Globalization.DateTimeStyles.None, out var d))
+        {
+            (month, year) = (d.Month, d.Year);
+            await LoadAsync();
+        }
+    }
+}

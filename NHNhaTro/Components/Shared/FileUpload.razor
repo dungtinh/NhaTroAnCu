@@ -1,0 +1,92 @@
+@* Tải ảnh/chứng từ lên ngay khi chọn; danh sách file chờ gắn vào phiếu khi lưu. *@
+@inject AttachmentService Attachments
+@inject ToastService Toast
+
+<div class="nh-upload">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="form-label mb-1">@Label @if (Required) {<span class="text-danger">*</span>}</label>
+    }
+    <div class="d-flex flex-wrap gap-2 align-items-start">
+        @foreach (var f in Files)
+        {
+            <div class="nh-thumb" @key="f.Path">
+                @if (f.IsImage)
+                {
+                    <a href="@f.Path" target="_blank"><img src="@f.Path" alt="@f.FileName" /></a>
+                }
+                else
+                {
+                    <a href="@f.Path" target="_blank" class="nh-thumb-file"><i class="fas fa-file-pdf"></i><span>@f.FileName</span></a>
+                }
+                <button type="button" class="nh-thumb-remove" title="Bỏ file" @onclick="() => Remove(f)">×</button>
+            </div>
+        }
+        <label class="nh-upload-btn @(uploading ? "disabled" : "")">
+            <i class="fas @(uploading ? "fa-spinner fa-spin" : (Camera ? "fa-camera" : "fa-paperclip"))"></i>
+            <span>@(uploading ? "Đang tải..." : ButtonText)</span>
+            <InputFile class="d-none" accept="@Accept" multiple="@Multiple" capture="@(Camera ? "environment" : null)" OnChange="OnSelected" disabled="@uploading" />
+        </label>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<PendingFile> Files { get; set; } = [];
+    [Parameter] public EventCallback<List<PendingFile>> FilesChanged { get; set; }
+    [Parameter] public string Kind { get; set; } = "Files";
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string ButtonText { get; set; } = "Chọn ảnh/chứng từ";
+    [Parameter] public string Accept { get; set; } = "image/*,.pdf";
+    [Parameter] public bool Multiple { get; set; } = true;
+    [Parameter] public bool Camera { get; set; }
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public bool IsPublic { get; set; }
+    [Parameter] public EventCallback<PendingFile> Uploaded { get; set; }
+    [Parameter] public EventCallback<PendingFile> Removed { get; set; }
+
+    private bool uploading;
+
+    private async Task OnSelected(InputFileChangeEventArgs e)
+    {
+        uploading = true;
+        try
+        {
+            foreach (var file in e.GetMultipleFiles(20))
+            {
+                if (file.Size > FileStorage.MaxFileSize)
+                {
+                    Toast.Error($"{file.Name} vượt quá 15MB.");
+                    continue;
+                }
+                try
+                {
+                    await using var stream = file.OpenReadStream(FileStorage.MaxFileSize);
+                    using var buffer = new MemoryStream();
+                    await stream.CopyToAsync(buffer);
+                    buffer.Position = 0;
+                    var saved = await Attachments.UploadAsync(buffer, file.Name, Kind, IsPublic);
+                    if (!Multiple) Files.Clear();
+                    Files.Add(saved);
+                    await Uploaded.InvokeAsync(saved);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Toast.Error(ex.Message);
+                }
+            }
+            await FilesChanged.InvokeAsync(Files);
+        }
+        finally
+        {
+            uploading = false;
+        }
+    }
+
+    private async Task Remove(PendingFile f)
+    {
+        Files.Remove(f);
+        Attachments.Discard([f]);
+        await Removed.InvokeAsync(f);
+        await FilesChanged.InvokeAsync(Files);
+    }
+}

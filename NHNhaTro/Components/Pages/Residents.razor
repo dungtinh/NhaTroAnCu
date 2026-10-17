@@ -1,0 +1,57 @@
+@page "/khach-thue"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject LeaseService Leases
+
+<PageTitle>Khách thuê</PageTitle>
+
+<div class="nh-page-title">
+    <h2><i class="fas fa-users"></i> Khách thuê</h2>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-primary" href="nhan-phong"><i class="fas fa-door-open"></i> Nhận phòng</a>
+        <a class="btn btn-success" href="@ExportUrl" target="_blank"><i class="fas fa-file-excel"></i> Sổ tạm trú (Excel)</a>
+    </div>
+</div>
+
+<div class="nh-card">
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <input class="form-control" style="max-width: 320px" placeholder="Tìm tên, CCCD, phòng, điện thoại" @bind="search" @bind:event="oninput" @bind:after="LoadAsync" />
+        <select class="form-select" style="max-width: 220px" @bind="currentOnly" @bind:after="LoadAsync">
+            <option value="true">Đang ở</option>
+            <option value="false">Tất cả (kể cả đã chuyển đi)</option>
+        </select>
+        <span class="align-self-center small text-muted">@rows.Count người · @rows.Count(r => Nationality.IsForeign(r.Nationality, r.Ethnicity)) người nước ngoài</span>
+    </div>
+    <div class="table-responsive">
+        <table class="nh-table">
+            <thead><tr><th></th><th>Phòng</th><th>Họ tên</th><th>CCCD/Hộ chiếu</th><th>Ngày sinh</th><th>Giới tính</th><th>Điện thoại</th><th>Quê quán/Thường trú</th><th>Biển số xe</th><th>Vào</th><th>Ra</th></tr></thead>
+            <tbody>
+                @foreach (var r in rows)
+                {
+                    <tr class="@(r.MoveOutDate != null ? "text-muted" : "")">
+                        <td>@if (r.Photo != null) { <a href="@r.Photo" target="_blank"><img src="@r.Photo" alt="" class="nh-mini-thumb" /></a> }</td>
+                        <td><a href="@($"hop-dong/{r.LeaseId}")" class="fw-bold">@r.RoomCode</a></td>
+                        <td>@r.FullName @if (r.IsRepresentative) {<span class="badge bg-info">Đại diện</span>}
+                            @if (Nationality.IsForeign(r.Nationality, r.Ethnicity)) {<span class="badge bg-warning text-dark">@r.Nationality</span>}</td>
+                        <td>@r.IdentityCard</td><td>@Fmt.Date(r.BirthDate)</td><td>@r.Gender</td><td>@r.Phone</td>
+                        <td class="small">@r.PermanentAddress</td><td>@r.VehiclePlate</td><td>@Fmt.Date(r.MoveInDate)</td><td>@Fmt.Date(r.MoveOutDate)</td>
+                    </tr>
+                }
+                @if (rows.Count == 0) { <tr><td colspan="11" class="text-center text-muted py-3">Không có dữ liệu.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private string? search;
+    private bool currentOnly = true;
+    private List<ResidentRow> rows = [];
+
+    private string ExportUrl => $"files/residents.xlsx?all={(!currentOnly).ToString().ToLower()}&q={Uri.EscapeDataString(search ?? "")}";
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync() => rows = await Leases.ListResidentsAsync(currentOnly, search);
+}

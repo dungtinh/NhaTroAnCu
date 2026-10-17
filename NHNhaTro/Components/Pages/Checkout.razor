@@ -1,0 +1,200 @@
+@page "/tra-phong/{LeaseId:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject LeaseService Leases
+@inject RoomService Rooms
+
+<PageTitle>Trả phòng @lease?.Room.Code</PageTitle>
+
+@if (lease == null)
+{
+    <div class="nh-loading">@(notFound ? "Không tìm thấy hợp đồng." : "Đang tải...")</div>
+}
+else if (lease.Status != LeaseStatus.Active)
+{
+    <div class="alert alert-info">Hợp đồng này đã trả phòng ngày @Fmt.Date(lease.EndDate). <a href="@($"hop-dong/{lease.Id}")">Xem hợp đồng</a></div>
+}
+else
+{
+    <div class="nh-page-title">
+        <h2><i class="fas fa-sign-out-alt"></i> Trả phòng @lease.Room.Code</h2>
+        <a class="btn btn-outline-secondary" href="@($"hop-dong/{lease.Id}")"><i class="fas fa-arrow-left"></i> Hợp đồng</a>
+    </div>
+    <div class="small text-muted mb-3">
+        Đại diện: <strong>@lease.Tenants.FirstOrDefault(t => t.IsRepresentative)?.Tenant.FullName</strong> · vào ngày @Fmt.Date(lease.StartDate) · tiền cọc @Fmt.Vnd(lease.Deposit)
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="nh-card">
+                <h5>1. Chốt điện</h5>
+                <div class="row g-2">
+                    <div class="col-md-4"><label class="form-label">Ngày trả phòng</label><input type="date" class="form-control" @bind="form.EndDate" /></div>
+                    <div class="col-md-4"><label class="form-label">Số điện cuối <span class="text-danger">*</span></label>
+                        <input type="number" min="0" class="form-control" @bind="form.EndMeterReading" @bind:after="RefreshAsync" /></div>
+                    <div class="col-md-4 small text-muted pt-md-4">Số đã chốt gần nhất: <strong>@preview?.LastMeter</strong><br />Dùng @preview?.UsedKwh số = @Fmt.Money(preview?.Electricity ?? 0)đ</div>
+                </div>
+            </div>
+
+            <div class="nh-card">
+                <h5>2. Kiểm tra đồ đạc</h5>
+                <table class="nh-table">
+                    <thead><tr><th>Đồ đạc</th><th class="text-center">Mặc định dãy</th><th class="text-center">Cấu hình phòng</th><th style="width:120px">Thực tế</th></tr></thead>
+                    <tbody>
+                        @foreach (var f in furniture)
+                        {
+                            var actual = form.FurnitureActual.GetValueOrDefault(f.ItemId, f.Quantity);
+                            <tr class="@(actual != f.Quantity ? "table-warning" : "")">
+                                <td>@f.Name</td><td class="text-center">@f.DefaultQuantity</td><td class="text-center">@f.Quantity</td>
+                                <td><input type="number" min="0" class="form-control form-control-sm" value="@actual" @onchange="e => SetFurnitureAsync(f.ItemId, e)" /></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="updFur" @bind="form.UpdateRoomFurniture" />
+                    <label class="form-check-label" for="updFur">Cập nhật cấu hình đồ đạc của phòng theo số thực tế</label>
+                </div>
+                @if (preview?.FurnitureWarnings.Count > 0)
+                {
+                    <div class="alert alert-warning small py-2 mt-2 mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> Đồ đạc khác cấu hình/mặc định:
+                        <ul class="mb-0">@foreach (var w in preview.FurnitureWarnings) { <li>@w</li> }</ul>
+                    </div>
+                }
+            </div>
+
+            <div class="nh-card">
+                <h5>3. Hư hỏng, phạt</h5>
+                @foreach (var p in form.Penalties)
+                {
+                    <div class="row g-2 mb-2" @key="p">
+                        <div class="col-7"><input class="form-control" placeholder="VD: Tường bẩn, vỡ kính..." @bind="p.Description" /></div>
+                        <div class="col-4"><MoneyInput Value="p.Amount" ValueChanged="async v => { p.Amount = v; await RefreshAsync(); }" /></div>
+                        <div class="col-1"><button type="button" class="btn btn-outline-danger" title="Bỏ" @onclick="async () => { form.Penalties.Remove(p); await RefreshAsync(); }">×</button></div>
+                    </div>
+                }
+                <div class="d-flex flex-wrap gap-1 mb-2">
+                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => form.Penalties.Add(new PenaltyInput())"><i class="fas fa-plus"></i> Thêm khoản phạt</button>
+                    @foreach (var s in Suggestions)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => form.Penalties.Add(new PenaltyInput { Description = s })">@s</button>
+                    }
+                </div>
+                <div class="row g-2">
+                    <div class="col-md-4"><label class="form-label">Khoản khác (âm = hoàn khách)</label>
+                        <MoneyInput Value="form.OtherAmount" ValueChanged="async v => { form.OtherAmount = v; await RefreshAsync(); }" /></div>
+                    <div class="col-md-8"><label class="form-label">Nội dung khoản khác</label><input class="form-control" @bind="form.OtherNote" /></div>
+                </div>
+            </div>
+
+            <div class="nh-card">
+                <h5>4. Ảnh hiện trạng và ghi chú</h5>
+                <FileUpload Kind="Checkout" ButtonText="Chụp/tải ảnh hiện trạng" Camera="true" Accept="image/*" @bind-Files="form.Photos" />
+                <textarea class="form-control mt-2" rows="3" placeholder="Ghi chú hiện trạng phòng" @bind="form.Note"></textarea>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="nh-card nh-sticky">
+                <h5>5. Quyết toán</h5>
+                @if (preview != null)
+                {
+                    <table class="nh-table mb-2">
+                        <tr><td>Tiền cọc đang giữ</td><td class="text-end fw-bold">@Fmt.Money(preview.Deposit)</td></tr>
+                        <tr><td>− Tiền điện chưa thu (@preview.UsedKwh số)</td><td class="text-end">@Fmt.Money(preview.Electricity)</td></tr>
+                        <tr><td>− Phạt hư hỏng</td><td class="text-end">@Fmt.Money(preview.Penalties)</td></tr>
+                        @if (preview.Other != 0) { <tr><td>− Khoản khác</td><td class="text-end">@Fmt.Money(preview.Other)</td></tr> }
+                        @foreach (var u in preview.UnpaidList)
+                        {
+                            <tr><td>− Còn nợ @BillKind.Display(u.Bill.Kind) @u.Bill.Month.ToString("00")/@u.Bill.Year</td><td class="text-end">@Fmt.Money(u.Due)</td></tr>
+                        }
+                        <tr class="table-light">
+                            <td class="fw-bold">@(preview.Balance >= 0 ? "Trả lại khách" : "Khách phải nộp thêm")</td>
+                            <td class="text-end fw-bold fs-5 @(preview.Balance >= 0 ? "text-success" : "text-danger")">@Fmt.Vnd(Math.Abs(preview.Balance))</td>
+                        </tr>
+                    </table>
+
+                    <label class="form-label">Trả lại cọc cho khách (chi từ TK cá nhân)</label>
+                    <MoneyInput @bind-Value="form.DepositRefund" />
+                    <div class="my-2"><FileUpload Kind="Receipts" ButtonText="Chứng từ trả cọc" @bind-Files="form.RefundReceipts" /></div>
+
+                    <label class="form-label">Khách nộp thêm (vào TK hộ kinh doanh)</label>
+                    <MoneyInput @bind-Value="form.Collected" />
+                    <button type="button" class="btn btn-sm btn-link px-0" @onclick="FillSuggested">Điền theo quyết toán</button>
+
+                    <div class="small text-muted">
+                        Phần cọc giữ lại (@Fmt.Money(Math.Max(0, preview.Deposit - form.DepositRefund))đ) được chuyển từ TK cá nhân sang TK hộ kinh doanh để trừ các khoản trên.
+                    </div>
+                    @if (Mismatch != 0)
+                    {
+                        <div class="alert alert-warning small py-2 mt-2 mb-0">Số trả/thu lệch quyết toán @Fmt.Vnd(Mismatch). Phần thiếu sẽ để lại thành nợ, phần thừa ghi thu khác.</div>
+                    }
+                }
+                <button type="button" class="btn btn-danger btn-lg w-100 mt-3" disabled="@Busy" @onclick="SaveAsync">
+                    <i class="fas @(Busy ? "fa-spinner fa-spin" : "fa-check")"></i> Hoàn tất trả phòng
+                </button>
+                <div class="small text-muted mt-2">Sau khi hoàn tất, phòng chuyển về trạng thái trống và số điện cuối thành số đầu cho khách sau.</div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int LeaseId { get; set; }
+    private static readonly string[] Suggestions = ["Tường bẩn", "Vỡ kính", "Hỏng khóa", "Mất chìa khóa", "Vệ sinh phòng"];
+
+    private Lease? lease;
+    private bool notFound;
+    private CheckoutForm form = new();
+    private CheckoutPreview? preview;
+    private List<FurnitureLine> furniture = [];
+
+    /// <summary>Chênh lệch giữa số tiền nhập và quyết toán (dương = thu/giữ thiếu so với số phải thu).</summary>
+    private decimal Mismatch => preview == null ? 0 : (preview.Deposit - form.DepositRefund + form.Collected) - (preview.Deposit - preview.Balance);
+
+    protected override async Task OnInitializedAsync()
+    {
+        lease = await Leases.GetLeaseAsync(LeaseId);
+        notFound = lease == null;
+        if (lease == null || lease.Status != LeaseStatus.Active) return;
+        var details = await Rooms.GetDetailsAsync(lease.Room.Code);
+        furniture = details?.Furniture ?? [];
+        form.LeaseId = LeaseId;
+        form.FurnitureActual = furniture.ToDictionary(f => f.ItemId, f => f.Quantity);
+        preview = await Leases.PreviewCheckoutAsync(form);
+        form.EndMeterReading = preview.LastMeter;
+        FillSuggested();
+    }
+
+    private async Task RefreshAsync()
+    {
+        try { preview = await Leases.PreviewCheckoutAsync(form); }
+        catch (Exception ex) { Toast.Error(ex.Message); }
+    }
+
+    private async Task SetFurnitureAsync(int itemId, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var q) && q >= 0) form.FurnitureActual[itemId] = q;
+        await RefreshAsync();
+    }
+
+    private void FillSuggested()
+    {
+        if (preview == null) return;
+        form.DepositRefund = Math.Max(0, preview.Balance);
+        form.Collected = Math.Max(0, -preview.Balance);
+    }
+
+    private async Task SaveAsync()
+    {
+        await RefreshAsync();
+        if (preview == null) return;
+        if (Mismatch != 0 && !await ConfirmAsync($"Số tiền lệch quyết toán {Fmt.Vnd(Mismatch)}. Vẫn hoàn tất trả phòng?")) return;
+        if (preview.FurnitureWarnings.Count > 0 && !await ConfirmAsync("Đồ đạc phòng khác cấu hình/mặc định:\n- " + string.Join("\n- ", preview.FurnitureWarnings) + "\n\nVẫn hoàn tất?")) return;
+        var user = await GetUserNameAsync();
+        if (await RunAsync(() => Leases.CheckoutAsync(form, user), $"Đã trả phòng {lease!.Room.Code}."))
+            Nav.NavigateTo($"hop-dong/{LeaseId}");
+    }
+}

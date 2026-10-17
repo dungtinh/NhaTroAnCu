@@ -4,198 +4,174 @@ using NHNhaTro.Data.Entities;
 
 namespace NHNhaTro.Services;
 
-public class BillForm
+/// <summary>Một dòng trên bảng thu tiền tháng (một phòng đang thuê).</summary>
+public class BillingRow
 {
-    public int? BillId { get; set; }
+    public int LeaseId { get; set; }
     public int RoomId { get; set; }
-    public int ContractId { get; set; }
-    public int Month { get; set; }
-    public int Year { get; set; }
-    public int WaterIndexStart { get; set; }
-    public int WaterIndexEnd { get; set; }
-    public decimal WaterPrice { get; set; }
-    public decimal ElectricityAmount { get; set; }
-    public decimal RentAmount { get; set; }
-    public decimal ExtraCharge { get; set; }
+    public string RoomCode { get; set; } = "";
+    public string? Representative { get; set; }
+    public int PersonCount { get; set; }
+    public decimal Rent { get; set; }
+    public int MeterStart { get; set; }
+    public int? MeterEnd { get; set; }
+    public decimal OtherAmount { get; set; }
     public decimal Discount { get; set; }
-    public string? BillNote { get; set; }
+    public string? Note { get; set; }
+    public int? BillId { get; set; }
+    public decimal Paid { get; set; }
+    /// <summary>Nhận phòng trong tháng này: kỳ đầu đã thu tới ngày thu tháng sau, không lập phiếu tháng.</summary>
+    public bool SkipThisMonth { get; set; }
+    public decimal PreviousDebt { get; set; }
 
-    public int WaterUsed => Math.Max(0, WaterIndexEnd - WaterIndexStart);
-    public decimal WaterAmount => WaterUsed * WaterPrice;
-    public decimal TotalAmount => Math.Max(0, ElectricityAmount + WaterAmount + RentAmount + ExtraCharge - Discount);
+    public decimal Electricity(decimal price) => MeterEnd is int end && end >= MeterStart ? (end - MeterStart) * price : 0;
+    public decimal Water(decimal perPerson) => PersonCount * perPerson;
+    public decimal Total(decimal price, decimal perPerson) => Math.Max(0, Rent + Electricity(price) + Water(perPerson) + OtherAmount - Discount);
+}
+
+public record BillingSheet(int Month, int Year, DateTime DueDate, decimal ElectricityPrice, decimal WaterPerPerson, List<BillingRow> Rows);
+
+public class PaymentForm
+{
+    public int BillId { get; set; }
+    public decimal Amount { get; set; }
+    public DateTime Date { get; set; } = DateTime.Today;
+    public int AccountId { get; set; }
+    public string? Note { get; set; }
+    public List<PendingFile> Receipts { get; set; } = [];
 }
 
 public class BillingService(IDbContextFactory<ApplicationDbContext> dbFactory)
 {
-    /// <summary>Chỉ số nước cuối kỳ lớn nhất đã ghi của phòng (dùng làm chỉ số đầu kỳ cho phiếu mới).</summary>
-    public static async Task<int> GetHighestWaterIndexEndAsync(ApplicationDbContext db, int roomId, int? exceptBillId = null) =>
-        await db.UtilityBills.Where(b => b.RoomId == roomId && b.Id != (exceptBillId ?? 0)).MaxAsync(b => (int?)b.WaterIndexEnd) ?? 0;
-
-    /// <summary>Lấy form phiếu báo của phòng cho tháng/năm: nạp phiếu đã có hoặc khởi tạo phiếu mới.</summary>
-    public async Task<BillForm?> GetFormAsync(int roomId, int month, int year)
+    public async Task<BillingSheet> GetSheetAsync(int month, int year)
     {
         await using var db = await dbFactory.CreateDbContextAsync();
-        var room = await db.Rooms.AsNoTracking().FirstOrDefaultAsync(r => r.Id == roomId);
-        if (room == null) return null;
+        var s = await db.Settings.AsNoTracking().FirstAsync();
+        var due = new DateTime(year, month, Math.Min(s.BillingDay, DateTime.DaysInMonth(year, month)));
 
-        var contract = await RoomService.CurrentContractsOfRoom(db, roomId).AsNoTracking()
-            .Include(c => c.ContractRooms)
-            .FirstOrDefaultAsync();
-        if (contract == null) return null;
+        var leases = await db.Leases.AsNoTracking().Where(l => l.Status == LeaseStatus.Active)
+            .Include(l => l.Room).ThenInclude(r => r.Block).Include(l => l.Tenants).ThenInclude(t => t.Tenant)
+            .OrderBy(l => l.Room.Block.Code).ThenBy(l => l.Room.Floor).ThenBy(l => l.Room.Number).AsSplitQuery().ToListAsync();
+        var ids = leases.Select(l => l.Id).ToList();
+        var bills = await db.Bills.AsNoTracking().Where(b => ids.Contains(b.LeaseId))
+            .Select(b => new { Bill = b, Paid = b.Payments.Sum(p => (decimal?)p.Amount) ?? 0 }).ToListAsync();
 
-        var bill = await db.UtilityBills.AsNoTracking()
-            .FirstOrDefaultAsync(b => b.ContractId == contract.Id && b.RoomId == roomId && b.Month == month && b.Year == year);
-
-        if (bill != null)
+        var rows = leases.Select(l =>
         {
-            return new BillForm
+            var lb = bills.Where(b => b.Bill.LeaseId == l.Id).ToList();
+            var current = lb.FirstOrDefault(b => b.Bill.Kind == BillKind.Monthly && b.Bill.Month == month && b.Bill.Year == year);
+            var earlier = lb.Where(b => b.Bill.Id != current?.Bill.Id && (b.Bill.Year < year || (b.Bill.Year == year && b.Bill.Month <= month))).ToList();
+            int meterStart = current?.Bill.MeterStart
+                ?? earlier.Where(b => b.Bill.MeterEnd != null).OrderByDescending(b => b.Bill.Year).ThenByDescending(b => b.Bill.Month).ThenByDescending(b => b.Bill.Id)
+                    .Select(b => b.Bill.MeterEnd).FirstOrDefault()
+                ?? l.StartMeterReading;
+            var active = l.Tenants.Where(t => t.MoveOutDate == null).ToList();
+            return new BillingRow
             {
-                BillId = bill.Id,
-                RoomId = roomId,
-                ContractId = contract.Id,
-                Month = bill.Month,
-                Year = bill.Year,
-                WaterIndexStart = bill.WaterIndexStart,
-                WaterIndexEnd = bill.WaterIndexEnd,
-                WaterPrice = contract.WaterPrice,
-                ElectricityAmount = bill.ElectricityAmount,
-                RentAmount = bill.RentAmount,
-                ExtraCharge = bill.ExtraCharge,
-                Discount = bill.Discount,
-                BillNote = bill.BillNote
+                LeaseId = l.Id, RoomId = l.RoomId, RoomCode = l.Room.Code,
+                Representative = (active.FirstOrDefault(t => t.IsRepresentative) ?? active.FirstOrDefault())?.Tenant.FullName,
+                PersonCount = current?.Bill.PersonCount ?? active.Count,
+                Rent = current?.Bill.RentAmount ?? l.MonthlyRent,
+                MeterStart = meterStart, MeterEnd = current?.Bill.MeterEnd,
+                OtherAmount = current?.Bill.OtherAmount ?? 0, Discount = current?.Bill.Discount ?? 0, Note = current?.Bill.Note,
+                BillId = current?.Bill.Id, Paid = current?.Paid ?? 0,
+                SkipThisMonth = !RoomService.NeedsMonthlyBill(l, month, year),
+                PreviousDebt = earlier.Sum(b => Math.Max(0, b.Bill.TotalAmount - b.Paid))
             };
-        }
+        }).ToList();
 
-        int waterPrev = await GetHighestWaterIndexEndAsync(db, roomId);
-        var form = new BillForm
-        {
-            RoomId = roomId,
-            ContractId = contract.Id,
-            Month = month,
-            Year = year,
-            WaterIndexStart = waterPrev,
-            WaterIndexEnd = waterPrev,
-            WaterPrice = contract.WaterPrice,
-            RentAmount = contract.ContractRooms.FirstOrDefault(cr => cr.RoomId == roomId)?.PriceAgreed ?? room.DefaultPrice,
-            BillNote = ""
-        };
-        ApplyFirstMonthAdjustment(form, contract);
-        return form;
+        return new BillingSheet(month, year, due, s.ElectricityPrice, s.WaterPricePerPerson, rows);
     }
 
-    /// <summary>
-    /// Tháng đầu tiên: tiền phòng tính theo ngày từ ngày bắt đầu đến ngày chốt (ngày chuyển vào).
-    /// Bắt đầu trước ngày chốt thì phụ thu, sau ngày chốt thì giảm trừ (giá ngày = giá tháng / 30).
-    /// Bản cũ tính phụ thu = giá ngày × (ngày chốt − ngày chốt) nên luôn bằng 0; đã sửa thành số ngày chênh lệch.
-    /// </summary>
-    public static void ApplyFirstMonthAdjustment(BillForm form, Contract contract)
+    /// <summary>Lập hoặc cập nhật phiếu tháng cho một phòng. Trả về Id phiếu.</summary>
+    public async Task<int> SaveBillAsync(int month, int year, BillingRow row, string? user)
     {
-        if (form.Month != contract.MoveInDate.Month || form.Year != contract.MoveInDate.Year) return;
-        var contractRoom = contract.ContractRooms.FirstOrDefault(cr => cr.RoomId == form.RoomId);
-        if (contractRoom == null) return;
-
-        int moveInDay = contract.MoveInDate.Day;
-        int startDay = contract.StartDate.Day;
-        decimal pricePerDay = Math.Round(contractRoom.PriceAgreed / 30, 0);
-
-        if (startDay < moveInDay)
-        {
-            form.ExtraCharge = pricePerDay * (moveInDay - startDay);
-            form.Discount = 0;
-            form.BillNote = $"Phụ thu {moveInDay - startDay} ngày (bắt đầu ngày {startDay:00}/{contract.StartDate.Month:00})";
-        }
-        else if (startDay > moveInDay)
-        {
-            form.ExtraCharge = 0;
-            form.Discount = pricePerDay * (startDay - moveInDay);
-            form.BillNote = $"Giảm trừ {startDay - moveInDay} ngày (bắt đầu ngày {startDay:00}/{contract.StartDate.Month:00})";
-        }
-        else
-        {
-            form.ExtraCharge = 0;
-            form.Discount = 0;
-            form.BillNote = $"Chuyển vào ngày {moveInDay:00}/{form.Month:00}";
-        }
-    }
-
-    public async Task<(bool IsNew, int BillId)> SaveAsync(BillForm form)
-    {
-        if (form.WaterIndexEnd < form.WaterIndexStart)
-            throw new InvalidOperationException("Chỉ số nước tháng này không được nhỏ hơn chỉ số tháng trước.");
+        if (row.MeterEnd is not int end) throw new InvalidOperationException($"Phòng {row.RoomCode}: nhập số điện mới.");
+        if (end < row.MeterStart) throw new InvalidOperationException($"Phòng {row.RoomCode}: số điện mới ({end}) nhỏ hơn số cũ ({row.MeterStart}).");
+        if (row.Rent < 0 || row.OtherAmount < 0 || row.Discount < 0) throw new InvalidOperationException($"Phòng {row.RoomCode}: số tiền không được âm.");
 
         await using var db = await dbFactory.CreateDbContextAsync();
-        var contract = await db.Contracts.AsNoTracking().FirstOrDefaultAsync(c => c.Id == form.ContractId)
-            ?? throw new InvalidOperationException("Không tìm thấy hợp đồng.");
+        var s = await db.Settings.AsNoTracking().FirstAsync();
+        var lease = await db.Leases.Include(l => l.Room).FirstAsync(l => l.Id == row.LeaseId);
+        if (lease.Status != LeaseStatus.Active) throw new InvalidOperationException($"Phòng {row.RoomCode}: hợp đồng đã kết thúc.");
 
-        var bill = await db.UtilityBills.FirstOrDefaultAsync(b =>
-            b.ContractId == form.ContractId && b.RoomId == form.RoomId && b.Month == form.Month && b.Year == form.Year);
-        bool isNew = bill == null;
+        var bill = await db.Bills.FirstOrDefaultAsync(b => b.LeaseId == lease.Id && b.Kind == BillKind.Monthly && b.Month == month && b.Year == year);
         if (bill == null)
         {
-            bill = new UtilityBill { CreatedAt = DateTime.Now };
-            db.UtilityBills.Add(bill);
+            bill = new Bill { LeaseId = lease.Id, Kind = BillKind.Monthly, Month = month, Year = year, CreatedAt = DateTime.Now, CreatedBy = user };
+            db.Bills.Add(bill);
         }
+        var from = new DateTime(year, month, Math.Min(s.BillingDay, DateTime.DaysInMonth(year, month)));
+        bill.PeriodFrom = from;
+        bill.PeriodTo = from.AddMonths(1);
+        bill.RentAmount = row.Rent;
+        bill.MeterStart = row.MeterStart;
+        bill.MeterEnd = end;
+        bill.ElectricityAmount = row.Electricity(s.ElectricityPrice);
+        bill.PersonCount = row.PersonCount;
+        bill.WaterAmount = row.Water(s.WaterPricePerPerson);
+        bill.OtherAmount = row.OtherAmount;
+        bill.Discount = row.Discount;
+        bill.TotalAmount = row.Total(s.ElectricityPrice, s.WaterPricePerPerson);
+        bill.Note = row.Note;
 
-        bill.Month = form.Month;
-        bill.Year = form.Year;
-        bill.RoomId = form.RoomId;
-        bill.ContractId = form.ContractId;
-        bill.WaterIndexStart = form.WaterIndexStart;
-        bill.WaterIndexEnd = form.WaterIndexEnd;
-        bill.ElectricityAmount = form.ElectricityAmount;
-        bill.WaterAmount = form.WaterUsed * contract.WaterPrice;
-        bill.RentAmount = form.RentAmount;
-        bill.ExtraCharge = form.ExtraCharge;
-        bill.Discount = form.Discount;
-        bill.TotalAmount = bill.ElectricityAmount + bill.WaterAmount + bill.RentAmount + bill.ExtraCharge - bill.Discount;
-        bill.BillNote = form.BillNote;
-        bill.BillStatus = "Final";
-        bill.UpdatedAt = DateTime.Now;
+        // Số điện hiện tại của phòng = số mới nhất đã chốt
+        var latestOther = await db.Bills.Where(b => b.LeaseId == lease.Id && b.Id != bill.Id && b.MeterEnd != null)
+            .OrderByDescending(b => b.Year).ThenByDescending(b => b.Month).Select(b => new { b.Year, b.Month, b.MeterEnd }).FirstOrDefaultAsync();
+        if (latestOther == null || latestOther.Year < year || (latestOther.Year == year && latestOther.Month <= month)) lease.Room.MeterReading = end;
 
         await db.SaveChangesAsync();
-        return (isNew, bill.Id);
+        return bill.Id;
     }
 
-    public async Task DeleteAsync(int billId)
+    public async Task<Bill?> GetBillAsync(int billId)
     {
         await using var db = await dbFactory.CreateDbContextAsync();
-        var bill = await db.UtilityBills.FindAsync(billId) ?? throw new InvalidOperationException("Không tìm thấy phiếu báo tiền.");
-        db.UtilityBills.Remove(bill);
-        await db.SaveChangesAsync();
+        return await db.Bills.AsNoTracking().Include(b => b.Payments).ThenInclude(p => p.Account)
+            .Include(b => b.Lease).ThenInclude(l => l.Room)
+            .Include(b => b.Lease).ThenInclude(l => l.Tenants).ThenInclude(t => t.Tenant)
+            .AsSplitQuery().FirstOrDefaultAsync(b => b.Id == billId);
     }
 
-    public static async Task<IncomeExpenseCategory> GetOrCreateSystemCategoryAsync(ApplicationDbContext db, string name, string type)
+    public async Task<int> RecordPaymentAsync(PaymentForm form, string? user)
     {
-        var category = await db.IncomeExpenseCategories.FirstOrDefaultAsync(c => c.Name == name && c.Type == type);
-        if (category != null) return category;
-        category = new IncomeExpenseCategory { Name = name, Type = type, IsSystem = true, IsActive = true, CreatedAt = DateTime.Now };
-        db.IncomeExpenseCategories.Add(category);
-        await db.SaveChangesAsync();
-        return category;
-    }
-
-    /// <summary>Ghi nhận thu tiền phòng, trả về Id giao dịch để in hóa đơn.</summary>
-    public async Task<int> RecordRoomPaymentAsync(int contractId, decimal amount, DateTime paymentDate, string? note, string? userId)
-    {
-        if (amount <= 0) throw new InvalidOperationException("Số tiền thu phải lớn hơn 0.");
+        if (form.Amount <= 0) throw new InvalidOperationException("Số tiền thu phải lớn hơn 0.");
         await using var db = await dbFactory.CreateDbContextAsync();
-        if (!await db.Contracts.AnyAsync(c => c.Id == contractId))
-            throw new InvalidOperationException("Không tìm thấy hợp đồng.");
-
-        var category = await GetOrCreateSystemCategoryAsync(db, SystemCategories.RoomPayment, CategoryType.Income);
-        var income = new IncomeExpense
+        var bill = await db.Bills.Include(b => b.Lease).ThenInclude(l => l.Room).FirstOrDefaultAsync(b => b.Id == form.BillId)
+            ?? throw new InvalidOperationException("Không tìm thấy phiếu.");
+        if (!await db.Accounts.AnyAsync(a => a.Id == form.AccountId)) throw new InvalidOperationException("Chọn tài khoản nhận tiền.");
+        var room = bill.Lease.Room;
+        var tx = new MoneyTransaction
         {
-            CategoryId = category.Id,
-            ContractId = contractId,
-            Amount = amount,
-            TransactionDate = paymentDate.Date,
-            Description = string.IsNullOrWhiteSpace(note) ? "Thu tiền phòng" : $"Thu tiền phòng - {note.Trim()}",
-            ReferenceNumber = $"THU-{DateTime.Now:yyyyMMddHHmmss}",
-            CreatedBy = userId,
-            CreatedAt = DateTime.Now
+            AccountId = form.AccountId, Date = form.Date.Date, Amount = form.Amount, Category = TxCategory.BillPayment,
+            Description = $"Thu tiền phòng {room.Code} {BillKind.Display(bill.Kind).ToLower(Fmt.Vi)} {bill.Month:00}/{bill.Year}" + (string.IsNullOrWhiteSpace(form.Note) ? "" : " - " + form.Note.Trim()),
+            RoomId = room.Id, LeaseId = bill.LeaseId, BillId = bill.Id, CreatedAt = DateTime.Now, CreatedBy = user
         };
-        db.IncomeExpenses.Add(income);
+        db.Transactions.Add(tx);
         await db.SaveChangesAsync();
-        return income.Id;
+        AttachmentService.Attach(db, AttachmentOwner.Transaction, tx.Id, form.Receipts, user);
+        await db.SaveChangesAsync();
+        return tx.Id;
+    }
+
+    /// <summary>Xóa phiếu (chỉ Quản trị, và phiếu chưa có khoản thu).</summary>
+    public async Task DeleteBillAsync(int billId)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync();
+        var bill = await db.Bills.Include(b => b.Payments).FirstOrDefaultAsync(b => b.Id == billId) ?? throw new InvalidOperationException("Không tìm thấy phiếu.");
+        if (bill.Payments.Count > 0) throw new InvalidOperationException("Phiếu đã có khoản thu: xóa các khoản thu trước.");
+        if (bill.Kind != BillKind.Monthly) throw new InvalidOperationException("Chỉ xóa được phiếu hằng tháng.");
+        db.Bills.Remove(bill);
+        await db.SaveChangesAsync();
+    }
+
+    public async Task<List<(Bill Bill, decimal Paid)>> GetUnpaidBillsAsync()
+    {
+        await using var db = await dbFactory.CreateDbContextAsync();
+        var list = await db.Bills.AsNoTracking().Include(b => b.Lease).ThenInclude(l => l.Room)
+            .Select(b => new { Bill = b, Paid = b.Payments.Sum(p => (decimal?)p.Amount) ?? 0 })
+            .Where(x => x.Bill.TotalAmount > x.Paid)
+            .OrderBy(x => x.Bill.Year).ThenBy(x => x.Bill.Month).ToListAsync();
+        return list.Select(x => (x.Bill, x.Paid)).ToList();
     }
 }

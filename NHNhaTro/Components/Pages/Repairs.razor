@@ -1,0 +1,157 @@
+@page "/sua-chua"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject ExpenseService Expenses
+@inject RoomService Rooms
+@inject SetupService Setup
+
+<PageTitle>Sửa chữa</PageTitle>
+
+<div class="nh-page-title">
+    <h2><i class="fas fa-tools"></i> Sửa chữa</h2>
+    <button type="button" class="btn btn-primary" @onclick="OpenForm"><i class="fas fa-plus"></i> Ghi phiếu sửa chữa</button>
+</div>
+
+@if (form != null)
+{
+    <div class="nh-card border border-primary">
+        <h5>Phiếu sửa chữa mới</h5>
+        <div class="row g-2">
+            <div class="col-md-3"><label class="form-label">Ngày</label><input type="date" class="form-control" @bind="form.Date" /></div>
+            <div class="col-md-3"><label class="form-label">Phạm vi</label>
+                <select class="form-select" @bind="form.RoomId">
+                    <option value="">Khu vực chung</option>
+                    @foreach (var r in rooms) { <option value="@r.Id">Phòng @r.Code</option> }
+                </select></div>
+            @if (form.RoomId == null)
+            {
+                <div class="col-md-3"><label class="form-label">Vị trí <span class="text-danger">*</span></label><input class="form-control" placeholder="VD: Cầu thang dãy A, bể nước" @bind="form.Location" /></div>
+            }
+            <div class="col-md-3"><label class="form-label">Đồ đạc</label>
+                <select class="form-select" @bind="form.FurnitureItemId">
+                    <option value="">-- Không / khác --</option>
+                    @foreach (var i in items) { <option value="@i.Id">@i.Name</option> }
+                </select></div>
+            <div class="col-md-6"><label class="form-label">Nội dung sửa <span class="text-danger">*</span></label><input class="form-control" maxlength="1000" @bind="form.Description" /></div>
+            <div class="col-md-3"><label class="form-label">Người/đơn vị sửa</label><input class="form-control" @bind="form.PerformedBy" /></div>
+            <div class="col-md-3"><label class="form-label">Số tiền</label><MoneyInput @bind-Value="form.Amount" /></div>
+            <div class="col-md-3"><label class="form-label">Chi từ tài khoản</label>
+                <select class="form-select" @bind="form.AccountId">@foreach (var a in accounts) {<option value="@a.Id">@a.Name</option>}</select></div>
+            <div class="col-md-4"><FileUpload Kind="Repairs" Label="Ảnh hư hỏng (trước)" Camera="true" Accept="image/*" Required="true" @bind-Files="form.BeforePhotos" /></div>
+            <div class="col-md-4"><FileUpload Kind="Repairs" Label="Ảnh sau khi sửa" Camera="true" Accept="image/*" @bind-Files="form.AfterPhotos" /></div>
+            <div class="col-md-4"><FileUpload Kind="Receipts" Label="Chứng từ chuyển khoản/hóa đơn" Required="@(form.Amount > 0)" @bind-Files="form.Receipts" /></div>
+        </div>
+        @if (RepeatWarning is { } w) { <div class="alert alert-warning small py-2 mt-2 mb-0"><i class="fas fa-exclamation-triangle"></i> @w</div> }
+        <div class="small text-muted mt-2">Bắt buộc có ảnh; có chi tiền thì bắt buộc chứng từ. Phiếu ghi lại người tạo và thời điểm, chỉ Quản trị được xóa.</div>
+        <div class="text-end mt-2">
+            <button type="button" class="btn btn-secondary me-2" @onclick="CancelForm">Hủy</button>
+            <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="SaveAsync"><i class="fas fa-check"></i> Lưu phiếu</button>
+        </div>
+    </div>
+}
+
+<div class="nh-card">
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-2"><label class="form-label small">Từ ngày</label><input type="date" class="form-control" @bind="from" @bind:after="LoadAsync" /></div>
+        <div class="col-6 col-md-2"><label class="form-label small">Đến ngày</label><input type="date" class="form-control" @bind="to" @bind:after="LoadAsync" /></div>
+        <div class="col-6 col-md-3"><label class="form-label small">Phạm vi</label>
+            <select class="form-select" value="@scope" @onchange="OnScopeChanged">
+                <option value="">Tất cả</option><option value="common">Khu vực chung</option>
+                @foreach (var r in rooms) { <option value="@r.Id">Phòng @r.Code</option> }
+            </select></div>
+        <div class="col-6 col-md-3"><label class="form-label small">Tìm</label><input class="form-control" @bind="search" @bind:after="LoadAsync" /></div>
+        <div class="col-md-2 align-self-end text-end small">@list.Count phiếu · <strong>@Fmt.Vnd(list.Sum(r => r.Amount))</strong></div>
+    </div>
+    <div class="table-responsive">
+        <table class="nh-table">
+            <thead><tr><th>Ngày</th><th>Phạm vi</th><th>Đồ đạc</th><th>Nội dung</th><th>Người sửa</th><th class="text-end">Số tiền</th><th>Ảnh/CT</th><th>Người ghi</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var r in list)
+                {
+                    <tr class="@(r.ReceiptCount == 0 && r.Amount > 0 ? "table-danger" : "")">
+                        <td class="text-nowrap">@Fmt.Date(r.Date)</td><td>@r.Place</td>
+                        <td>@r.Item @if (r.RepeatCount > 1) { <span class="badge bg-warning text-dark" title="Số lần sửa cùng phòng, cùng đồ trong 180 ngày">@r.RepeatCount lần/180 ngày</span> }</td>
+                        <td>@r.Description</td><td>@r.PerformedBy</td>
+                        <td class="text-end fw-bold">@Fmt.Money(r.Amount)</td>
+                        <td class="small"><i class="fas fa-image"></i> @r.PhotoCount · <i class="fas fa-receipt"></i> @r.ReceiptCount</td>
+                        <td class="small text-muted" title="@Fmt.DateTime(r.CreatedAt)">@r.CreatedBy</td>
+                        <td><a class="btn btn-sm btn-outline-primary" href="@($"sua-chua/{r.Id}")">Xem</a></td>
+                    </tr>
+                }
+                @if (list.Count == 0) { <tr><td colspan="9" class="text-center text-muted py-3">Chưa có phiếu sửa chữa.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "phong")] public string? RoomCode { get; set; }
+
+    private List<Room> rooms = [];
+    private List<FurnitureItem> items = [];
+    private List<MoneyAccount> accounts = [];
+    private List<RepairRow> list = [];
+    private DateTime? from, to;
+    private string scope = "";
+    private string? search;
+    private RepairForm? form;
+    private int personalId;
+
+    private string? RepeatWarning
+    {
+        get
+        {
+            if (form?.RoomId == null) return null;
+            var since = DateTime.Today.AddDays(-180);
+            var code = rooms.FirstOrDefault(r => r.Id == form.RoomId)?.Code;
+            var same = list.Count(r => r.Place == "Phòng " + code && r.Date >= since && (form.FurnitureItemId == null || r.Item == items.FirstOrDefault(i => i.Id == form.FurnitureItemId)?.Name));
+            return same > 0 ? $"Phòng {code} đã có {same} phiếu sửa{(form.FurnitureItemId != null ? " cùng đồ đạc này" : "")} trong 180 ngày qua. Kiểm tra kỹ trước khi chi." : null;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        rooms = await Rooms.ListRoomsAsync();
+        items = await Setup.GetFurnitureItemsAsync();
+        accounts = (await Setup.GetAccountsAsync()).Where(a => a.IsActive).ToList();
+        personalId = (await Setup.GetSettingsAsync()).PersonalAccountId;
+        if (RoomCode != null && rooms.FirstOrDefault(r => r.Code == RoomCode) is { } room)
+        {
+            scope = room.Id.ToString();
+            OpenForm();
+            form!.RoomId = room.Id;
+        }
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        int? roomId = int.TryParse(scope, out var id) ? id : null;
+        list = await Expenses.ListRepairsAsync(from, to, roomId, scope == "common", search);
+    }
+
+    private async Task OnScopeChanged(ChangeEventArgs e)
+    {
+        scope = e.Value?.ToString() ?? "";
+        await LoadAsync();
+    }
+
+    private void OpenForm() => form = new RepairForm { AccountId = personalId };
+
+    private void CancelForm()
+    {
+        form = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        var user = await GetUserNameAsync();
+        int id = 0;
+        if (await RunAsync(async () => id = await Expenses.CreateRepairAsync(form!, user), "Đã lưu phiếu sửa chữa."))
+        {
+            form = null;
+            await LoadAsync();
+        }
+    }
+}

@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.StaticFiles;
@@ -7,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using NHNhaTro.Components;
 using NHNhaTro.Components.Account;
 using NHNhaTro.Data;
+using NHNhaTro.Data.Entities;
 using NHNhaTro.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,7 +16,6 @@ var vi = CultureInfo.GetCultureInfo("vi-VN");
 CultureInfo.DefaultThreadCurrentCulture = vi;
 CultureInfo.DefaultThreadCurrentUICulture = vi;
 
-// Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -40,11 +39,11 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
-        // Không có máy gửi email thật và tài khoản của bản MVC cũ đều chưa xác nhận email,
-        // nên không bắt buộc xác nhận email (nếu bật, mọi tài khoản cũ sẽ bị chặn đăng nhập).
+        // Không có máy gửi email thật nên không bắt buộc xác nhận email.
         options.SignIn.RequireConfirmedAccount = false;
         options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
     })
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
@@ -53,19 +52,19 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 
 // Nghiệp vụ nhà trọ
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
-// Từ QuestPDF 2026.9 font hệ thống không được dùng mặc định. Bật lại để dùng Times New Roman có sẵn trên Windows
-// (giống bản cũ); máy chủ không có font này thì đặt file .ttf vào thư mục Fonts, hoặc PDF sẽ dùng Lato đi kèm QuestPDF.
+// Từ QuestPDF 2026.9 font hệ thống không được dùng mặc định: bật lại để dùng Times New Roman của Windows.
 QuestPDF.Settings.UseSystemFonts = true;
-builder.Services.Configure<LandlordOptions>(builder.Configuration.GetSection("NhaTro"));
 builder.Services.AddHttpClient("fptai", c => c.Timeout = TimeSpan.FromSeconds(60));
 builder.Services.AddSingleton<FileStorage>();
+builder.Services.AddScoped<SetupService>();
 builder.Services.AddScoped<RoomService>();
+builder.Services.AddScoped<LeaseService>();
 builder.Services.AddScoped<BillingService>();
-builder.Services.AddScoped<ContractService>();
-builder.Services.AddScoped<TenantService>();
-builder.Services.AddScoped<IncomeExpenseService>();
-builder.Services.AddScoped<PdfDocuments>();
-builder.Services.AddScoped<OfficeDocuments>();
+builder.Services.AddScoped<AccountService>();
+builder.Services.AddScoped<ExpenseService>();
+builder.Services.AddScoped<AttachmentService>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<Documents>();
 builder.Services.AddScoped<ToastService>();
 builder.Services.AddScoped<RegistrationPolicy>();
 
@@ -78,18 +77,24 @@ if (!app.Environment.IsDevelopment() && connectionString.Contains("(localdb)", S
         "hoặc đặt biến môi trường ConnectionStrings__DefaultConnection (xem docs/TRIEN-KHAI-IIS.md).");
 }
 
-// Font cho PDF: nạp mọi .ttf trong thư mục Fonts (nếu có) để máy chủ không có Times New Roman vẫn in được tiếng Việt.
+// Tạo/cập nhật bảng, dữ liệu ban đầu (64 phòng, đồ đạc, tài khoản) và vai trò người dùng.
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await db.Database.MigrateAsync();
+    await SetupService.SeedAsync(db);
+    await UserService.EnsureRolesAsync(scope.ServiceProvider);
+}
+
+// Font cho PDF: nạp mọi .ttf trong thư mục Fonts (nếu có).
 var fontDir = Path.Combine(app.Environment.ContentRootPath, "Fonts");
 if (Directory.Exists(fontDir))
-{
     foreach (var font in Directory.EnumerateFiles(fontDir, "*.ttf"))
     {
         using var fs = File.OpenRead(font);
         QuestPDF.Drawing.FontManager.RegisterFontFromStream(fs);
     }
-}
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
@@ -97,37 +102,31 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
-
 app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
-
-// Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
 
-// ===== Tải file: chỉ người đã đăng nhập =====
+// ===== Tải chứng từ: chỉ người đã đăng nhập =====
 var files = app.MapGroup("/files").RequireAuthorization();
 
-files.MapGet("/bills/{id:int}", async (int id, PdfDocuments pdf) =>
-    await pdf.UtilityBillAsync(id) is { } r ? Results.File(r.Bytes, "application/pdf", r.FileName) : Results.NotFound());
+files.MapGet("/bills/{id:int}", async (int id, Documents docs) =>
+    await docs.BillPdfAsync(id) is { } r ? Results.File(r.Bytes, "application/pdf", r.FileName) : Results.NotFound());
 
-files.MapGet("/receipts/{id:int}", async (int id, PdfDocuments pdf) =>
-    await pdf.PaymentReceiptAsync(id) is { } r ? Results.File(r.Bytes, "application/pdf", r.FileName) : Results.NotFound());
+files.MapGet("/checkout/{leaseId:int}", async (int leaseId, Documents docs) =>
+    await docs.CheckoutPdfAsync(leaseId) is { } r ? Results.File(r.Bytes, "application/pdf", r.FileName) : Results.NotFound());
 
-files.MapGet("/contracts/{id:int}/print", async (int id, ContractService contracts, OfficeDocuments office) =>
+files.MapGet("/contracts/{leaseId:int}", async (int leaseId, Documents docs) =>
 {
-    var c = await contracts.GetDetailsAsync(id);
-    if (c == null) return Results.NotFound();
     try
     {
-        return Results.File(office.PrintContract(c), OfficeDocuments.DocxMime, $"HopDong_{c.Id:D6}_{DateTime.Now:yyyyMMdd}.docx");
+        return await docs.ContractDocxAsync(leaseId) is { } r ? Results.File(r.Bytes, Documents.DocxMime, r.FileName) : Results.NotFound();
     }
     catch (InvalidOperationException ex)
     {
@@ -135,48 +134,36 @@ files.MapGet("/contracts/{id:int}/print", async (int id, ContractService contrac
     }
 });
 
-files.MapGet("/contracts.xlsx", async ([AsParameters] ContractExportQuery q, ContractService contracts, OfficeDocuments office) =>
+files.MapGet("/residents.xlsx", async (bool? all, string? q, LeaseService leases, Documents docs) =>
 {
-    var list = await contracts.ListForExportAsync(q.ToFilter());
-    return Results.File(office.ContractList(list), OfficeDocuments.XlsxMime, $"DanhSachHopDong_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+    var rows = await leases.ListResidentsAsync(all != true, q);
+    return Results.File(await docs.ResidentRegisterAsync(rows), Documents.XlsxMime, $"SoLuuTru_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
 });
 
-files.MapGet("/tenants.xlsx", async ([AsParameters] TenantExportQuery q, TenantService tenants, OfficeDocuments office) =>
+files.MapGet("/ledger.xlsx", async ([AsParameters] LedgerQuery q, Documents docs) =>
+    Results.File(await docs.LedgerAsync(q.ToFilter()), Documents.XlsxMime, $"SoThuChi_{DateTime.Now:yyyyMMdd_HHmm}.xlsx"));
+
+// Mã QR dẫn tới trang giới thiệu (in lên phướn quảng cáo)
+app.MapGet("/qr.png", (HttpContext ctx, int? size) =>
 {
-    var list = await tenants.ListAsync(q.ToFilter());
-    return Results.File(office.TenantRegister(list), OfficeDocuments.XlsxMime, $"DanhSachKhachThue_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+    var url = $"{ctx.Request.Scheme}://{ctx.Request.Host}/gioi-thieu";
+    return Results.File(Documents.QrPng(url, Math.Clamp(size ?? 12, 4, 40)), "image/png", "QR-gioi-thieu.png");
 });
 
-files.MapGet("/tenants.pdf", async ([AsParameters] TenantExportQuery q, TenantService tenants, PdfDocuments pdf) =>
-{
-    var list = await tenants.ListAsync(q.ToFilter());
-    return Results.File(pdf.TenantList(list, q.Status), "application/pdf", $"DanhSachKhachThue_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
-});
-
-// Ảnh CCCD và scan hợp đồng (đường dẫn lưu trong database có dạng /Uploads/...)
+// Ảnh và chứng từ (đường dẫn /Uploads/...). Thư mục Public (ảnh quảng cáo) xem không cần đăng nhập.
 var contentTypes = new FileExtensionContentTypeProvider();
-app.MapGet("/Uploads/{**path}", (string path, FileStorage storage) =>
+app.MapGet("/Uploads/{**path}", (string path, FileStorage storage, HttpContext ctx) =>
 {
+    if (!FileStorage.IsPublicPath(path) && ctx.User.Identity?.IsAuthenticated != true) return Results.Challenge();
     var physical = storage.ResolvePhysicalPath($"{FileStorage.WebPrefix}/{path}");
     if (physical == null || !File.Exists(physical)) return Results.NotFound();
     if (!contentTypes.TryGetContentType(physical, out var type)) type = "application/octet-stream";
     return Results.File(physical, type, enableRangeProcessing: true);
-}).RequireAuthorization();
+});
 
 app.Run();
 
-public record ContractExportQuery(string? SearchTerm, string? ContractType, string? Status, DateTime? FromDate, DateTime? ToDate, int? CompanyId)
+public record LedgerQuery(int? AccountId, DateTime? From, DateTime? To, string? Category, string? Direction, string? Search)
 {
-    public ContractFilter ToFilter() => new()
-    {
-        SearchTerm = SearchTerm, ContractType = ContractType, Status = Status, FromDate = FromDate, ToDate = ToDate, CompanyId = CompanyId
-    };
-}
-
-public record TenantExportQuery(string? SearchName, string? SearchCard, string? SearchRoom, string? Status, int? CompanyId, string? ContractType)
-{
-    public TenantFilter ToFilter() => new()
-    {
-        SearchName = SearchName, SearchCard = SearchCard, SearchRoom = SearchRoom, Status = Status, CompanyId = CompanyId, ContractType = ContractType
-    };
+    public LedgerFilter ToFilter() => new() { AccountId = AccountId, From = From, To = To, Category = Category, Direction = Direction, Search = Search };
 }

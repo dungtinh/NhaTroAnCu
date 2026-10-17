@@ -1,0 +1,140 @@
+@page "/nhan-phong"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject RoomService Rooms
+@inject LeaseService Leases
+@inject SetupService Setup
+
+<PageTitle>Nhận phòng</PageTitle>
+
+<div class="nh-page-title">
+    <h2><i class="fas fa-door-open"></i> Nhận phòng cho khách</h2>
+</div>
+
+@if (settings == null)
+{
+    <div class="nh-loading">Đang tải...</div>
+}
+else
+{
+    var room = emptyRooms.FirstOrDefault(r => r.Id == form.RoomId);
+    var first = room == null ? null : LeaseService.CalculateFirstPeriod(form.MonthlyRent, form.MoveInDate, settings.BillingDay, settings.WaterPricePerPerson, Math.Max(1, form.Tenants.Count(t => !t.IsEmpty)));
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="nh-card">
+                <h5>1. Phòng và giá</h5>
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label">Phòng trống <span class="text-danger">*</span></label>
+                        <select class="form-select" value="@form.RoomId" @onchange="OnRoomChanged">
+                            <option value="0">-- Chọn phòng --</option>
+                            @foreach (var g in emptyRooms.GroupBy(r => r.Block.Code))
+                            {
+                                <optgroup label="Dãy @g.Key">
+                                    @foreach (var r in g) { <option value="@r.Id">@r.Code - @Fmt.Money(r.Rent)đ</option> }
+                                </optgroup>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4"><label class="form-label">Ngày vào <span class="text-danger">*</span></label><input type="date" class="form-control" @bind="form.MoveInDate" /></div>
+                    <div class="col-md-4"><label class="form-label">Số điện đầu</label><input type="number" min="0" class="form-control" @bind="form.StartMeterReading" /></div>
+                    <div class="col-md-4"><label class="form-label">Tiền phòng/tháng</label><MoneyInput Value="form.MonthlyRent" ValueChanged="OnRentChanged" /></div>
+                    <div class="col-md-4"><label class="form-label">Tiền cọc</label><MoneyInput @bind-Value="form.Deposit" /></div>
+                    <div class="col-md-4"><label class="form-label">Ghi chú</label><input class="form-control" maxlength="1000" @bind="form.Note" /></div>
+                </div>
+                @if (room != null)
+                {
+                    <div class="small text-muted mt-2">Số điện đầu lấy theo số khi khách trước trả phòng (@room.MeterReading). Điện @Fmt.Money(settings.ElectricityPrice)đ/số, nước @Fmt.Money(settings.WaterPricePerPerson)đ/người/tháng.</div>
+                }
+            </div>
+
+            <div class="nh-card">
+                <h5>2. Người ở (quét CCCD)</h5>
+                <TenantEditor Tenants="form.Tenants" MaxPeople="room?.MaxOccupants ?? 4" Changed="StateHasChanged" />
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="nh-card">
+                <h5>3. Tiền thu khi vào</h5>
+                @if (first == null)
+                {
+                    <p class="text-muted mb-0">Chọn phòng để tính tiền.</p>
+                }
+                else
+                {
+                    <div class="small text-muted mb-2">Kỳ đầu: @Fmt.Date(first.From) → @Fmt.Date(first.To) (ngày thu mồng @settings.BillingDay)</div>
+                    <table class="nh-table mb-2">
+                        <tr><td>Tiền phòng tháng</td><td class="text-end">@Fmt.Money(form.MonthlyRent)</td></tr>
+                        <tr><td>@(first.AdjustDays >= 0 ? "Cộng" : "Trừ") @Math.Abs(first.AdjustDays) ngày × @Fmt.Money(Math.Round(form.MonthlyRent / 30))</td>
+                            <td class="text-end">@(first.AdjustDays >= 0 ? "+" : "−")@Fmt.Money(Math.Abs(first.Rent - form.MonthlyRent))</td></tr>
+                        <tr><td>Tiền phòng kỳ đầu</td><td class="text-end fw-bold">@Fmt.Money(first.Rent)</td></tr>
+                        <tr><td>Tiền nước kỳ đầu (@first.PersonCount người)</td><td class="text-end">@Fmt.Money(first.Water)</td></tr>
+                        <tr class="table-light"><td class="fw-bold">Thu vào TK hộ kinh doanh</td><td class="text-end fw-bold text-primary">@Fmt.Vnd(first.Total)</td></tr>
+                        <tr class="table-light"><td class="fw-bold">Thu cọc vào TK cá nhân</td><td class="text-end fw-bold text-primary">@Fmt.Vnd(form.Deposit)</td></tr>
+                    </table>
+
+                    <label class="form-label">Ngày thu</label>
+                    <input type="date" class="form-control mb-2" @bind="form.PaymentDate" />
+
+                    <label class="form-label">Đã thu tiền cọc</label>
+                    <MoneyInput @bind-Value="form.DepositPaid" />
+                    <div class="my-2"><FileUpload Kind="Receipts" ButtonText="Chứng từ cọc" @bind-Files="form.DepositReceipts" /></div>
+
+                    <label class="form-label">Đã thu tiền phòng kỳ đầu</label>
+                    <MoneyInput @bind-Value="form.FirstPaymentPaid" />
+                    <div class="my-2"><FileUpload Kind="Receipts" ButtonText="Chứng từ thu" @bind-Files="form.PaymentReceipts" /></div>
+                    <button type="button" class="btn btn-sm btn-link px-0" @onclick="() => { form.DepositPaid = form.Deposit; form.FirstPaymentPaid = first.Total; }">Điền đủ số phải thu</button>
+                    <div class="small text-muted">Chưa thu thì để 0, phiếu kỳ đầu sẽ hiện là còn nợ.</div>
+                }
+                <button type="button" class="btn btn-primary btn-lg w-100 mt-3" disabled="@(Busy || room == null)" @onclick="SaveAsync">
+                    <i class="fas @(Busy ? "fa-spinner fa-spin" : "fa-check")"></i> Nhận phòng
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "phong")] public string? RoomCode { get; set; }
+
+    private AppSetting? settings;
+    private List<Room> emptyRooms = [];
+    private CheckInForm form = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        settings = await Setup.GetSettingsAsync();
+        emptyRooms = await Rooms.ListRoomsAsync(RoomStatus.Empty);
+        if (RoomCode != null && emptyRooms.FirstOrDefault(r => r.Code == RoomCode) is { } r) SelectRoom(r);
+    }
+
+    private void OnRoomChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id) && emptyRooms.FirstOrDefault(r => r.Id == id) is { } r) SelectRoom(r);
+        else form.RoomId = 0;
+    }
+
+    private void SelectRoom(Room r)
+    {
+        form.RoomId = r.Id;
+        form.MonthlyRent = r.Rent;
+        form.Deposit = r.Rent;
+        form.StartMeterReading = r.MeterReading;
+    }
+
+    private void OnRentChanged(decimal v)
+    {
+        if (form.Deposit == form.MonthlyRent) form.Deposit = v;
+        form.MonthlyRent = v;
+    }
+
+    private async Task SaveAsync()
+    {
+        int leaseId = 0;
+        var user = await GetUserNameAsync();
+        if (await RunAsync(async () => leaseId = await Leases.CheckInAsync(form, user), "Đã nhận phòng. In hợp đồng cho khách ký rồi tải bản scan lên."))
+            Nav.NavigateTo($"hop-dong/{leaseId}");
+    }
+}

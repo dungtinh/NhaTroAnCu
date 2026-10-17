@@ -1,0 +1,221 @@
+@page "/hop-dong/{Id:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject LeaseService Leases
+@inject BillingService Billing
+@inject AccountService Accounts
+
+<PageTitle>Hợp đồng phòng @lease?.Room.Code</PageTitle>
+
+@if (lease == null)
+{
+    <div class="nh-loading">@(notFound ? "Không tìm thấy hợp đồng." : "Đang tải...")</div>
+}
+else
+{
+    bool active = lease.Status == LeaseStatus.Active;
+    <div class="nh-page-title">
+        <h2><i class="fas fa-file-contract"></i> Hợp đồng phòng @lease.Room.Code
+            <span class="badge @(active ? "bg-success" : "bg-secondary") fs-6 align-middle">@(active ? "Đang thuê" : "Đã trả phòng")</span></h2>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-secondary" href="@($"phong/{lease.Room.Code}")"><i class="fas fa-door-closed"></i> Phòng @lease.Room.Code</a>
+            <a class="btn btn-outline-primary" href="@($"files/contracts/{lease.Id}")" target="_blank"><i class="fas fa-print"></i> In hợp đồng (Word)</a>
+            @if (active) { <a class="btn btn-danger" href="@($"tra-phong/{lease.Id}")"><i class="fas fa-sign-out-alt"></i> Trả phòng</a> }
+            else { <a class="btn btn-outline-secondary" href="@($"files/checkout/{lease.Id}")" target="_blank"><i class="fas fa-file-pdf"></i> Biên bản trả phòng</a> }
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-4">
+            <div class="nh-card">
+                <h5><i class="fas fa-info-circle"></i> Thông tin thuê</h5>
+                <table class="nh-table">
+                    <tr><td>Ngày vào</td><td class="text-end">@Fmt.Date(lease.StartDate)</td></tr>
+                    @if (!active) { <tr><td>Ngày trả</td><td class="text-end">@Fmt.Date(lease.EndDate)</td></tr> }
+                    <tr><td>Số điện đầu</td><td class="text-end">@lease.StartMeterReading</td></tr>
+                    @if (!active) { <tr><td>Số điện cuối</td><td class="text-end">@lease.EndMeterReading</td></tr> }
+                </table>
+                <div class="row g-2 mt-1">
+                    <div class="col-6"><label class="form-label">Giá thuê</label><MoneyInput @bind-Value="rent" disabled="@(!active)" /></div>
+                    <div class="col-6"><label class="form-label">Tiền cọc</label><MoneyInput @bind-Value="deposit" disabled="@(!active || !isAdmin)" /></div>
+                    <div class="col-12"><label class="form-label">Ghi chú</label><textarea class="form-control" rows="2" @bind="note" disabled="@(!active)"></textarea></div>
+                </div>
+                @if (active) { <button type="button" class="btn btn-sm btn-primary mt-2" @onclick="SaveTermsAsync"><i class="fas fa-save"></i> Lưu</button> }
+            </div>
+
+            <div class="nh-card">
+                <h5><i class="fas fa-file-signature"></i> Hợp đồng đã ký (scan)</h5>
+                <AttachmentList EntityType="@AttachmentOwner.Lease" EntityId="lease.Id" Kind="@AttachmentKind.ContractScan" CanDelete="isAdmin" Version="version" />
+                <div class="mt-2"><FileUpload Kind="Contracts" ButtonText="Tải bản scan" Files="scanFiles" Uploaded="OnScanUploadedAsync" /></div>
+            </div>
+
+            @if (!active)
+            {
+                <div class="nh-card">
+                    <h5><i class="fas fa-clipboard-check"></i> Trả phòng</h5>
+                    <table class="nh-table">
+                        <tr><td>Tiền cọc</td><td class="text-end">@Fmt.Money(lease.Deposit)</td></tr>
+                        <tr><td>Điện chưa thu</td><td class="text-end">@Fmt.Money(lease.CheckoutElectricity ?? 0)</td></tr>
+                        @foreach (var p in lease.Penalties) { <tr><td>Phạt: @p.Description</td><td class="text-end">@Fmt.Money(p.Amount)</td></tr> }
+                        @if ((lease.CheckoutOther ?? 0) != 0) { <tr><td>Khoản khác</td><td class="text-end">@Fmt.Money(lease.CheckoutOther ?? 0)</td></tr> }
+                        <tr><td class="fw-bold">Đã trả cọc</td><td class="text-end fw-bold">@Fmt.Money(lease.DepositRefunded ?? 0)</td></tr>
+                        <tr><td class="fw-bold">Khách nộp thêm</td><td class="text-end fw-bold">@Fmt.Money(lease.CheckoutCollected ?? 0)</td></tr>
+                    </table>
+                    @if (!string.IsNullOrEmpty(lease.FurnitureWarnings)) { <div class="alert alert-warning small py-2 mt-2 mb-2">@lease.FurnitureWarnings</div> }
+                    @if (!string.IsNullOrEmpty(lease.CheckoutNote)) { <p class="small mb-2">@lease.CheckoutNote</p> }
+                    <AttachmentList EntityType="@AttachmentOwner.Lease" EntityId="lease.Id" Kind="@AttachmentKind.CheckoutPhoto" />
+                </div>
+            }
+        </div>
+
+        <div class="col-lg-8">
+            <div class="nh-card">
+                <h5><i class="fas fa-users"></i> Người ở</h5>
+                @if (active)
+                {
+                    <TenantEditor Tenants="tenants" MaxPeople="lease.Room.MaxOccupants" ExceptLeaseId="lease.Id" />
+                    <div class="d-flex flex-wrap gap-2 align-items-end mt-3">
+                        <div><label class="form-label">Ngày thay đổi (vào/ra)</label><input type="date" class="form-control" @bind="changeDate" /></div>
+                        <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="SaveTenantsAsync"><i class="fas fa-save"></i> Lưu danh sách người ở</button>
+                    </div>
+                    <div class="small text-muted mt-1">Bỏ một người khỏi danh sách sẽ ghi ngày chuyển đi; tiền nước các kỳ sau tính theo số người còn ở.</div>
+                }
+                <table class="nh-table mt-3">
+                    <thead><tr><th>Họ tên</th><th>CCCD</th><th>Điện thoại</th><th>Vào</th><th>Ra</th></tr></thead>
+                    <tbody>
+                        @foreach (var t in lease.Tenants.OrderBy(t => t.MoveOutDate != null).ThenByDescending(t => t.IsRepresentative))
+                        {
+                            <tr class="@(t.MoveOutDate != null ? "text-muted" : "")">
+                                <td>@t.Tenant.FullName @if (t.IsRepresentative) {<span class="badge bg-info">Đại diện</span>}</td>
+                                <td>@t.Tenant.IdentityCard</td><td>@t.Tenant.Phone</td><td>@Fmt.Date(t.MoveInDate)</td><td>@Fmt.Date(t.MoveOutDate)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="nh-card">
+                <h5><i class="fas fa-receipt"></i> Phiếu thu và các lần thu tiền</h5>
+                @foreach (var b in lease.Bills.OrderByDescending(b => b.Year).ThenByDescending(b => b.Month).ThenByDescending(b => b.Id))
+                {
+                    var paid = b.Payments.Sum(p => p.Amount);
+                    <div class="border rounded p-2 mb-2">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div>
+                                <strong>@BillKind.Display(b.Kind) @b.Month.ToString("00")/@b.Year</strong>
+                                <span class="text-muted small ms-2">@Fmt.Date(b.PeriodFrom) → @Fmt.Date(b.PeriodTo)</span>
+                                <div class="small">Phòng @Fmt.Money(b.RentAmount) · Điện @Fmt.Money(b.ElectricityAmount)@(b.MeterEnd != null ? $" ({b.MeterStart}→{b.MeterEnd})" : "") · Nước @Fmt.Money(b.WaterAmount) (@b.PersonCount người)@(b.OtherAmount - b.Discount != 0 ? $" · Khác {Fmt.Money(b.OtherAmount - b.Discount)}" : "")</div>
+                                @if (!string.IsNullOrEmpty(b.Note)) { <div class="small text-muted">@b.Note</div> }
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold">@Fmt.Vnd(b.TotalAmount)</div>
+                                <div class="small @(paid >= b.TotalAmount ? "text-success" : "text-danger")">Đã thu @Fmt.Money(paid)</div>
+                                <div class="mt-1">
+                                    @if (paid < b.TotalAmount) { <button type="button" class="btn btn-sm btn-success" @onclick="() => { payBill = b; payPaid = paid; }"><i class="fas fa-hand-holding-usd"></i> Thu</button> }
+                                    <a class="btn btn-sm btn-outline-secondary" href="@($"files/bills/{b.Id}")" target="_blank"><i class="fas fa-print"></i></a>
+                                    @if (isAdmin && b.Kind == BillKind.Monthly && b.Payments.Count == 0) { <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => DeleteBillAsync(b)"><i class="fas fa-trash"></i></button> }
+                                </div>
+                            </div>
+                        </div>
+                        @foreach (var p in b.Payments.OrderBy(p => p.Date))
+                        {
+                            <div class="d-flex flex-wrap gap-2 align-items-center small border-top mt-2 pt-2">
+                                <span><i class="fas fa-check text-success"></i> @Fmt.Date(p.Date): <strong>@Fmt.Vnd(p.Amount)</strong> - @p.Description <span class="text-muted">(@p.CreatedBy)</span></span>
+                                <AttachmentList EntityType="@AttachmentOwner.Transaction" EntityId="p.Id" ShowEmpty="false" CanDelete="isAdmin" />
+                                @if (isAdmin) { <button type="button" class="btn btn-sm btn-link text-danger p-0" @onclick="() => DeletePaymentAsync(p)">Xóa khoản thu</button> }
+                            </div>
+                        }
+                    </div>
+                }
+                @if (deposits.Count > 0)
+                {
+                    <h6 class="mt-3 fw-bold">Tiền cọc (tài khoản cá nhân)</h6>
+                    @foreach (var t in deposits)
+                    {
+                        <div class="d-flex flex-wrap gap-2 align-items-center small border-top py-1">
+                            <span>@Fmt.Date(t.Date): <strong class="@(t.Amount > 0 ? "text-success" : "text-danger")">@Fmt.Vnd(t.Amount)</strong> - @t.Description</span>
+                            <AttachmentList EntityType="@AttachmentOwner.Transaction" EntityId="t.Id" ShowEmpty="false" />
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <PaymentDialog Bill="payBill" Paid="payPaid" RoomCode="@lease.Room.Code" Closed="() => payBill = null" Saved="AfterChangeAsync" />
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Lease? lease;
+    private bool notFound, isAdmin;
+    private decimal rent, deposit;
+    private string? note;
+    private List<TenantInput> tenants = [];
+    private DateTime changeDate = DateTime.Today;
+    private List<PendingFile> scanFiles = [];
+    private int version;
+    private Bill? payBill;
+    private decimal payPaid;
+    private List<LedgerRow> deposits = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isAdmin = await IsAdminAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        lease = await Leases.GetLeaseAsync(Id);
+        notFound = lease == null;
+        if (lease == null) return;
+        rent = lease.MonthlyRent;
+        deposit = lease.Deposit;
+        note = lease.Note;
+        tenants = lease.Tenants.Where(t => t.MoveOutDate == null).OrderByDescending(t => t.IsRepresentative).Select(t => TenantInput.From(t.Tenant)).ToList();
+        if (tenants.Count == 0) tenants.Add(new TenantInput());
+        var page = await Accounts.GetLedgerAsync(new LedgerFilter { LeaseId = lease.Id, PageSize = 200 });
+        deposits = page.Rows.Where(r => r.LeaseId == lease.Id && r.Category is TxCategory.Deposit or TxCategory.DepositRefund || (r.Category == TxCategory.Transfer && r.Amount < 0)).ToList();
+        version++;
+    }
+
+    private async Task SaveTermsAsync()
+    {
+        if (await RunAsync(() => Leases.UpdateLeaseTermsAsync(Id, rent, deposit, note), "Đã lưu.")) await LoadAsync();
+    }
+
+    private async Task SaveTenantsAsync()
+    {
+        if (await RunAsync(() => Leases.SaveTenantsAsync(Id, tenants, changeDate), "Đã lưu danh sách người ở.")) await LoadAsync();
+    }
+
+    private async Task OnScanUploadedAsync(PendingFile f)
+    {
+        var user = await GetUserNameAsync();
+        if (await RunAsync(() => Leases.SetContractScanAsync(Id, f, user), "Đã lưu bản scan hợp đồng."))
+        {
+            scanFiles.Clear();
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeleteBillAsync(Bill b)
+    {
+        if (!await ConfirmAsync($"Xóa phiếu tháng {b.Month:00}/{b.Year}?")) return;
+        if (await RunAsync(() => Billing.DeleteBillAsync(b.Id), "Đã xóa phiếu.")) await LoadAsync();
+    }
+
+    private async Task DeletePaymentAsync(MoneyTransaction p)
+    {
+        if (!await ConfirmAsync($"Xóa khoản thu {Fmt.Vnd(p.Amount)} ngày {Fmt.Date(p.Date)}?")) return;
+        if (await RunAsync(() => Accounts.DeleteAsync(p.Id), "Đã xóa khoản thu.")) await LoadAsync();
+    }
+
+    private async Task AfterChangeAsync()
+    {
+        payBill = null;
+        await LoadAsync();
+    }
+}

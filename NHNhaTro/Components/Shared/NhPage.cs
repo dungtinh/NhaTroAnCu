@@ -24,6 +24,19 @@ public abstract class NhPage : ComponentBase
         return state.User.FindFirstValue(ClaimTypes.NameIdentifier);
     }
 
+    /// <summary>Tên đăng nhập (email) của người dùng hiện tại, dùng ghi "người tạo".</summary>
+    protected async Task<string?> GetUserNameAsync()
+    {
+        if (AuthState == null) return null;
+        return (await AuthState).User.Identity?.Name;
+    }
+
+    protected async Task<bool> IsAdminAsync()
+    {
+        if (AuthState == null) return false;
+        return (await AuthState).User.IsInRole(NHNhaTro.Data.Entities.Roles.Admin);
+    }
+
     protected ValueTask<bool> ConfirmAsync(string message) => JS.InvokeAsync<bool>("confirm", message);
 
     /// <summary>Chạy thao tác, hiện thông báo lỗi nghiệp vụ thay vì làm hỏng mạch Blazor.</summary>

@@ -1,0 +1,172 @@
+@page "/cau-hinh"
+@attribute [Authorize(Roles = Roles.Admin)]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject SetupService Setup
+
+<PageTitle>Cấu hình</PageTitle>
+
+<div class="nh-page-title">
+    <h2><i class="fas fa-cog"></i> Cấu hình</h2>
+    <a class="btn btn-outline-secondary" href="nguoi-dung"><i class="fas fa-user-shield"></i> Người dùng</a>
+</div>
+
+@if (s != null)
+{
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="nh-card">
+                <h5>Thông tin chung và giá</h5>
+                <div class="row g-2">
+                    <div class="col-12"><label class="form-label">Tên nhà trọ</label><input class="form-control" @bind="s.Name" /></div>
+                    <div class="col-md-6"><label class="form-label">Chủ nhà</label><input class="form-control" @bind="s.Owner" /></div>
+                    <div class="col-md-6"><label class="form-label">Điện thoại</label><input class="form-control" @bind="s.Phone" /></div>
+                    <div class="col-12"><label class="form-label">Địa chỉ</label><input class="form-control" @bind="s.Address" /></div>
+                    <div class="col-12"><label class="form-label">Nơi đăng ký tạm trú (in trên sổ)</label><input class="form-control" @bind="s.RegisterArea" /></div>
+                    <div class="col-md-4"><label class="form-label">Giá điện (đ/số)</label><MoneyInput @bind-Value="s.ElectricityPrice" /></div>
+                    <div class="col-md-4"><label class="form-label">Nước (đ/người/tháng)</label><MoneyInput @bind-Value="s.WaterPricePerPerson" /></div>
+                    <div class="col-md-4"><label class="form-label">Ngày thu hằng tháng</label><input type="number" min="1" max="28" class="form-control" @bind="s.BillingDay" /></div>
+                    <div class="col-md-6"><label class="form-label">TK nhận cọc</label>
+                        <select class="form-select" @bind="s.PersonalAccountId">@foreach (var a in accounts) {<option value="@a.Id">@a.Name</option>}</select></div>
+                    <div class="col-md-6"><label class="form-label">TK nhận tiền phòng</label>
+                        <select class="form-select" @bind="s.BusinessAccountId">@foreach (var a in accounts) {<option value="@a.Id">@a.Name</option>}</select></div>
+                </div>
+                <button type="button" class="btn btn-primary mt-2" disabled="@Busy" @onclick="SaveSettingsAsync"><i class="fas fa-save"></i> Lưu</button>
+            </div>
+
+            <div class="nh-card">
+                <h5>Tài khoản tiền và số dư đầu kỳ</h5>
+                @foreach (var a in accounts)
+                {
+                    <div class="border rounded p-2 mb-2" @key="a.Id">
+                        <div class="row g-2">
+                            <div class="col-md-6"><label class="form-label small">Tên (@(a.Kind == AccountKind.Personal ? "cá nhân" : "hộ kinh doanh"))</label><input class="form-control" @bind="a.Name" /></div>
+                            <div class="col-md-3"><label class="form-label small">Số dư đầu kỳ</label><MoneyInput @bind-Value="a.OpeningBalance" /></div>
+                            <div class="col-md-3"><label class="form-label small">Ngày đầu kỳ</label><input type="date" class="form-control" @bind="a.OpeningDate" /></div>
+                            <div class="col-md-4"><label class="form-label small">Ngân hàng</label><input class="form-control" @bind="a.BankName" /></div>
+                            <div class="col-md-4"><label class="form-label small">Số tài khoản</label><input class="form-control" @bind="a.AccountNumber" /></div>
+                            <div class="col-md-4"><label class="form-label small">Chủ tài khoản</label><input class="form-control" @bind="a.AccountHolder" /></div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary mt-2" @onclick="() => SaveAccountAsync(a)"><i class="fas fa-save"></i> Lưu tài khoản</button>
+                    </div>
+                }
+            </div>
+
+            <div class="nh-card">
+                <h5>Quét CCCD (FPT.AI)</h5>
+                <div class="row g-2">
+                    <div class="col-md-8"><label class="form-label small">API key</label><input type="password" class="form-control" autocomplete="off" placeholder="@(hasFpt ? "Đã cấu hình - nhập để thay" : "Chưa cấu hình")" @bind="fptKey" /></div>
+                    <div class="col-md-4 align-self-end"><button type="button" class="btn btn-primary w-100" @onclick="SaveFptAsync">Lưu key</button></div>
+                </div>
+                <div class="small text-muted mt-1">Đăng ký key tại console.fpt.ai. Để trống rồi lưu là tắt chức năng quét.</div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            @foreach (var b in blocks)
+            {
+                <div class="nh-card" @key="b.Id">
+                    <h5>Dãy @b.Code - mặc định</h5>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6"><label class="form-label small">Giá thuê mặc định</label><MoneyInput @bind-Value="b.DefaultRent" /></div>
+                        <div class="col-md-6 small text-muted pt-md-4">@b.Floors tầng × @b.RoomsPerFloor phòng</div>
+                    </div>
+                    <table class="nh-table">
+                        <thead><tr><th>Đồ đạc</th><th style="width:110px">Số lượng</th></tr></thead>
+                        <tbody>
+                            @foreach (var i in items.Where(i => i.IsActive || blockQty[b.Id].ContainsKey(i.Id)))
+                            {
+                                <tr><td>@i.Name</td>
+                                    <td><input type="number" min="0" class="form-control form-control-sm" value="@blockQty[b.Id].GetValueOrDefault(i.Id)" @onchange="e => SetQty(b.Id, i.Id, e)" /></td></tr>
+                            }
+                        </tbody>
+                    </table>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" id="@($"af{b.Id}")" @bind="applyFurniture[b.Id]" /><label class="form-check-label small" for="@($"af{b.Id}")">Áp dụng đồ đạc cho các phòng đang trống của dãy</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" id="@($"ar{b.Id}")" @bind="applyRent[b.Id]" /><label class="form-check-label small" for="@($"ar{b.Id}")">Áp dụng giá cho các phòng đang trống của dãy</label></div>
+                    <button type="button" class="btn btn-sm btn-primary mt-2" @onclick="() => SaveBlockAsync(b)"><i class="fas fa-save"></i> Lưu dãy @b.Code</button>
+                </div>
+            }
+
+            <div class="nh-card">
+                <h5>Danh mục đồ đạc</h5>
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                    @foreach (var i in items)
+                    {
+                        <span class="badge @(i.IsActive ? "bg-primary" : "bg-secondary") fs-6 fw-normal">
+                            @i.Name <button type="button" class="btn btn-sm btn-link text-white p-0 ms-1" title="@(i.IsActive ? "Ngừng dùng" : "Dùng lại")" @onclick="() => ToggleItemAsync(i)">@(i.IsActive ? "×" : "↺")</button>
+                        </span>
+                    }
+                </div>
+                <div class="input-group" style="max-width: 360px">
+                    <input class="form-control" placeholder="Tên đồ đạc mới" @bind="newItem" />
+                    <button type="button" class="btn btn-outline-primary" @onclick="AddItemAsync">Thêm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private AppSetting? s;
+    private List<MoneyAccount> accounts = [];
+    private List<Block> blocks = [];
+    private List<FurnitureItem> items = [];
+    private Dictionary<int, Dictionary<int, int>> blockQty = [];
+    private Dictionary<int, bool> applyFurniture = [], applyRent = [];
+    private string? fptKey, newItem;
+    private bool hasFpt;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        s = await Setup.GetSettingsAsync();
+        accounts = await Setup.GetAccountsAsync();
+        items = await Setup.GetFurnitureItemsAsync(includeInactive: true);
+        blocks = await Setup.GetBlocksAsync();
+        blockQty = blocks.ToDictionary(b => b.Id, b => b.DefaultFurniture.ToDictionary(f => f.FurnitureItemId, f => f.Quantity));
+        foreach (var b in blocks) { applyFurniture.TryAdd(b.Id, false); applyRent.TryAdd(b.Id, false); }
+        hasFpt = !string.IsNullOrEmpty(await Setup.GetFptApiKeyAsync());
+    }
+
+    private void SetQty(int blockId, int itemId, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var q) && q >= 0) blockQty[blockId][itemId] = q;
+    }
+
+    private Task SaveSettingsAsync() => RunAsync(() => Setup.SaveSettingsAsync(s!), "Đã lưu cấu hình.");
+
+    private Task SaveAccountAsync(MoneyAccount a) => RunAsync(() => Setup.SaveAccountAsync(a), $"Đã lưu {a.Name}.");
+
+    private async Task SaveBlockAsync(Block b)
+    {
+        int changed = 0;
+        if (await RunAsync(async () => changed = await Setup.SaveBlockAsync(b.Id, b.DefaultRent, blockQty[b.Id], applyFurniture[b.Id], applyRent[b.Id])))
+            Toast.Success($"Đã lưu dãy {b.Code}" + (changed > 0 ? $", cập nhật {changed} phòng trống." : "."));
+    }
+
+    private async Task SaveFptAsync()
+    {
+        if (string.IsNullOrWhiteSpace(fptKey) && hasFpt && !await ConfirmAsync("Tắt chức năng quét CCCD?")) return;
+        if (await RunAsync(() => Setup.SaveFptApiKeyAsync(fptKey, null), "Đã lưu."))
+        {
+            fptKey = null;
+            hasFpt = !string.IsNullOrEmpty(await Setup.GetFptApiKeyAsync());
+        }
+    }
+
+    private async Task AddItemAsync()
+    {
+        if (await RunAsync(() => Setup.AddFurnitureItemAsync(newItem ?? ""), "Đã thêm."))
+        {
+            newItem = null;
+            items = await Setup.GetFurnitureItemsAsync(includeInactive: true);
+        }
+    }
+
+    private async Task ToggleItemAsync(FurnitureItem i)
+    {
+        if (await RunAsync(() => Setup.SetFurnitureItemActiveAsync(i.Id, !i.IsActive)))
+            items = await Setup.GetFurnitureItemsAsync(includeInactive: true);
+    }
+}

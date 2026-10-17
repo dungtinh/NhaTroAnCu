@@ -1,0 +1,255 @@
+@page "/thu-chi"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject AccountService Accounts
+@inject SetupService Setup
+@inject RoomService Rooms
+
+<PageTitle>Thu chi</PageTitle>
+
+<div class="nh-page-title">
+    <h2><i class="fas fa-wallet"></i> Thu chi</h2>
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-success" @onclick="() => OpenManual(true)"><i class="fas fa-plus"></i> Thu khác</button>
+        <button type="button" class="btn btn-danger" @onclick="() => OpenManual(false)"><i class="fas fa-minus"></i> Chi khác</button>
+        <button type="button" class="btn btn-outline-primary" @onclick="OpenTransfer"><i class="fas fa-exchange-alt"></i> Chuyển nội bộ</button>
+        <a class="btn btn-outline-secondary" href="bao-cao"><i class="fas fa-chart-bar"></i> Báo cáo tháng</a>
+        <a class="btn btn-outline-success" href="@ExportUrl" target="_blank"><i class="fas fa-file-excel"></i> Excel</a>
+    </div>
+</div>
+
+<div class="row g-2 mb-3">
+    @foreach (var b in balances)
+    {
+        <div class="col-md-6">
+            <div class="nh-stat text-start p-3 @(filter.AccountId == b.Account.Id ? "border border-primary" : "")" role="button" @onclick="() => ToggleAccountAsync(b.Account.Id)">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-bold"><i class="fas @(b.Account.Kind == AccountKind.Personal ? "fa-user" : "fa-store")"></i> @b.Account.Name</div>
+                        <div class="small text-muted">@b.Account.BankName @b.Account.AccountNumber · đầu kỳ @Fmt.Money(b.Account.OpeningBalance) (@Fmt.Date(b.Account.OpeningDate))</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="v @(b.Balance < 0 ? "text-danger" : "text-primary")">@Fmt.Money(b.Balance)</div>
+                        <div class="small"><span class="text-success">+@Fmt.Money(b.Income)</span> · <span class="text-danger">−@Fmt.Money(b.Expense)</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="nh-card">
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-2"><label class="form-label small">Từ ngày</label><input type="date" class="form-control" @bind="filter.From" @bind:after="SearchAsync" /></div>
+        <div class="col-6 col-md-2"><label class="form-label small">Đến ngày</label><input type="date" class="form-control" @bind="filter.To" @bind:after="SearchAsync" /></div>
+        <div class="col-6 col-md-2"><label class="form-label small">Tài khoản</label>
+            <select class="form-select" @bind="filter.AccountId" @bind:after="SearchAsync"><option value="">Tất cả</option>@foreach (var a in accounts) {<option value="@a.Id">@a.Name</option>}</select></div>
+        <div class="col-6 col-md-2"><label class="form-label small">Loại</label>
+            <select class="form-select" @bind="filter.Category" @bind:after="SearchAsync"><option value="">Tất cả</option>@foreach (var c in TxCategory.All) {<option value="@c">@TxCategory.Display(c)</option>}</select></div>
+        <div class="col-6 col-md-2"><label class="form-label small">Thu/chi</label>
+            <select class="form-select" @bind="filter.Direction" @bind:after="SearchAsync"><option value="">Cả hai</option><option value="in">Thu</option><option value="out">Chi</option></select></div>
+        <div class="col-6 col-md-2"><label class="form-label small">Tìm</label><input class="form-control" placeholder="Nội dung, phòng" @bind="filter.Search" @bind:after="SearchAsync" /></div>
+    </div>
+    @if (ledger != null)
+    {
+        <div class="small mb-2">@ledger.Total giao dịch · Thu <strong class="text-success">@Fmt.Money(ledger.SumIn)</strong> · Chi <strong class="text-danger">@Fmt.Money(ledger.SumOut)</strong> · Chênh lệch <strong>@Fmt.Money(ledger.SumIn - ledger.SumOut)</strong></div>
+        <div class="table-responsive">
+            <table class="nh-table">
+                <thead><tr><th>Ngày</th><th>Tài khoản</th><th>Loại</th><th>Nội dung</th><th>Phòng</th><th class="text-end">Số tiền</th><th>Người ghi</th><th>Chứng từ</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var r in ledger.Rows)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@Fmt.Date(r.Date)</td>
+                            <td class="small">@r.AccountName</td>
+                            <td class="small">@TxCategory.Display(r.Category)</td>
+                            <td>@r.Description
+                                @if (r.RepairId != null) { <a href="@($"sua-chua/{r.RepairId}")" class="small ms-1">xem phiếu</a> }
+                                @if (r.LeaseId != null) { <a href="@($"hop-dong/{r.LeaseId}")" class="small ms-1">hợp đồng</a> }
+                            </td>
+                            <td>@r.RoomCode</td>
+                            <td class="text-end fw-bold text-nowrap @(r.Amount > 0 ? "text-success" : "text-danger")">@(r.Amount > 0 ? "+" : "")@Fmt.Money(r.Amount)</td>
+                            <td class="small text-muted" title="@Fmt.DateTime(r.CreatedAt)">@r.CreatedBy</td>
+                            <td>
+                                @if (r.AttachmentCount > 0) { <button type="button" class="btn btn-sm btn-link p-0" @onclick="() => viewTx = viewTx == r.Id ? null : r.Id"><i class="fas fa-paperclip"></i> @r.AttachmentCount</button> }
+                                @if (viewTx == r.Id) { <AttachmentList EntityType="@AttachmentOwner.Transaction" EntityId="r.Id" CanDelete="isAdmin" /> }
+                            </td>
+                            <td>@if (isAdmin && r.RepairId == null && r.PurchaseId == null) { <button type="button" class="btn btn-sm btn-outline-danger" title="Xóa" @onclick="() => DeleteAsync(r)"><i class="fas fa-trash"></i></button> }</td>
+                        </tr>
+                    }
+                    @if (ledger.Rows.Count == 0) { <tr><td colspan="9" class="text-center text-muted py-3">Không có giao dịch.</td></tr> }
+                </tbody>
+            </table>
+        </div>
+        <Pager Page="filter.Page" PageSize="filter.PageSize" TotalItems="ledger.Total" PageChanged="GoPageAsync" />
+    }
+</div>
+
+@if (manual != null)
+{
+    <div class="nh-modal-backdrop" @onclick="() => manual = null">
+        <div class="nh-modal" style="max-width: 560px" @onclick:stopPropagation="true">
+            <div class="nh-modal-header @(manual.IsIncome ? "bg-success" : "bg-danger")">
+                <h5>@(manual.IsIncome ? "Ghi thu khác" : "Ghi chi khác")</h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="() => manual = null"></button>
+            </div>
+            <div class="nh-modal-body">
+                <div class="row g-2">
+                    <div class="col-6"><label class="form-label">Tài khoản</label>
+                        <select class="form-select" @bind="manual.AccountId">@foreach (var a in accounts) {<option value="@a.Id">@a.Name</option>}</select></div>
+                    <div class="col-6"><label class="form-label">Ngày</label><input type="date" class="form-control" @bind="manual.Date" /></div>
+                    <div class="col-6"><label class="form-label">Số tiền</label><MoneyInput @bind-Value="manual.Amount" /></div>
+                    <div class="col-6"><label class="form-label">Loại</label>
+                        <select class="form-select" @bind="manual.Category">
+                            @foreach (var c in ManualCategories(manual.IsIncome)) {<option value="@c">@TxCategory.Display(c)</option>}
+                        </select></div>
+                    <div class="col-6"><label class="form-label">Phòng (nếu có)</label>
+                        <select class="form-select" @bind="manual.RoomId"><option value="">--</option>@foreach (var r in rooms) {<option value="@r.Id">@r.Code</option>}</select></div>
+                    <div class="col-12"><label class="form-label">Nội dung <span class="text-danger">*</span></label><input class="form-control" maxlength="500" @bind="manual.Description" /></div>
+                    <div class="col-12"><FileUpload Kind="Receipts" Label="Chứng từ" @bind-Files="manualFiles" /></div>
+                </div>
+                <div class="text-end mt-3">
+                    <button type="button" class="btn btn-secondary me-2" @onclick="() => manual = null">Hủy</button>
+                    <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="SaveManualAsync"><i class="fas fa-check"></i> Lưu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (transfer)
+{
+    <div class="nh-modal-backdrop" @onclick="() => transfer = false">
+        <div class="nh-modal" style="max-width: 520px" @onclick:stopPropagation="true">
+            <div class="nh-modal-header bg-primary"><h5>Chuyển tiền nội bộ</h5><button type="button" class="btn-close btn-close-white" @onclick="() => transfer = false"></button></div>
+            <div class="nh-modal-body">
+                <div class="row g-2">
+                    <div class="col-6"><label class="form-label">Từ tài khoản</label><select class="form-select" @bind="tFrom">@foreach (var a in accounts) {<option value="@a.Id">@a.Name</option>}</select></div>
+                    <div class="col-6"><label class="form-label">Sang tài khoản</label><select class="form-select" @bind="tTo">@foreach (var a in accounts) {<option value="@a.Id">@a.Name</option>}</select></div>
+                    <div class="col-6"><label class="form-label">Số tiền</label><MoneyInput @bind-Value="tAmount" /></div>
+                    <div class="col-6"><label class="form-label">Ngày</label><input type="date" class="form-control" @bind="tDate" /></div>
+                    <div class="col-12"><label class="form-label">Ghi chú</label><input class="form-control" @bind="tNote" /></div>
+                    <div class="col-12"><FileUpload Kind="Receipts" Label="Chứng từ" @bind-Files="manualFiles" /></div>
+                </div>
+                <div class="text-end mt-3">
+                    <button type="button" class="btn btn-secondary me-2" @onclick="() => transfer = false">Hủy</button>
+                    <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="SaveTransferAsync"><i class="fas fa-check"></i> Chuyển</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private LedgerFilter filter = new() { From = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1) };
+    private LedgerPage? ledger;
+    private List<AccountBalance> balances = [];
+    private List<MoneyAccount> accounts = [];
+    private List<Room> rooms = [];
+    private bool isAdmin;
+    private int? viewTx;
+
+    private ManualTransactionForm? manual;
+    private List<PendingFile> manualFiles = [];
+    private bool transfer;
+    private int tFrom, tTo;
+    private decimal tAmount;
+    private DateTime tDate = DateTime.Today;
+    private string? tNote;
+
+    private string ExportUrl
+    {
+        get
+        {
+            var q = new List<string>();
+            if (filter.AccountId != null) q.Add($"accountId={filter.AccountId}");
+            if (filter.From != null) q.Add($"from={filter.From:yyyy-MM-dd}");
+            if (filter.To != null) q.Add($"to={filter.To:yyyy-MM-dd}");
+            if (!string.IsNullOrEmpty(filter.Category)) q.Add($"category={filter.Category}");
+            if (!string.IsNullOrEmpty(filter.Direction)) q.Add($"direction={filter.Direction}");
+            if (!string.IsNullOrEmpty(filter.Search)) q.Add($"search={Uri.EscapeDataString(filter.Search)}");
+            return "files/ledger.xlsx" + (q.Count > 0 ? "?" + string.Join("&", q) : "");
+        }
+    }
+
+    private static IEnumerable<string> ManualCategories(bool income) => income
+        ? [TxCategory.OtherIncome, TxCategory.Rent, TxCategory.Electricity, TxCategory.Water, TxCategory.Penalty, TxCategory.Deposit]
+        : [TxCategory.OtherExpense, TxCategory.Electricity, TxCategory.Water, TxCategory.DepositRefund];
+
+    protected override async Task OnInitializedAsync()
+    {
+        isAdmin = await IsAdminAsync();
+        accounts = await Setup.GetAccountsAsync();
+        rooms = await Rooms.ListRoomsAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        balances = await Accounts.GetBalancesAsync();
+        ledger = await Accounts.GetLedgerAsync(filter);
+    }
+
+    private async Task SearchAsync()
+    {
+        filter.Page = 1;
+        await LoadAsync();
+    }
+
+    private async Task GoPageAsync(int p)
+    {
+        filter.Page = p;
+        await LoadAsync();
+    }
+
+    private async Task ToggleAccountAsync(int id)
+    {
+        filter.AccountId = filter.AccountId == id ? null : id;
+        await SearchAsync();
+    }
+
+    private void OpenManual(bool income)
+    {
+        var personal = accounts.FirstOrDefault(a => a.Kind == AccountKind.Personal)?.Id ?? 0;
+        var business = accounts.FirstOrDefault(a => a.Kind == AccountKind.Business)?.Id ?? 0;
+        manual = new ManualTransactionForm { IsIncome = income, AccountId = income ? business : personal, Category = income ? TxCategory.OtherIncome : TxCategory.OtherExpense };
+        manualFiles = [];
+    }
+
+    private void OpenTransfer()
+    {
+        tFrom = accounts.FirstOrDefault(a => a.Kind == AccountKind.Business)?.Id ?? 0;
+        tTo = accounts.FirstOrDefault(a => a.Kind == AccountKind.Personal)?.Id ?? 0;
+        tAmount = 0; tDate = DateTime.Today; tNote = null;
+        manualFiles = [];
+        transfer = true;
+    }
+
+    private async Task SaveManualAsync()
+    {
+        if (string.IsNullOrWhiteSpace(manual!.Description)) { Toast.Error("Nhập nội dung."); return; }
+        var user = await GetUserNameAsync();
+        if (await RunAsync(() => Accounts.AddManualAsync(manual, manualFiles, user), "Đã ghi sổ."))
+        {
+            manual = null;
+            await LoadAsync();
+        }
+    }
+
+    private async Task SaveTransferAsync()
+    {
+        var user = await GetUserNameAsync();
+        if (await RunAsync(() => Accounts.TransferAsync(tFrom, tTo, tAmount, tDate, tNote, manualFiles, user), "Đã chuyển tiền."))
+        {
+            transfer = false;
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeleteAsync(LedgerRow r)
+    {
+        if (!await ConfirmAsync($"Xóa giao dịch {Fmt.Vnd(r.Amount)} ngày {Fmt.Date(r.Date)}?" + (r.TransferGroup != null ? "\nĐây là chuyển nội bộ/khấu trừ cọc: tất cả các dòng liên quan sẽ bị xóa." : ""))) return;
+        if (await RunAsync(() => Accounts.DeleteAsync(r.Id), "Đã xóa.")) await LoadAsync();
+    }
+}

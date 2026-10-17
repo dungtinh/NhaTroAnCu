@@ -1,0 +1,237 @@
+@page "/phong/{Code}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject RoomService Rooms
+
+<PageTitle>Phòng @Code</PageTitle>
+
+@if (d == null)
+{
+    <div class="nh-loading">@(notFound ? "Không tìm thấy phòng." : "Đang tải...")</div>
+}
+else
+{
+    var lease = d.CurrentLease;
+    <div class="nh-page-title">
+        <h2><i class="fas fa-door-closed"></i> Phòng @d.Room.Code <span class="badge @(lease != null ? "bg-primary" : d.Room.Status == RoomStatus.Maintenance ? "bg-purple bg-secondary" : "bg-secondary") fs-6 align-middle">@RoomStatus.Display(d.Room.Status)</span></h2>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-secondary" href=""><i class="fas fa-arrow-left"></i> Sơ đồ</a>
+            @if (lease == null && d.Room.Status != RoomStatus.Maintenance)
+            {
+                <a class="btn btn-primary" href="@($"nhan-phong?phong={d.Room.Code}")"><i class="fas fa-door-open"></i> Nhận phòng</a>
+            }
+            @if (lease != null)
+            {
+                <a class="btn btn-outline-primary" href="@($"hop-dong/{lease.Id}")"><i class="fas fa-file-contract"></i> Hợp đồng & người ở</a>
+                <a class="btn btn-success" href="thu-tien"><i class="fas fa-file-invoice-dollar"></i> Thu tiền tháng</a>
+                <a class="btn btn-danger" href="@($"tra-phong/{lease.Id}")"><i class="fas fa-sign-out-alt"></i> Trả phòng</a>
+            }
+            <a class="btn btn-outline-warning" href="@($"sua-chua?phong={d.Room.Code}")"><i class="fas fa-tools"></i> Ghi sửa chữa</a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-4">
+            <div class="nh-card">
+                <h5><i class="fas fa-sliders-h"></i> Cấu hình phòng</h5>
+                <div class="row g-2">
+                    <div class="col-6"><label class="form-label">Giá thuê/tháng</label><MoneyInput @bind-Value="rent" /></div>
+                    <div class="col-6"><label class="form-label">Số điện hiện tại</label><input type="number" min="0" class="form-control" @bind="meter" /></div>
+                    <div class="col-6"><label class="form-label">Tối đa số người</label><input type="number" min="1" max="20" class="form-control" @bind="maxOcc" /></div>
+                    <div class="col-6 d-flex align-items-end">
+                        @if (lease == null)
+                        {
+                            <div class="form-check"><input class="form-check-input" type="checkbox" id="maint" @bind="maintenance" /><label class="form-check-label" for="maint">Đang sửa (không cho thuê)</label></div>
+                        }
+                    </div>
+                    <div class="col-12"><label class="form-label">Ghi chú</label><input class="form-control" maxlength="500" @bind="note" /></div>
+                </div>
+
+                <h6 class="mt-3 mb-2 fw-bold">Đồ đạc trong phòng</h6>
+                <table class="nh-table">
+                    <thead><tr><th>Đồ</th><th class="text-center">Số lượng</th><th class="text-center">Mặc định dãy</th></tr></thead>
+                    <tbody>
+                        @foreach (var f in furniture)
+                        {
+                            <tr class="@(f.Quantity != f.Default ? "table-warning" : "")">
+                                <td>@f.Name</td>
+                                <td class="text-center" style="width:90px"><input type="number" min="0" max="20" class="form-control form-control-sm text-center" @bind="f.Quantity" /></td>
+                                <td class="text-center">@f.Default</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (furniture.Any(f => f.Quantity != f.Default))
+                {
+                    <div class="alert alert-warning py-2 small mt-2 mb-0"><i class="fas fa-exclamation-triangle"></i> Đồ đạc khác mặc định của dãy: @string.Join(", ", furniture.Where(f => f.Quantity != f.Default).Select(f => $"{f.Name} {f.Quantity}/{f.Default}"))</div>
+                }
+                <button type="button" class="btn btn-primary mt-3" disabled="@Busy" @onclick="SaveAsync"><i class="fas fa-save"></i> Lưu cấu hình phòng</button>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            @if (lease != null)
+            {
+                var active = lease.Tenants.Where(t => t.MoveOutDate == null).OrderByDescending(t => t.IsRepresentative).ToList();
+                <div class="nh-card">
+                    <h5><i class="fas fa-file-contract"></i> Đang thuê từ @Fmt.Date(lease.StartDate)</h5>
+                    <div class="row g-2 mb-2">
+                        <div class="col-sm-4"><div class="text-muted small">Giá thuê</div><strong>@Fmt.Vnd(lease.MonthlyRent)</strong></div>
+                        <div class="col-sm-4"><div class="text-muted small">Tiền cọc</div><strong>@Fmt.Vnd(lease.Deposit)</strong></div>
+                        <div class="col-sm-4"><div class="text-muted small">Còn nợ</div><strong class="@(d.Outstanding > 0 ? "text-danger" : "text-success")">@Fmt.Vnd(d.Outstanding)</strong></div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var t in active)
+                        {
+                            <div class="border rounded p-2 small" style="min-width: 220px">
+                                <div class="fw-bold">@t.Tenant.FullName @if (t.IsRepresentative) {<span class="badge bg-info ms-1">Đại diện</span>}</div>
+                                <div><i class="fas fa-id-card text-muted"></i> @t.Tenant.IdentityCard</div>
+                                @if (!string.IsNullOrEmpty(t.Tenant.Phone)) { <div><i class="fas fa-phone text-muted"></i> <a href="tel:@t.Tenant.Phone">@t.Tenant.Phone</a></div> }
+                            </div>
+                        }
+                    </div>
+                    @if (string.IsNullOrEmpty(lease.ContractScanPath))
+                    {
+                        <div class="alert alert-warning py-2 small mt-2 mb-0"><i class="fas fa-exclamation-circle"></i> Chưa tải bản scan hợp đồng đã ký. <a href="@($"hop-dong/{lease.Id}")">Tải lên</a></div>
+                    }
+                </div>
+
+                <div class="nh-card">
+                    <h5><i class="fas fa-receipt"></i> Phiếu thu</h5>
+                    <div class="table-responsive">
+                        <table class="nh-table">
+                            <thead><tr><th>Kỳ</th><th>Loại</th><th class="text-end">Phòng</th><th class="text-end">Điện</th><th class="text-end">Nước</th><th class="text-end">Khác</th><th class="text-end">Tổng</th><th class="text-end">Đã thu</th><th></th></tr></thead>
+                            <tbody>
+                                @foreach (var b in d.Bills)
+                                {
+                                    var paid = d.BillPaid.GetValueOrDefault(b.Id);
+                                    <tr>
+                                        <td>@b.Month.ToString("00")/@b.Year</td>
+                                        <td>@BillKind.Display(b.Kind)</td>
+                                        <td class="text-end">@Fmt.Money(b.RentAmount)</td>
+                                        <td class="text-end">@Fmt.Money(b.ElectricityAmount)@if (b.MeterEnd != null) {<div class="small text-muted">@b.MeterStart→@b.MeterEnd</div>}</td>
+                                        <td class="text-end">@Fmt.Money(b.WaterAmount)</td>
+                                        <td class="text-end">@Fmt.Money(b.OtherAmount - b.Discount)</td>
+                                        <td class="text-end fw-bold">@Fmt.Money(b.TotalAmount)</td>
+                                        <td class="text-end @(paid >= b.TotalAmount ? "text-success" : "text-danger")">@Fmt.Money(paid)</td>
+                                        <td class="text-nowrap">
+                                            @if (paid < b.TotalAmount)
+                                            {
+                                                <button type="button" class="btn btn-sm btn-success" @onclick="() => { payBill = b; payPaid = paid; }"><i class="fas fa-hand-holding-usd"></i> Thu</button>
+                                            }
+                                            <a class="btn btn-sm btn-outline-secondary" href="@($"files/bills/{b.Id}")" target="_blank" title="In phiếu"><i class="fas fa-print"></i></a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="nh-card text-center py-4">
+                    <i class="fas fa-door-open fa-3x text-muted mb-2"></i>
+                    <p class="mb-2">Phòng đang @RoomStatus.Display(d.Room.Status).ToLower(). Số điện hiện tại: <strong>@d.Room.MeterReading</strong></p>
+                    @if (d.Room.Status != RoomStatus.Maintenance) { <a class="btn btn-primary" href="@($"nhan-phong?phong={d.Room.Code}")"><i class="fas fa-door-open"></i> Nhận phòng cho khách</a> }
+                </div>
+            }
+
+            @if (d.PastLeases.Count > 0)
+            {
+                <div class="nh-card">
+                    <h5><i class="fas fa-history"></i> Các lượt thuê trước</h5>
+                    <table class="nh-table">
+                        <thead><tr><th>Thời gian</th><th>Người đại diện</th><th class="text-end">Phạt</th><th class="text-end">Trả cọc</th><th>Ghi chú</th><th></th></tr></thead>
+                        <tbody>
+                            @foreach (var l in d.PastLeases)
+                            {
+                                <tr>
+                                    <td>@Fmt.Date(l.StartDate) - @Fmt.Date(l.EndDate)</td>
+                                    <td>@(l.Tenants.OrderByDescending(t => t.IsRepresentative).Select(t => t.Tenant.FullName).FirstOrDefault())</td>
+                                    <td class="text-end">@Fmt.Money(l.CheckoutPenalty ?? 0)</td>
+                                    <td class="text-end">@Fmt.Money(l.DepositRefunded ?? 0)</td>
+                                    <td class="small">@l.FurnitureWarnings</td>
+                                    <td><a class="btn btn-sm btn-outline-secondary" href="@($"hop-dong/{l.Id}")"><i class="fas fa-eye"></i></a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @if (d.Repairs.Count > 0)
+            {
+                <div class="nh-card">
+                    <h5><i class="fas fa-tools"></i> Sửa chữa của phòng</h5>
+                    <table class="nh-table">
+                        <thead><tr><th>Ngày</th><th>Đồ</th><th>Nội dung</th><th>Người sửa</th><th class="text-end">Tiền</th><th></th></tr></thead>
+                        <tbody>
+                            @foreach (var r in d.Repairs)
+                            {
+                                <tr>
+                                    <td>@Fmt.Date(r.Date)</td><td>@r.FurnitureItem?.Name</td><td>@r.Description</td><td>@r.PerformedBy</td>
+                                    <td class="text-end">@Fmt.Money(r.Amount)</td>
+                                    <td><a class="btn btn-sm btn-outline-secondary" href="@($"sua-chua/{r.Id}")"><i class="fas fa-eye"></i></a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    <PaymentDialog Bill="payBill" Paid="payPaid" RoomCode="@d.Room.Code" Closed="() => payBill = null" Saved="AfterPaymentAsync" />
+}
+
+@code {
+    [Parameter] public string Code { get; set; } = "";
+    private RoomDetails? d;
+    private bool notFound;
+    private decimal rent;
+    private int meter, maxOcc;
+    private string? note;
+    private bool maintenance;
+    private List<FurnitureEdit> furniture = [];
+    private Bill? payBill;
+    private decimal payPaid;
+
+    private class FurnitureEdit
+    {
+        public int ItemId { get; set; }
+        public string Name { get; set; } = "";
+        public int Quantity { get; set; }
+        public int Default { get; set; }
+    }
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        d = await Rooms.GetDetailsAsync(Code);
+        notFound = d == null;
+        if (d == null) return;
+        rent = d.Room.Rent;
+        meter = d.Room.MeterReading;
+        maxOcc = d.Room.MaxOccupants;
+        note = d.Room.Note;
+        maintenance = d.Room.Status == RoomStatus.Maintenance;
+        furniture = d.Furniture.Select(f => new FurnitureEdit { ItemId = f.ItemId, Name = f.Name, Quantity = f.Quantity, Default = f.DefaultQuantity }).ToList();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (d == null) return;
+        if (await RunAsync(() => Rooms.UpdateRoomAsync(d.Room.Id, rent, meter, maxOcc, note, maintenance, furniture.ToDictionary(f => f.ItemId, f => f.Quantity)),
+                $"Đã lưu cấu hình phòng {d.Room.Code}."))
+            await LoadAsync();
+    }
+
+    private async Task AfterPaymentAsync()
+    {
+        payBill = null;
+        await LoadAsync();
+    }
+}

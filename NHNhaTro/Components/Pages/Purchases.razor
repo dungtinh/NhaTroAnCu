@@ -1,0 +1,113 @@
+@page "/mua-sam"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject ExpenseService Expenses
+@inject RoomService Rooms
+@inject SetupService Setup
+
+<PageTitle>Mua sắm</PageTitle>
+
+<div class="nh-page-title">
+    <h2><i class="fas fa-shopping-cart"></i> Mua sắm</h2>
+    <button type="button" class="btn btn-primary" @onclick="() => OpenForm(false)"><i class="fas fa-plus"></i> Ghi khoản mua</button>
+</div>
+
+@if (form != null)
+{
+    <div class="nh-card border border-primary">
+        <h5>@(form.IsAdvertising ? "Chi phí quảng cáo" : "Khoản mua sắm mới")</h5>
+        <div class="row g-2">
+            <div class="col-md-3"><label class="form-label">Ngày</label><input type="date" class="form-control" @bind="form.Date" /></div>
+            <div class="col-md-5"><label class="form-label">Nội dung <span class="text-danger">*</span></label><input class="form-control" maxlength="1000" placeholder="VD: Mua 2 quạt treo tường" @bind="form.Description" /></div>
+            <div class="col-md-4"><label class="form-label">Nơi bán</label><input class="form-control" @bind="form.Supplier" /></div>
+            <div class="col-md-3"><label class="form-label">Số tiền <span class="text-danger">*</span></label><MoneyInput @bind-Value="form.Amount" /></div>
+            <div class="col-md-3"><label class="form-label">Cho phòng (nếu có)</label>
+                <select class="form-select" @bind="form.RoomId"><option value="">-- Chung --</option>@foreach (var r in rooms) {<option value="@r.Id">@r.Code</option>}</select></div>
+            <div class="col-md-3"><label class="form-label">Chi từ tài khoản</label>
+                <select class="form-select" @bind="form.AccountId">@foreach (var a in accounts) {<option value="@a.Id">@a.Name</option>}</select></div>
+            <div class="col-md-3 pt-md-4">
+                <div class="form-check"><input class="form-check-input" type="checkbox" id="isAd" @bind="form.IsAdvertising" /><label class="form-check-label" for="isAd">Là chi phí quảng cáo</label></div>
+            </div>
+            <div class="col-12"><FileUpload Kind="Receipts" Label="Ảnh hóa đơn/chứng từ" Camera="true" Required="true" @bind-Files="form.Receipts" /></div>
+        </div>
+        <div class="text-end mt-2">
+            <button type="button" class="btn btn-secondary me-2" @onclick="() => form = null">Hủy</button>
+            <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="SaveAsync"><i class="fas fa-check"></i> Lưu</button>
+        </div>
+    </div>
+}
+
+<div class="nh-card">
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-2"><label class="form-label small">Từ ngày</label><input type="date" class="form-control" @bind="from" @bind:after="LoadAsync" /></div>
+        <div class="col-6 col-md-2"><label class="form-label small">Đến ngày</label><input type="date" class="form-control" @bind="to" @bind:after="LoadAsync" /></div>
+        <div class="col-6 col-md-3"><label class="form-label small">Loại</label>
+            <select class="form-select" @bind="kind" @bind:after="LoadAsync"><option value="">Tất cả</option><option value="buy">Mua sắm</option><option value="ad">Quảng cáo</option></select></div>
+        <div class="col-6 col-md-3"><label class="form-label small">Tìm</label><input class="form-control" @bind="search" @bind:after="LoadAsync" /></div>
+        <div class="col-md-2 align-self-end text-end small">@list.Count khoản · <strong>@Fmt.Vnd(list.Sum(r => r.Amount))</strong></div>
+    </div>
+    <div class="table-responsive">
+        <table class="nh-table">
+            <thead><tr><th>Ngày</th><th>Nội dung</th><th>Nơi bán</th><th>Phòng</th><th class="text-end">Số tiền</th><th>Tài khoản</th><th>Chứng từ</th><th>Người ghi</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var r in list)
+                {
+                    <tr>
+                        <td class="text-nowrap">@Fmt.Date(r.Date)</td>
+                        <td>@r.Description @if (r.IsAdvertising) {<span class="badge bg-info">Quảng cáo</span>}</td>
+                        <td>@r.Supplier</td><td>@r.RoomCode</td>
+                        <td class="text-end fw-bold">@Fmt.Money(r.Amount)</td>
+                        <td class="small">@r.AccountName</td>
+                        <td><AttachmentList EntityType="@AttachmentOwner.Purchase" EntityId="r.Id" ShowEmpty="false" CanDelete="isAdmin" /></td>
+                        <td class="small text-muted">@r.CreatedBy</td>
+                        <td>@if (isAdmin) { <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(r)"><i class="fas fa-trash"></i></button> }</td>
+                    </tr>
+                }
+                @if (list.Count == 0) { <tr><td colspan="9" class="text-center text-muted py-3">Chưa có khoản mua sắm.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private List<Room> rooms = [];
+    private List<MoneyAccount> accounts = [];
+    private List<PurchaseRow> list = [];
+    private DateTime? from, to;
+    private string kind = "";
+    private string? search;
+    private PurchaseForm? form;
+    private int personalId;
+    private bool isAdmin;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isAdmin = await IsAdminAsync();
+        rooms = await Rooms.ListRoomsAsync();
+        accounts = (await Setup.GetAccountsAsync()).Where(a => a.IsActive).ToList();
+        personalId = (await Setup.GetSettingsAsync()).PersonalAccountId;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync() =>
+        list = await Expenses.ListPurchasesAsync(from, to, kind switch { "ad" => true, "buy" => false, _ => null }, search);
+
+    private void OpenForm(bool ad) => form = new PurchaseForm { AccountId = personalId, IsAdvertising = ad };
+
+    private async Task SaveAsync()
+    {
+        var user = await GetUserNameAsync();
+        if (await RunAsync(() => Expenses.CreatePurchaseAsync(form!, user), "Đã lưu."))
+        {
+            form = null;
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeleteAsync(PurchaseRow r)
+    {
+        if (!await ConfirmAsync($"Xóa khoản \"{r.Description}\" {Fmt.Vnd(r.Amount)}?")) return;
+        if (await RunAsync(() => Expenses.DeletePurchaseAsync(r.Id), "Đã xóa.")) await LoadAsync();
+    }
+}

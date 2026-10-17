@@ -1,0 +1,92 @@
+@page "/quang-cao"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject SetupService Setup
+@inject AttachmentService Attachments
+@inject ExpenseService Expenses
+
+<PageTitle>Quảng cáo</PageTitle>
+
+<div class="nh-page-title">
+    <h2><i class="fas fa-bullhorn"></i> Quảng cáo, thu hút khách</h2>
+    <a class="btn btn-outline-primary" href="gioi-thieu" target="_blank"><i class="fas fa-external-link-alt"></i> Xem trang giới thiệu</a>
+</div>
+
+@if (s != null)
+{
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="nh-card">
+                <h5>Nội dung trang giới thiệu</h5>
+                <div class="row g-2">
+                    <div class="col-12"><label class="form-label">Tiêu đề</label><input class="form-control" maxlength="200" placeholder="VD: Phòng trọ mới, đủ đồ, gần KCN" @bind="s.AdTitle" /></div>
+                    <div class="col-12"><label class="form-label">Mô tả</label><textarea class="form-control" rows="5" maxlength="4000" @bind="s.AdDescription"></textarea></div>
+                    <div class="col-md-6"><label class="form-label">Điện thoại liên hệ</label><input class="form-control" @bind="s.Phone" /></div>
+                    <div class="col-md-6"><label class="form-label">Số Zalo (nếu khác)</label><input class="form-control" @bind="s.ZaloPhone" /></div>
+                    <div class="col-12"><label class="form-label">Địa chỉ</label><input class="form-control" @bind="s.Address" /></div>
+                    <div class="col-md-4"><label class="form-label">Vĩ độ</label><input type="number" step="any" class="form-control" placeholder="20.86" @bind="s.Latitude" /></div>
+                    <div class="col-md-4"><label class="form-label">Kinh độ</label><input type="number" step="any" class="form-control" placeholder="106.68" @bind="s.Longitude" /></div>
+                    <div class="col-md-4"><label class="form-label">Link Google Maps</label><input class="form-control" @bind="s.MapUrl" /></div>
+                    <div class="col-12 small text-muted">Lấy tọa độ: mở Google Maps, nhấn giữ vào vị trí nhà trọ, chép hai số hiện ra.</div>
+                </div>
+                <button type="button" class="btn btn-primary mt-2" disabled="@Busy" @onclick="SaveAsync"><i class="fas fa-save"></i> Lưu</button>
+            </div>
+
+            <div class="nh-card">
+                <h5>Ảnh giới thiệu (hiện công khai)</h5>
+                <AttachmentList EntityType="@AttachmentOwner.Site" EntityId="1" Kind="@AttachmentKind.Gallery" CanDelete="true" Version="version" />
+                <div class="mt-2"><FileUpload Kind="Gallery" IsPublic="true" Accept="image/*" ButtonText="Thêm ảnh" Files="pending" Uploaded="AddPhotoAsync" /></div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="nh-card text-center">
+                <h5>Mã QR dán băng rôn, tờ rơi</h5>
+                <img src="qr.png?size=12" alt="QR trang giới thiệu" style="max-width: 260px; width: 100%" />
+                <div class="small text-muted mt-1">Quét để mở trang giới thiệu phòng trống.</div>
+                <a class="btn btn-sm btn-outline-secondary mt-2" href="qr.png?size=20" download="qr-nha-tro.png"><i class="fas fa-download"></i> Tải ảnh QR</a>
+            </div>
+
+            <div class="nh-card">
+                <h5>Chi phí quảng cáo</h5>
+                <table class="nh-table">
+                    @foreach (var a in ads.Take(10)) { <tr><td>@Fmt.Date(a.Date)</td><td>@a.Description</td><td class="text-end">@Fmt.Money(a.Amount)</td></tr> }
+                    @if (ads.Count == 0) { <tr><td class="text-muted">Chưa có.</td></tr> }
+                </table>
+                <div class="d-flex justify-content-between mt-2">
+                    <strong>Tổng: @Fmt.Vnd(ads.Sum(a => a.Amount))</strong>
+                    <a href="mua-sam" class="small">Ghi chi phí ở Mua sắm (đánh dấu "quảng cáo")</a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private AppSetting? s;
+    private List<PendingFile> pending = [];
+    private int version;
+    private List<PurchaseRow> ads = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        s = await Setup.GetSettingsAsync();
+        ads = await Expenses.ListPurchasesAsync(null, null, true, null);
+    }
+
+    private async Task SaveAsync()
+    {
+        await RunAsync(() => Setup.SaveSettingsAsync(s!), "Đã lưu.");
+    }
+
+    private async Task AddPhotoAsync(PendingFile f)
+    {
+        var user = await GetUserNameAsync();
+        if (await RunAsync(() => Attachments.AddAsync(AttachmentOwner.Site, 1, [f with { Kind = AttachmentKind.Gallery }], user)))
+        {
+            pending.Clear();
+            version++;
+        }
+    }
+}

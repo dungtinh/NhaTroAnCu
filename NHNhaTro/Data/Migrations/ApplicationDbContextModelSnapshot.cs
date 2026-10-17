@@ -242,70 +242,76 @@ namespace NHNhaTro.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("NHNhaTro.Data.Entities.Company", b =>
+            modelBuilder.Entity("NHNhaTro.Data.Entities.AppSetting", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<string>("AdDescription")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AdTitle")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Address")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("BankAccount")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                    b.Property<int>("BillingDay")
+                        .HasColumnType("int");
 
-                    b.Property<string>("BankName")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                    b.Property<int>("BusinessAccountId")
+                        .HasColumnType("int");
 
-                    b.Property<string>("CompanyName")
+                    b.Property<decimal>("ElectricityPrice")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("float");
+
+                    b.Property<string>("MapUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("datetime");
-
-                    b.Property<string>("Email")
+                    b.Property<string>("Owner")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<bool?>("IsActive")
-                        .HasColumnType("bit");
+                    b.Property<int>("PersonalAccountId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Phone")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
-                    b.Property<string>("Representative")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<string>("RegisterArea")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("RepresentativeEmail")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<decimal>("WaterPricePerPerson")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
 
-                    b.Property<string>("RepresentativePhone")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("TaxCode")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime");
+                    b.Property<string>("ZaloPhone")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Companies", (string)null);
+                    b.ToTable("Settings");
                 });
 
-            modelBuilder.Entity("NHNhaTro.Data.Entities.Contract", b =>
+            modelBuilder.Entity("NHNhaTro.Data.Entities.Attachment", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -313,55 +319,165 @@ namespace NHNhaTro.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("CompanyId")
+                    b.Property<string>("Caption")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("EntityId")
                         .HasColumnType("int");
 
-                    b.Property<string>("ContractScanFilePath")
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
-                    b.Property<string>("ContractType")
+                    b.Property<string>("FileName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EntityType", "EntityId");
+
+                    b.ToTable("Attachments");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.Bill", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<decimal>("Discount")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<decimal>("ElectricityAmount")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<decimal>("ElectricityPrice")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<int>("LeaseId")
+                        .HasColumnType("int");
 
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("date");
+                    b.Property<int?>("MeterEnd")
+                        .HasColumnType("int");
 
-                    b.Property<DateTime>("MoveInDate")
-                        .HasColumnType("date");
+                    b.Property<int?>("MeterStart")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Month")
+                        .HasColumnType("int");
 
                     b.Property<string>("Note")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<decimal>("PriceAgreed")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<decimal>("OtherAmount")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
 
-                    b.Property<DateTime>("StartDate")
+                    b.Property<DateTime>("PeriodFrom")
                         .HasColumnType("date");
 
-                    b.Property<string>("Status")
+                    b.Property<DateTime>("PeriodTo")
+                        .HasColumnType("date");
+
+                    b.Property<int>("PersonCount")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("RentAmount")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<decimal>("WaterAmount")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LeaseId", "Year", "Month", "Kind");
+
+                    b.ToTable("Bills");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.Block", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(5)
+                        .HasColumnType("nvarchar(5)");
 
-                    b.Property<decimal>("WaterPrice")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<decimal>("DefaultRent")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<int>("Floors")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("RoomsPerFloor")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CompanyId");
+                    b.HasIndex("Code")
+                        .IsUnique();
 
-                    b.ToTable("Contracts", (string)null);
+                    b.ToTable("Blocks");
                 });
 
-            modelBuilder.Entity("NHNhaTro.Data.Entities.ContractExtensionHistory", b =>
+            modelBuilder.Entity("NHNhaTro.Data.Entities.BlockFurniture", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -369,91 +485,23 @@ namespace NHNhaTro.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("ContractId")
+                    b.Property<int>("BlockId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("ExtendMonths")
+                    b.Property<int>("FurnitureItemId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("ExtendedAt")
-                        .HasColumnType("datetime");
-
-                    b.Property<DateTime?>("NewEndDate")
-                        .HasColumnType("datetime");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<DateTime?>("OldEndDate")
-                        .HasColumnType("datetime");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ContractId");
-
-                    b.ToTable("ContractExtensionHistory", (string)null);
-                });
-
-            modelBuilder.Entity("NHNhaTro.Data.Entities.ContractRoom", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ContractId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("PriceAgreed")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("RoomId")
+                    b.Property<int>("Quantity")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ContractId");
+                    b.HasIndex("FurnitureItemId");
 
-                    b.HasIndex("RoomId");
+                    b.HasIndex("BlockId", "FurnitureItemId")
+                        .IsUnique();
 
-                    b.ToTable("ContractRooms", (string)null);
-                });
-
-            modelBuilder.Entity("NHNhaTro.Data.Entities.ContractTenant", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ContractId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime");
-
-                    b.Property<int>("RoomId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TenantId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ContractId");
-
-                    b.HasIndex("RoomId");
-
-                    b.HasIndex("TenantId");
-
-                    b.ToTable("ContractTenants", (string)null);
+                    b.ToTable("BlockFurniture");
                 });
 
             modelBuilder.Entity("NHNhaTro.Data.Entities.FptReaderApi", b =>
@@ -474,7 +522,117 @@ namespace NHNhaTro.Migrations
                     b.ToTable("FPTReaderAPI", (string)null);
                 });
 
-            modelBuilder.Entity("NHNhaTro.Data.Entities.IncomeExpense", b =>
+            modelBuilder.Entity("NHNhaTro.Data.Entities.FurnitureItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("FurnitureItems");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.Lease", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal?>("CheckoutCollected")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<decimal?>("CheckoutElectricity")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<string>("CheckoutNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<decimal?>("CheckoutOther")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<decimal?>("CheckoutPenalty")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<string>("ContractScanPath")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<decimal>("Deposit")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<decimal?>("DepositRefunded")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("EndMeterReading")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FurnitureWarnings")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<decimal>("MonthlyRent")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("RoomId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("StartMeterReading")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoomId", "Status");
+
+                    b.ToTable("Leases");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.LeasePenalty", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -483,46 +641,25 @@ namespace NHNhaTro.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ContractId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime");
-
-                    b.Property<string>("CreatedBy")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
-                    b.Property<string>("ReferenceNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("TransactionDate")
-                        .HasColumnType("date");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime");
+                    b.Property<int>("LeaseId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CategoryId");
+                    b.HasIndex("LeaseId");
 
-                    b.HasIndex("ContractId");
-
-                    b.ToTable("IncomeExpenses", (string)null);
+                    b.ToTable("LeasePenalties");
                 });
 
-            modelBuilder.Entity("NHNhaTro.Data.Entities.IncomeExpenseCategory", b =>
+            modelBuilder.Entity("NHNhaTro.Data.Entities.LeaseTenant", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -530,31 +667,246 @@ namespace NHNhaTro.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime");
+                    b.Property<bool>("IsRepresentative")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("LeaseId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("MoveInDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("MoveOutDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LeaseId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("LeaseTenants");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.MoneyAccount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AccountHolder")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("AccountNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("BankName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsSystem")
-                        .HasColumnType("bit");
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                    b.Property<decimal>("OpeningBalance")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime");
+                    b.Property<DateTime>("OpeningDate")
+                        .HasColumnType("date");
 
                     b.HasKey("Id");
 
-                    b.ToTable("IncomeExpenseCategories", (string)null);
+                    b.ToTable("Accounts");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.MoneyTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<int?>("BillId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("LeaseId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PurchaseId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("RepairId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("RoomId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("TransferGroup")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BillId");
+
+                    b.HasIndex("LeaseId");
+
+                    b.HasIndex("PurchaseId");
+
+                    b.HasIndex("RepairId");
+
+                    b.HasIndex("RoomId");
+
+                    b.HasIndex("AccountId", "Date");
+
+                    b.ToTable("Transactions");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.Purchase", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsAdvertising")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("RoomId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Supplier")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("RoomId");
+
+                    b.ToTable("Purchases");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.Repair", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int?>("FurnitureItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("PerformedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("RoomId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("FurnitureItemId");
+
+                    b.HasIndex("RoomId");
+
+                    b.ToTable("Repairs");
                 });
 
             modelBuilder.Entity("NHNhaTro.Data.Entities.Room", b =>
@@ -565,49 +917,74 @@ namespace NHNhaTro.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Area")
-                        .IsRequired()
-                        .HasMaxLength(1)
-                        .IsUnicode(false)
-                        .HasColumnType("char(1)")
-                        .IsFixedLength();
-
-                    b.Property<decimal>("DefaultPrice")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("Floor")
+                    b.Property<int>("BlockId")
                         .HasColumnType("int");
 
-                    b.Property<bool>("HasAirCondition")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("HasBed")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("HasFridge")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("HasWardrobe")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("HasWaterHeater")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsOccupied")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
+                    b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
-                    b.Property<int>("RoomNumber")
+                    b.Property<int>("Floor")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxOccupants")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MeterReading")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Rent")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BlockId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Rooms");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.RoomFurniture", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("FurnitureItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoomId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Rooms", (string)null);
+                    b.HasIndex("FurnitureItemId");
+
+                    b.HasIndex("RoomId", "FurnitureItemId")
+                        .IsUnique();
+
+                    b.ToTable("RoomFurniture");
                 });
 
             modelBuilder.Entity("NHNhaTro.Data.Entities.Tenant", b =>
@@ -620,9 +997,6 @@ namespace NHNhaTro.Migrations
 
                     b.Property<DateTime?>("BirthDate")
                         .HasColumnType("date");
-
-                    b.Property<int?>("CompanyId")
-                        .HasColumnType("int");
 
                     b.Property<string>("Ethnicity")
                         .HasMaxLength(50)
@@ -639,18 +1013,22 @@ namespace NHNhaTro.Migrations
 
                     b.Property<string>("IdentityCard")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Nationality")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("PermanentAddress")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
-                    b.Property<string>("PhoneNumber")
+                    b.Property<string>("Phone")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<string>("Photo")
+                    b.Property<string>("Photos")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("VehiclePlate")
@@ -659,82 +1037,10 @@ namespace NHNhaTro.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CompanyId");
+                    b.HasIndex("IdentityCard")
+                        .IsUnique();
 
-                    b.ToTable("Tenants", (string)null);
-                });
-
-            modelBuilder.Entity("NHNhaTro.Data.Entities.UtilityBill", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("BillNote")
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
-
-                    b.Property<string>("BillStatus")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<int>("ContractId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime");
-
-                    b.Property<decimal>("Discount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("ElectricityAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("ExtraCharge")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("Month")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("RentAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("RoomId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime");
-
-                    b.Property<decimal>("WaterAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("WaterIndexEnd")
-                        .HasColumnType("int");
-
-                    b.Property<int>("WaterIndexStart")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ContractId");
-
-                    b.HasIndex("RoomId");
-
-                    b.ToTable("UtilityBills", (string)null);
+                    b.ToTable("Tenants");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -839,157 +1145,227 @@ namespace NHNhaTro.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("NHNhaTro.Data.Entities.Contract", b =>
+            modelBuilder.Entity("NHNhaTro.Data.Entities.Bill", b =>
                 {
-                    b.HasOne("NHNhaTro.Data.Entities.Company", "Company")
-                        .WithMany("Contracts")
-                        .HasForeignKey("CompanyId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.Navigation("Company");
-                });
-
-            modelBuilder.Entity("NHNhaTro.Data.Entities.ContractExtensionHistory", b =>
-                {
-                    b.HasOne("NHNhaTro.Data.Entities.Contract", "Contract")
-                        .WithMany("ContractExtensionHistories")
-                        .HasForeignKey("ContractId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                    b.HasOne("NHNhaTro.Data.Entities.Lease", "Lease")
+                        .WithMany("Bills")
+                        .HasForeignKey("LeaseId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Contract");
+                    b.Navigation("Lease");
                 });
 
-            modelBuilder.Entity("NHNhaTro.Data.Entities.ContractRoom", b =>
+            modelBuilder.Entity("NHNhaTro.Data.Entities.BlockFurniture", b =>
                 {
-                    b.HasOne("NHNhaTro.Data.Entities.Contract", "Contract")
-                        .WithMany("ContractRooms")
-                        .HasForeignKey("ContractId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                    b.HasOne("NHNhaTro.Data.Entities.Block", "Block")
+                        .WithMany("DefaultFurniture")
+                        .HasForeignKey("BlockId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("NHNhaTro.Data.Entities.FurnitureItem", "FurnitureItem")
+                        .WithMany()
+                        .HasForeignKey("FurnitureItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Block");
+
+                    b.Navigation("FurnitureItem");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.Lease", b =>
+                {
                     b.HasOne("NHNhaTro.Data.Entities.Room", "Room")
-                        .WithMany("ContractRooms")
+                        .WithMany("Leases")
                         .HasForeignKey("RoomId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("Contract");
 
                     b.Navigation("Room");
                 });
 
-            modelBuilder.Entity("NHNhaTro.Data.Entities.ContractTenant", b =>
+            modelBuilder.Entity("NHNhaTro.Data.Entities.LeasePenalty", b =>
                 {
-                    b.HasOne("NHNhaTro.Data.Entities.Contract", "Contract")
-                        .WithMany("ContractTenants")
-                        .HasForeignKey("ContractId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                    b.HasOne("NHNhaTro.Data.Entities.Lease", "Lease")
+                        .WithMany("Penalties")
+                        .HasForeignKey("LeaseId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("NHNhaTro.Data.Entities.Room", "Room")
-                        .WithMany("ContractTenants")
-                        .HasForeignKey("RoomId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                    b.Navigation("Lease");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.LeaseTenant", b =>
+                {
+                    b.HasOne("NHNhaTro.Data.Entities.Lease", "Lease")
+                        .WithMany("Tenants")
+                        .HasForeignKey("LeaseId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("NHNhaTro.Data.Entities.Tenant", "Tenant")
-                        .WithMany("ContractTenants")
+                        .WithMany("Leases")
                         .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Contract");
-
-                    b.Navigation("Room");
+                    b.Navigation("Lease");
 
                     b.Navigation("Tenant");
                 });
 
-            modelBuilder.Entity("NHNhaTro.Data.Entities.IncomeExpense", b =>
+            modelBuilder.Entity("NHNhaTro.Data.Entities.MoneyTransaction", b =>
                 {
-                    b.HasOne("NHNhaTro.Data.Entities.IncomeExpenseCategory", "Category")
-                        .WithMany("IncomeExpenses")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                    b.HasOne("NHNhaTro.Data.Entities.MoneyAccount", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("NHNhaTro.Data.Entities.Contract", "Contract")
-                        .WithMany("IncomeExpenses")
-                        .HasForeignKey("ContractId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                    b.HasOne("NHNhaTro.Data.Entities.Bill", "Bill")
+                        .WithMany("Payments")
+                        .HasForeignKey("BillId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                    b.Navigation("Category");
+                    b.HasOne("NHNhaTro.Data.Entities.Lease", "Lease")
+                        .WithMany()
+                        .HasForeignKey("LeaseId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                    b.Navigation("Contract");
-                });
+                    b.HasOne("NHNhaTro.Data.Entities.Purchase", "Purchase")
+                        .WithMany()
+                        .HasForeignKey("PurchaseId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity("NHNhaTro.Data.Entities.Tenant", b =>
-                {
-                    b.HasOne("NHNhaTro.Data.Entities.Company", "Company")
-                        .WithMany("Tenants")
-                        .HasForeignKey("CompanyId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.Navigation("Company");
-                });
-
-            modelBuilder.Entity("NHNhaTro.Data.Entities.UtilityBill", b =>
-                {
-                    b.HasOne("NHNhaTro.Data.Entities.Contract", "Contract")
-                        .WithMany("UtilityBills")
-                        .HasForeignKey("ContractId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                    b.HasOne("NHNhaTro.Data.Entities.Repair", "Repair")
+                        .WithMany()
+                        .HasForeignKey("RepairId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NHNhaTro.Data.Entities.Room", "Room")
-                        .WithMany("UtilityBills")
+                        .WithMany()
                         .HasForeignKey("RoomId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                    b.Navigation("Contract");
+                    b.Navigation("Account");
+
+                    b.Navigation("Bill");
+
+                    b.Navigation("Lease");
+
+                    b.Navigation("Purchase");
+
+                    b.Navigation("Repair");
 
                     b.Navigation("Room");
                 });
 
-            modelBuilder.Entity("NHNhaTro.Data.Entities.Company", b =>
+            modelBuilder.Entity("NHNhaTro.Data.Entities.Purchase", b =>
                 {
-                    b.Navigation("Contracts");
+                    b.HasOne("NHNhaTro.Data.Entities.MoneyAccount", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
-                    b.Navigation("Tenants");
+                    b.HasOne("NHNhaTro.Data.Entities.Room", "Room")
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Account");
+
+                    b.Navigation("Room");
                 });
 
-            modelBuilder.Entity("NHNhaTro.Data.Entities.Contract", b =>
+            modelBuilder.Entity("NHNhaTro.Data.Entities.Repair", b =>
                 {
-                    b.Navigation("ContractExtensionHistories");
+                    b.HasOne("NHNhaTro.Data.Entities.MoneyAccount", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
-                    b.Navigation("ContractRooms");
+                    b.HasOne("NHNhaTro.Data.Entities.FurnitureItem", "FurnitureItem")
+                        .WithMany()
+                        .HasForeignKey("FurnitureItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                    b.Navigation("ContractTenants");
+                    b.HasOne("NHNhaTro.Data.Entities.Room", "Room")
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                    b.Navigation("IncomeExpenses");
+                    b.Navigation("Account");
 
-                    b.Navigation("UtilityBills");
-                });
+                    b.Navigation("FurnitureItem");
 
-            modelBuilder.Entity("NHNhaTro.Data.Entities.IncomeExpenseCategory", b =>
-                {
-                    b.Navigation("IncomeExpenses");
+                    b.Navigation("Room");
                 });
 
             modelBuilder.Entity("NHNhaTro.Data.Entities.Room", b =>
                 {
-                    b.Navigation("ContractRooms");
+                    b.HasOne("NHNhaTro.Data.Entities.Block", "Block")
+                        .WithMany("Rooms")
+                        .HasForeignKey("BlockId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
-                    b.Navigation("ContractTenants");
+                    b.Navigation("Block");
+                });
 
-                    b.Navigation("UtilityBills");
+            modelBuilder.Entity("NHNhaTro.Data.Entities.RoomFurniture", b =>
+                {
+                    b.HasOne("NHNhaTro.Data.Entities.FurnitureItem", "FurnitureItem")
+                        .WithMany()
+                        .HasForeignKey("FurnitureItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NHNhaTro.Data.Entities.Room", "Room")
+                        .WithMany("Furniture")
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FurnitureItem");
+
+                    b.Navigation("Room");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.Bill", b =>
+                {
+                    b.Navigation("Payments");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.Block", b =>
+                {
+                    b.Navigation("DefaultFurniture");
+
+                    b.Navigation("Rooms");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.Lease", b =>
+                {
+                    b.Navigation("Bills");
+
+                    b.Navigation("Penalties");
+
+                    b.Navigation("Tenants");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.Room", b =>
+                {
+                    b.Navigation("Furniture");
+
+                    b.Navigation("Leases");
                 });
 
             modelBuilder.Entity("NHNhaTro.Data.Entities.Tenant", b =>
                 {
-                    b.Navigation("ContractTenants");
+                    b.Navigation("Leases");
                 });
 #pragma warning restore 612, 618
         }

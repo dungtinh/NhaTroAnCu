@@ -1,0 +1,137 @@
+@* Nhập danh sách người ở trong phòng: ảnh CCCD, quét CCCD (FPT.AI), tự điền người cũ theo số CCCD. *@
+@inject LeaseService Leases
+@inject ToastService Toast
+
+@if (!scanConfigured)
+{
+    <div class="alert alert-light border small py-2"><i class="fas fa-info-circle"></i> Chưa cấu hình API key FPT.AI nên chưa quét CCCD tự động được. Ảnh CCCD vẫn lưu bình thường.</div>
+}
+
+@for (int i = 0; i < Tenants.Count; i++)
+{
+    var index = i;
+    var t = Tenants[index];
+    <div class="nh-card mb-3" @key="t">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong><i class="fas fa-user"></i> Người @(index + 1) @(index == 0 ? "(đại diện)" : "")</strong>
+            @if (Tenants.Count > 1)
+            {
+                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => Remove(index)"><i class="fas fa-trash"></i> Bỏ</button>
+            }
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+            <FileUpload Kind="TenantPhotos" Files="Pending(t)" ButtonText="Ảnh CCCD (2 mặt)" Accept="image/*" Camera="true" Uploaded="f => OnPhotoUploaded(t, f)" Removed="f => t.Photos.Remove(f.Path)" />
+            @foreach (var p in t.Photos.Where(p => !Pending(t).Any(x => x.Path == p)))
+            {
+                <div class="nh-thumb"><a href="@p" target="_blank"><img src="@p" alt="CCCD" /></a><button type="button" class="nh-thumb-remove" @onclick="() => t.Photos.Remove(p)">×</button></div>
+            }
+            @if (scanConfigured && t.Photos.Count > 0)
+            {
+                <button type="button" class="btn btn-sm btn-info" disabled="@(scanning == t)" @onclick="() => ScanAsync(t)">
+                    <i class="fas @(scanning == t ? "fa-spinner fa-spin" : "fa-magic")"></i> Quét CCCD
+                </button>
+            }
+        </div>
+        <div class="row g-2">
+            <div class="col-md-5"><label class="form-label">Họ và tên <span class="text-danger">*</span></label><input class="form-control" maxlength="100" @bind="t.FullName" /></div>
+            <div class="col-md-4"><label class="form-label">Số CCCD/Hộ chiếu <span class="text-danger">*</span></label><input class="form-control" maxlength="30" @bind="t.IdentityCard" @bind:after="() => LookupAsync(t)" /></div>
+            <div class="col-md-3"><label class="form-label">Điện thoại</label><input class="form-control" maxlength="20" @bind="t.Phone" /></div>
+            <div class="col-md-3"><label class="form-label">Ngày sinh</label><input type="date" class="form-control" @bind="t.BirthDate" /></div>
+            <div class="col-md-2">
+                <label class="form-label">Giới tính</label>
+                <select class="form-select" @bind="t.Gender"><option value=""></option><option>Nam</option><option>Nữ</option></select>
+            </div>
+            <div class="col-md-2"><label class="form-label">Dân tộc</label><input class="form-control" maxlength="50" @bind="t.Ethnicity" /></div>
+            <div class="col-md-2"><label class="form-label">Quốc tịch</label><input class="form-control" maxlength="50" @bind="t.Nationality" /></div>
+            <div class="col-md-3"><label class="form-label">Biển số xe</label><input class="form-control" maxlength="20" @bind="t.VehiclePlate" /></div>
+            <div class="col-12"><label class="form-label">Địa chỉ thường trú</label><input class="form-control" maxlength="300" @bind="t.PermanentAddress" /></div>
+        </div>
+    </div>
+}
+
+<button type="button" class="btn btn-outline-success" disabled="@(Tenants.Count >= MaxPeople)" @onclick="Add"><i class="fas fa-user-plus"></i> Thêm người ở</button>
+@if (Tenants.Count >= MaxPeople)
+{
+    <small class="text-muted ms-2">Tối đa @MaxPeople người/phòng</small>
+}
+
+@code {
+    [Parameter, EditorRequired] public List<TenantInput> Tenants { get; set; } = [];
+    [Parameter] public int MaxPeople { get; set; } = 4;
+    [Parameter] public int? ExceptLeaseId { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+
+    private bool scanConfigured;
+    private TenantInput? scanning;
+    private readonly Dictionary<TenantInput, List<PendingFile>> pending = [];
+
+    private List<PendingFile> Pending(TenantInput t) => pending.TryGetValue(t, out var l) ? l : pending[t] = [];
+
+    protected override async Task OnInitializedAsync() => scanConfigured = await Leases.IsCardScanConfiguredAsync();
+
+    private async Task Add()
+    {
+        Tenants.Add(new TenantInput());
+        await Changed.InvokeAsync();
+    }
+
+    private async Task Remove(int index)
+    {
+        Tenants.RemoveAt(index);
+        await Changed.InvokeAsync();
+    }
+
+    private async Task OnPhotoUploaded(TenantInput t, PendingFile f)
+    {
+        t.Photos.Add(f.Path);
+        if (scanConfigured && string.IsNullOrWhiteSpace(t.FullName)) await ScanAsync(t, f.Path);
+    }
+
+    private async Task ScanAsync(TenantInput t, string? path = null)
+    {
+        scanning = t;
+        try
+        {
+            var r = await Leases.ScanIdentityCardAsync(path ?? t.Photos.Last());
+            if (!string.IsNullOrEmpty(r.Name)) t.FullName = r.Name;
+            if (!string.IsNullOrEmpty(r.Id)) t.IdentityCard = r.Id;
+            if (r.BirthDate.HasValue) t.BirthDate = r.BirthDate;
+            if (!string.IsNullOrEmpty(r.Gender)) t.Gender = r.Gender;
+            if (!string.IsNullOrEmpty(r.Address)) t.PermanentAddress = r.Address;
+            if (!string.IsNullOrEmpty(r.Ethnicity)) t.Ethnicity = r.Ethnicity;
+            if (!string.IsNullOrEmpty(r.Nationality)) t.Nationality = r.Nationality;
+            Toast.Success("Đã quét CCCD.");
+            await CheckOtherRoomAsync(t);
+        }
+        catch (InvalidOperationException ex) { Toast.Error(ex.Message); }
+        catch (HttpRequestException ex) { Toast.Error("Lỗi kết nối FPT.AI: " + ex.Message); }
+        finally { scanning = null; }
+    }
+
+    private async Task LookupAsync(TenantInput t)
+    {
+        if (string.IsNullOrWhiteSpace(t.IdentityCard)) return;
+        await CheckOtherRoomAsync(t);
+        if (!string.IsNullOrWhiteSpace(t.FullName)) return;
+        var old = await Leases.FindTenantAsync(t.IdentityCard);
+        if (old == null) return;
+        t.TenantId = old.TenantId;
+        t.FullName = old.FullName;
+        t.BirthDate ??= old.BirthDate;
+        t.Gender ??= old.Gender;
+        t.Phone ??= old.Phone;
+        t.PermanentAddress ??= old.PermanentAddress;
+        t.Ethnicity = old.Ethnicity ?? t.Ethnicity;
+        t.Nationality = old.Nationality ?? t.Nationality;
+        t.VehiclePlate ??= old.VehiclePlate;
+        foreach (var p in old.Photos.Where(p => !t.Photos.Contains(p))) t.Photos.Add(p);
+        Toast.Info($"Đã điền thông tin người thuê cũ: {old.FullName}.");
+    }
+
+    private async Task CheckOtherRoomAsync(TenantInput t)
+    {
+        if (string.IsNullOrWhiteSpace(t.IdentityCard)) return;
+        var room = await Leases.FindActiveRoomOfAsync(t.IdentityCard, ExceptLeaseId);
+        if (room != null) Toast.Warning($"Người có CCCD {t.IdentityCard} đang ở phòng {room}.");
+    }
+}
