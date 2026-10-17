@@ -1,0 +1,10 @@
+<Project>
+  <!--
+    Xem Directory.Build.props. RoslynTargetsPath lúc này là ...\Roslyn (dotnet CLI) hoặc ...\Roslyn\binfx (Visual Studio);
+    cắt đuôi \binfx để lấy ...\Roslyn\bincore\csc.dll. Microsoft.CSharp.Core.targets truyền $(CscEnvironment) vào Csc task.
+  -->
+  <PropertyGroup>
+    <_NhRoslynRoot>$(RoslynTargetsPath.TrimEnd('\').Replace('\binfx', ''))</_NhRoslynRoot>
+    <CscEnvironment>NHNHATRO_DOTNET=$(DOTNET_HOST_PATH);NHNHATRO_CSC_DLL=$(_NhRoslynRoot)\bincore\csc.dll</CscEnvironment>
+  </PropertyGroup>
+</Project>

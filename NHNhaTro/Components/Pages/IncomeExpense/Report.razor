@@ -1,0 +1,91 @@
+@page "/IncomeExpense/Report"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject IncomeExpenseService Service
+
+<PageTitle>Báo cáo thu chi</PageTitle>
+<HeadContent><link rel="stylesheet" href="css/legacy/income-report.css" /></HeadContent>
+
+<div class="container">
+    <div class="report-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h2 class="mb-0"><i class="fas fa-chart-line"></i> Báo cáo thu chi tháng @month/@year</h2>
+        <div class="d-flex gap-2 align-items-center">
+            <select class="form-control" style="width: 110px" @bind="month">
+                @for (int i = 1; i <= 12; i++) { <option value="@i">Tháng @i</option> }
+            </select>
+            <select class="form-control" style="width: 100px" @bind="year">
+                @for (int y = DateTime.Today.Year + 1; y >= DateTime.Today.Year - 6; y--) { <option value="@y">@y</option> }
+            </select>
+            <button type="button" class="btn btn-primary" @onclick="LoadAsync"><i class="fas fa-search"></i> Xem</button>
+            <a href="IncomeExpense" class="btn btn-secondary"><i class="fas fa-arrow-left"></i></a>
+        </div>
+    </div>
+
+    @if (report == null)
+    {
+        <div class="nh-loading"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
+    }
+    else
+    {
+        <div class="row summary-boxes">
+            <div class="col-md-4"><div class="summary-box income"><h4>Tổng thu</h4><p class="amount">+@Fmt.Money(report.TotalIncome) đ</p></div></div>
+            <div class="col-md-4"><div class="summary-box expense"><h4>Tổng chi</h4><p class="amount">-@Fmt.Money(report.TotalExpense) đ</p></div></div>
+            <div class="col-md-4"><div class="summary-box balance @(report.Balance >= 0 ? "positive" : "negative")"><h4>Cân đối</h4><p class="amount">@Fmt.Money(report.Balance) đ</p></div></div>
+        </div>
+
+        <div class="row mt-4 g-4">
+            <div class="col-md-6">
+                <h4 class="mb-3"><i class="fas fa-chart-pie"></i> Phân bổ các loại chi</h4>
+                <CategoryBars Items="report.ExpenseByCategory" Css="" />
+            </div>
+            <div class="col-md-6">
+                <h4 class="mb-3"><i class="fas fa-chart-bar"></i> Phân bổ các khoản thu</h4>
+                <CategoryBars Items="report.IncomeByCategory" Css="income" />
+            </div>
+        </div>
+
+        <div class="transaction-details mt-4">
+            <h4>Chi tiết giao dịch</h4>
+            @if (report.Transactions.Count == 0)
+            {
+                <p class="text-muted">Không có giao dịch trong tháng.</p>
+            }
+            else
+            {
+                decimal running = 0;
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead><tr><th>Ngày</th><th>Danh mục</th><th>Mô tả</th><th>Phòng</th><th class="text-end">Thu</th><th class="text-end">Chi</th><th class="text-end">Số dư</th></tr></thead>
+                        <tbody>
+                            @foreach (var t in report.Transactions)
+                            {
+                                bool income = t.Category.Type == CategoryType.Income;
+                                running += income ? t.Amount : -t.Amount;
+                                <tr>
+                                    <td>@Fmt.Date(t.TransactionDate)</td>
+                                    <td>@t.Category.Name</td>
+                                    <td>@t.Description</td>
+                                    <td>@(t.Contract == null ? "" : string.Join(", ", t.Contract.ContractRooms.Select(cr => cr.Room.Name)))</td>
+                                    <td class="text-end text-success">@(income ? Fmt.Money(t.Amount) : "")</td>
+                                    <td class="text-end text-danger">@(income ? "" : Fmt.Money(t.Amount))</td>
+                                    <td class="text-end fw-bold">@Fmt.Money(running)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private int month = DateTime.Today.Month;
+    private int year = DateTime.Today.Year;
+    private MonthlyReport? report;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync() => report = await Service.GetMonthlyReportAsync(month, year);
+}

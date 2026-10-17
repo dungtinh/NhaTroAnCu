@@ -1,0 +1,539 @@
+@page "/Rooms/Details/{Id:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject RoomService Rooms
+@inject BillingService Billing
+
+<PageTitle>Chi tiết phòng @d?.Room.Name</PageTitle>
+<HeadContent><link rel="stylesheet" href="css/legacy/room-details.css" /><link rel="stylesheet" href="css/legacy/payment-history-inline.css" /></HeadContent>
+
+@if (d == null)
+{
+    <div class="nh-loading">@(notFound ? "Không tìm thấy phòng." : "Đang tải...")</div>
+}
+else
+{
+    var c = d.Contract;
+    var today = DateTime.Today;
+    bool isNearingEnd = c != null && (c.EndDate - today).TotalDays > 0 && (c.EndDate - today).TotalDays <= 30;
+    bool isExpired = c != null && c.EndDate < today;
+
+    <div class="room-details-container">
+        <div class="page-header">
+            <h2 class="page-title"><i class="fas fa-door-open"></i> Chi tiết phòng @d.Room.Name</h2>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="Rooms" class="btn btn-sm btn-secondary"><i class="fas fa-arrow-left"></i> Sơ đồ phòng</a>
+                <a href="@($"Rooms/History/{d.Room.Id}")" class="btn btn-sm btn-info"><i class="fas fa-history"></i> Lịch sử</a>
+                @if (c == null)
+                {
+                    <a href="@($"Contracts/Create?roomId={d.Room.Id}")" class="btn btn-primary"><i class="fas fa-plus"></i> Tạo hợp đồng mới</a>
+                }
+                else
+                {
+                    <a href="@($"Contracts/Details/{c.Id}")" class="btn btn-sm btn-info"><i class="fas fa-eye"></i> Xem hợp đồng</a>
+                }
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-4">
+                <!-- 1. THÔNG TIN PHÒNG -->
+                <div class="detail-card room-info-card">
+                    <div class="card-header bg-gradient-primary">
+                        <i class="fas fa-home"></i> <span>Tiện ích & Thông tin phòng</span>
+                        <a href="@($"Rooms/Edit/{d.Room.Id}")" class="btn btn-sm btn-info badge badge-light"><i class="fas fa-edit"></i> Sửa</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="room-basic-info">
+                            <div class="info-item"><span class="info-label">Tên phòng:</span><span class="info-value">@d.Room.Name</span></div>
+                            <div class="info-item"><span class="info-label">Dãy:</span><span class="info-value">@d.Room.Area</span></div>
+                            <div class="info-item"><span class="info-label">Tầng:</span><span class="info-value">@d.Room.Floor</span></div>
+                            <div class="info-item"><span class="info-label">Giá mặc định:</span><span class="info-value price">@Fmt.Vnd(d.Room.DefaultPrice)</span></div>
+                            <div class="info-item">
+                                <span class="info-label">Trạng thái:</span>
+                                <span class="badge @(d.Room.IsOccupied ? "badge-success bg-success" : "badge-warning bg-warning text-dark")">@(d.Room.IsOccupied ? "Đang có người ở" : "Còn trống")</span>
+                            </div>
+                        </div>
+                        <hr class="divider" />
+                        <h5 class="section-subtitle"><i class="fas fa-plug"></i> Tiện ích</h5>
+                        <ul class="utilities-list">
+                            @foreach (var (name, icon, has) in Utilities(d.Room))
+                            {
+                                <li>
+                                    <span class="utility-icon"><i class="fas @icon"></i></span>
+                                    <span class="utility-name">@name</span>
+                                    <span class="utility-status @(has ? "has-utility" : "no-utility")">@(has ? "Có" : "Không")</span>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 2. HỢP ĐỒNG -->
+                <div class="detail-card contract-info-card">
+                    <div class="card-header bg-gradient-blue">
+                        <i class="fas fa-file-contract"></i> <span>Thông tin hợp đồng</span>
+                        @if (c != null)
+                        {
+                            <a href="@($"Contracts/Details/{c.Id}")" class="btn btn-sm btn-info badge badge-light"><i class="fas fa-eye"></i> Chi tiết</a>
+                        }
+                    </div>
+                    <div class="card-body">
+                        @if (c != null)
+                        {
+                            if (isNearingEnd)
+                            {
+                                <div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> <div><strong>Hợp đồng sắp hết hạn!</strong><br />Còn @((c.EndDate - today).Days) ngày</div></div>
+                            }
+                            if (isExpired)
+                            {
+                                <div class="alert alert-danger"><i class="fas fa-times-circle"></i> <strong>Hợp đồng đã hết hạn!</strong>
+                                    <a href="@($"Contracts/Extend/{c.Id}")" class="ms-2">Gia hạn</a> · <a href="@($"Contracts/End/{c.Id}")">Kết thúc</a></div>
+                            }
+                            <div class="contract-details">
+                                <div class="detail-row"><span class="detail-label">Mã hợp đồng:</span><span class="detail-value">#@c.Id</span></div>
+                                <div class="detail-row"><span class="detail-label">Loại hợp đồng:</span><span class="detail-value">@ContractType.Display(c.ContractType)</span></div>
+                                @if (c.IsCompany && c.Company != null)
+                                {
+                                    <div class="detail-row"><span class="detail-label">Công ty:</span><span class="detail-value">@c.Company.CompanyName</span></div>
+                                }
+                                <div class="detail-row"><span class="detail-label">Giá thuê thỏa thuận:</span><span class="detail-value price">@Fmt.Vnd(d.ActualPrice)</span></div>
+                                <div class="detail-row"><span class="detail-label">Ngày bắt đầu:</span><span class="detail-value">@Fmt.Date(c.StartDate)</span></div>
+                                <div class="detail-row"><span class="detail-label">Ngày kết thúc:</span><span class="detail-value">@Fmt.Date(c.EndDate)</span></div>
+                                <div class="detail-row"><span class="detail-label">Giá điện:</span><span class="detail-value">@Fmt.Money(c.ElectricityPrice)đ/kWh</span></div>
+                                <div class="detail-row"><span class="detail-label">Giá nước:</span><span class="detail-value">@Fmt.Money(c.WaterPrice)đ/m³</span></div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="no-data">
+                                <i class="fas fa-file-contract fa-3x"></i>
+                                <p>Phòng chưa có hợp đồng đang hoạt động</p>
+                                <a href="@($"Contracts/Create?roomId={d.Room.Id}")" class="btn btn-primary"><i class="fas fa-plus"></i> Tạo hợp đồng mới</a>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- 3. KHÁCH THUÊ -->
+                <div class="detail-card tenant-info-card">
+                    <div class="card-header bg-gradient-green">
+                        <i class="fas fa-users"></i> <span>Thông tin khách thuê</span>
+                        @if (c != null)
+                        {
+                            <a href="@($"ContractTenants/TenantManager?contractId={c.Id}&roomId={d.Room.Id}")" class="btn btn-sm btn-info badge badge-light"><i class="fas fa-user-plus"></i> Quản lý</a>
+                        }
+                    </div>
+                    <div class="card-body">
+                        @if (d.Tenants.Count > 0)
+                        {
+                            <div class="tenant-list">
+                                @foreach (var t in d.Tenants)
+                                {
+                                    <div class="tenant-item">
+                                        <div class="tenant-avatar">
+                                            @if (t.PhotoList.FirstOrDefault() is { } photo)
+                                            {
+                                                <a href="@photo" target="_blank"><img src="@photo" alt="@t.FullName" /></a>
+                                            }
+                                            else
+                                            {
+                                                <i class="fas fa-user"></i>
+                                            }
+                                        </div>
+                                        <div class="tenant-details">
+                                            <div class="tenant-name">@t.FullName</div>
+                                            <div class="tenant-info-row"><i class="fas fa-phone"></i> @t.PhoneNumber</div>
+                                            <div class="tenant-info-row"><i class="fas fa-id-card"></i> @t.IdentityCard</div>
+                                            @if (!string.IsNullOrEmpty(t.VehiclePlate))
+                                            {
+                                                <div class="tenant-info-row"><i class="fas fa-motorcycle"></i> @t.VehiclePlate</div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="no-data"><i class="fas fa-users fa-3x"></i><p>Chưa có thông tin khách thuê</p></div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <!-- 4. PHIẾU BÁO TIỀN THÁNG NÀY -->
+                <div class="detail-card">
+                    <div class="card-header bg-gradient-orange">
+                        <i class="fas fa-file-invoice-dollar"></i> <span>Phiếu báo tiền tháng @today.Month/@today.Year</span>
+                        @if (c != null)
+                        {
+                            <span class="badge badge-light bg-light text-dark">HĐ #@c.Id</span>
+                        }
+                    </div>
+                    <div class="card-body">
+                        @if (c == null)
+                        {
+                            <div class="no-data"><i class="fas fa-exclamation-triangle fa-3x"></i><p>Vui lòng tạo hợp đồng trước khi tạo phiếu báo tiền</p></div>
+                        }
+                        else if (d.CurrentBill is { } cb)
+                        {
+                            <div class="bill-details">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="detail-row"><span class="detail-label">Chỉ số nước:</span><span class="detail-value">@cb.WaterIndexStart - @cb.WaterIndexEnd</span></div>
+                                        <div class="detail-row"><span class="detail-label">Tiền nước:</span><span class="detail-value price">@Fmt.Vnd(cb.WaterAmount)</span></div>
+                                        <div class="detail-row"><span class="detail-label">Tiền điện:</span><span class="detail-value price">@Fmt.Vnd(cb.ElectricityAmount)</span></div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="detail-row"><span class="detail-label">Tiền phòng:</span><span class="detail-value price">@Fmt.Vnd(cb.RentAmount)</span></div>
+                                        <div class="detail-row"><span class="detail-label">Phụ thu:</span><span class="detail-value">@Fmt.Vnd(cb.ExtraCharge)</span></div>
+                                        <div class="detail-row"><span class="detail-label">Giảm trừ:</span><span class="detail-value">@Fmt.Vnd(cb.Discount)</span></div>
+                                    </div>
+                                </div>
+                                <div class="bill-total-box">
+                                    <div class="total-label">Tổng cần thu:</div>
+                                    <div class="total-amount">@Fmt.Vnd(cb.TotalAmount)</div>
+                                </div>
+                                @if (!string.IsNullOrEmpty(cb.BillNote))
+                                {
+                                    <div class="bill-note"><i class="fas fa-sticky-note"></i> Ghi chú: @cb.BillNote</div>
+                                }
+                                <div class="bill-actions">
+                                    <button type="button" class="btn btn-warning" @onclick="() => OpenBillAsync(today.Month, today.Year)"><i class="fas fa-edit"></i> Sửa phiếu</button>
+                                    <a class="btn btn-success" href="@($"files/bills/{cb.Id}")" target="_blank"><i class="fas fa-print"></i> In phiếu</a>
+                                    <button type="button" class="btn btn-danger" @onclick="() => DeleteBillAsync(cb.Id)"><i class="fas fa-trash"></i> Xóa phiếu</button>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="no-data">
+                                <i class="fas fa-file-invoice fa-3x"></i>
+                                <p>Chưa có phiếu báo tiền tháng @today.Month/@today.Year</p>
+                                <button type="button" class="btn btn-primary" @onclick="() => OpenBillAsync(today.Month, today.Year)"><i class="fas fa-plus"></i> Tạo phiếu mới</button>
+                            </div>
+                        }
+                        @if (c != null)
+                        {
+                            <div class="mt-3 d-flex align-items-center gap-2 flex-wrap">
+                                <small class="text-muted">Lập/sửa phiếu tháng khác:</small>
+                                <input type="month" class="form-control form-control-sm" style="max-width: 170px" @bind="otherMonth" />
+                                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="OpenOtherMonthAsync"><i class="fas fa-file-invoice"></i> Mở phiếu</button>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- 5. GHI NHẬN THANH TOÁN -->
+                <div class="detail-card">
+                    <div class="card-header bg-gradient-purple"><i class="fas fa-money-check-alt"></i> <span>Ghi nhận thanh toán</span></div>
+                    <div class="card-body">
+                        @if (c != null)
+                        {
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label>Số tiền thu:</label>
+                                    <MoneyInput @bind-Value="payAmount" />
+                                    @if (d.AmountDue > 0)
+                                    {
+                                        <small class="text-success">Còn phải thu: @Fmt.Vnd(d.AmountDue)</small>
+                                    }
+                                </div>
+                                <div class="col-md-6">
+                                    <label>Ngày thu:</label>
+                                    <input type="date" class="form-control" @bind="payDate" />
+                                </div>
+                                <div class="col-12">
+                                    <label>Ghi chú:</label>
+                                    <input type="text" class="form-control" maxlength="400" @bind="payNote" placeholder="VD: Tháng @today.Month/@today.Year" />
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-success mt-3" disabled="@Busy" @onclick="RecordPaymentAsync">
+                                <i class="fas @(Busy ? "fa-spinner fa-spin" : "fa-check")"></i> Ghi nhận
+                            </button>
+                            @if (lastReceiptId is int rid)
+                            {
+                                <a class="btn btn-outline-primary mt-3 ms-2" href="@($"files/receipts/{rid}")" target="_blank"><i class="fas fa-file-pdf"></i> Tải hóa đơn PDF</a>
+                            }
+                        }
+                        else
+                        {
+                            <p class="text-muted">Không có hợp đồng</p>
+                        }
+                    </div>
+                </div>
+
+                <!-- 6. LỊCH SỬ PHIẾU BÁO & THANH TOÁN -->
+                <div class="detail-card">
+                    <div class="card-header bg-gradient-dark"><i class="fas fa-history"></i> <span>Lịch sử phiếu báo & thanh toán</span></div>
+                    <div class="card-body">
+                        @if (d.PaymentHistory.Count > 0)
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover payment-history-table align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Tháng/Năm</th>
+                                            <th>Phiếu báo</th>
+                                            <th>Đã thu</th>
+                                            <th>+/- Tháng</th>
+                                            <th>Đặt cọc</th>
+                                            <th>Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var m in d.PaymentHistory)
+                                        {
+                                            var key = (m.Year, m.Month);
+                                            <tr class="@(m.MonthBalance < 0 ? "table-warning" : "")">
+                                                <td class="fw-bold"><i class="fas fa-calendar-alt text-primary"></i> Tháng @m.Month/@m.Year</td>
+                                                <td>
+                                                    @if (m.Bills.Count > 0)
+                                                    {
+                                                        <span class="text-danger fw-bold">@Fmt.Vnd(m.TotalBilled)</span><br />
+                                                        <small class="text-muted">@string.Join(", ", m.Bills.Select(b => "Phiếu #" + b.Id))</small>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">Chưa có phiếu</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <span class="text-success fw-bold">@Fmt.Vnd(m.TotalPaid)</span>
+                                                    @if (m.Payments.Count > 0)
+                                                    {
+                                                        <br /><small class="text-muted">@m.Payments.Count lần thu</small>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (m.MonthBalance == 0)
+                                                    {
+                                                        <span class="badge bg-success">Đủ</span>
+                                                    }
+                                                    else if (m.MonthBalance > 0)
+                                                    {
+                                                        <span class="text-primary">+@Fmt.Vnd(m.MonthBalance)</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-danger">@Fmt.Vnd(m.MonthBalance)</span>
+                                                    }
+                                                </td>
+                                                <td><span class="fw-bold @(m.CumulativeDeposit >= 0 ? "text-info" : "text-danger")">@Fmt.Vnd(m.CumulativeDeposit)</span></td>
+                                                <td>
+                                                    <button type="button" class="btn btn-sm btn-info" @onclick="() => Toggle(key)">
+                                                        <i class="fas @(expanded.Contains(key) ? "fa-chevron-up" : "fa-chevron-down")"></i> Chi tiết
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            @if (expanded.Contains(key))
+                                            {
+                                                @foreach (var b in m.Bills)
+                                                {
+                                                    <tr>
+                                                        <td colspan="6" class="ps-5">
+                                                            <div class="p-2 bg-light rounded">
+                                                                <strong><i class="fas fa-file-invoice text-warning"></i> Phiếu báo #@b.Id:</strong>
+                                                                <div class="row mt-2 small">
+                                                                    <div class="col-md-3">Tiền phòng: <strong>@Fmt.Vnd(b.RentAmount)</strong></div>
+                                                                    <div class="col-md-3">Tiền điện: <strong>@Fmt.Vnd(b.ElectricityAmount)</strong></div>
+                                                                    <div class="col-md-3">Tiền nước: <strong>@Fmt.Vnd(b.WaterAmount)</strong> (@b.WaterIndexStart → @b.WaterIndexEnd)</div>
+                                                                    <div class="col-md-3">Phụ thu/Giảm: <strong>@Fmt.Vnd(b.ExtraCharge - b.Discount)</strong></div>
+                                                                </div>
+                                                                @if (!string.IsNullOrEmpty(b.BillNote))
+                                                                {
+                                                                    <div class="small text-muted mt-1">Ghi chú: @b.BillNote</div>
+                                                                }
+                                                                <div class="mt-2">
+                                                                    @if (b.RoomId == d.Room.Id)
+                                                                    {
+                                                                        <button type="button" class="btn btn-sm btn-outline-warning" @onclick="() => OpenBillAsync(b.Month, b.Year)"><i class="fas fa-edit"></i> Sửa</button>
+                                                                    }
+                                                                    <a class="btn btn-sm btn-outline-success" href="@($"files/bills/{b.Id}")" target="_blank"><i class="fas fa-print"></i> In</a>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                                @if (m.Payments.Count > 0)
+                                                {
+                                                    <tr>
+                                                        <td colspan="6" class="ps-5">
+                                                            <table class="table table-sm mb-0">
+                                                                <thead><tr><th>Ngày thu</th><th>Số tiền</th><th>Ghi chú</th><th>Mã GD</th><th></th></tr></thead>
+                                                                <tbody>
+                                                                    @foreach (var p in m.Payments)
+                                                                    {
+                                                                        <tr>
+                                                                            <td>@Fmt.Date(p.TransactionDate)</td>
+                                                                            <td class="text-success fw-bold">@Fmt.Vnd(p.Amount)</td>
+                                                                            <td>@p.Description</td>
+                                                                            <td><small>@p.ReferenceNumber</small></td>
+                                                                            <td><a class="btn btn-sm btn-outline-primary" href="@($"files/receipts/{p.Id}")" target="_blank" title="In hóa đơn"><i class="fas fa-file-pdf"></i></a></td>
+                                                                        </tr>
+                                                                    }
+                                                                </tbody>
+                                                            </table>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted mb-0">Chưa có lịch sử phiếu báo và thanh toán.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (bill is not null)
+    {
+        <div class="nh-modal-backdrop" @onclick="CloseBill">
+            <div class="nh-modal" @onclick:stopPropagation="true">
+                <div class="nh-modal-header">
+                    <h5><i class="fas fa-file-invoice-dollar"></i> @(bill.BillId == null ? "Tạo phiếu báo tiền" : "Sửa phiếu báo tiền") tháng @bill.Month/@bill.Year</h5>
+                    <button type="button" class="btn-close btn-close-white" aria-label="Đóng" @onclick="CloseBill"></button>
+                </div>
+                <div class="nh-modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label>Chỉ số nước tháng trước</label>
+                            <input type="number" class="form-control" @bind="bill.WaterIndexStart" @bind:event="oninput" />
+                        </div>
+                        <div class="col-md-4">
+                            <label>Chỉ số nước tháng này</label>
+                            <input type="number" class="form-control" min="@bill.WaterIndexStart" @bind="bill.WaterIndexEnd" @bind:event="oninput" />
+                        </div>
+                        <div class="col-md-4">
+                            <label>Số nước đã sử dụng</label>
+                            <input class="form-control" value="@bill.WaterUsed" readonly />
+                        </div>
+                        <div class="col-md-4">
+                            <label>Giá nước / số</label>
+                            <MoneyInput Value="bill.WaterPrice" ReadOnly="true" />
+                        </div>
+                        <div class="col-md-4">
+                            <label>Tiền nước</label>
+                            <MoneyInput Value="bill.WaterAmount" ReadOnly="true" />
+                        </div>
+                        <div class="col-md-4">
+                            <label>Tiền điện</label>
+                            <MoneyInput @bind-Value="bill.ElectricityAmount" />
+                        </div>
+                        <div class="col-md-4">
+                            <label>Tiền thuê phòng</label>
+                            <MoneyInput @bind-Value="bill.RentAmount" />
+                        </div>
+                        <div class="col-md-4">
+                            <label>Tiền cộng thêm</label>
+                            <MoneyInput @bind-Value="bill.ExtraCharge" />
+                        </div>
+                        <div class="col-md-4">
+                            <label>Tiền giảm trừ</label>
+                            <MoneyInput @bind-Value="bill.Discount" />
+                        </div>
+                        <div class="col-md-6">
+                            <label>Tổng cần thu</label>
+                            <input class="form-control money fw-bold text-danger" value="@Fmt.Money(bill.TotalAmount)" readonly />
+                        </div>
+                        <div class="col-md-6">
+                            <label>Ghi chú phiếu báo tiền</label>
+                            <input class="form-control" maxlength="250" @bind="bill.BillNote" />
+                        </div>
+                    </div>
+                    <div class="text-end mt-4">
+                        <button type="button" class="btn btn-secondary me-2" @onclick="CloseBill">Hủy</button>
+                        <button type="button" class="btn btn-primary px-4" disabled="@Busy" @onclick="SaveBillAsync"><i class="fas fa-save"></i> Lưu phiếu báo tiền</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private RoomDetails? d;
+    private bool notFound;
+    private BillForm? bill;
+    private decimal payAmount;
+    private DateTime payDate = DateTime.Today;
+    private string? payNote;
+    private int? lastReceiptId;
+    private DateTime otherMonth = DateTime.Today;
+    private readonly HashSet<(int, int)> expanded = [];
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        d = await Rooms.GetDetailsAsync(Id);
+        notFound = d == null;
+        if (d != null) payAmount = d.AmountDue;
+    }
+
+    private static IEnumerable<(string, string, bool)> Utilities(Room r) =>
+    [
+        ("Điều hòa", "fa-snowflake", r.HasAirCondition),
+        ("Tủ lạnh", "fa-cube", r.HasFridge),
+        ("Bình nóng lạnh", "fa-fire", r.HasWaterHeater),
+        ("Giường", "fa-bed", r.HasBed),
+        ("Tủ quần áo", "fa-door-closed", r.HasWardrobe)
+    ];
+
+    private void Toggle((int, int) key)
+    {
+        if (!expanded.Remove(key)) expanded.Add(key);
+    }
+
+    private async Task OpenBillAsync(int month, int year)
+    {
+        bill = await Billing.GetFormAsync(Id, month, year);
+        if (bill == null) Toast.Warning("Phòng chưa có hợp đồng đang hoạt động.");
+    }
+
+    private Task OpenOtherMonthAsync() => OpenBillAsync(otherMonth.Month, otherMonth.Year);
+
+    private void CloseBill() => bill = null;
+
+    private async Task SaveBillAsync()
+    {
+        if (bill == null) return;
+        var isNew = bill.BillId == null;
+        if (await RunAsync(() => Billing.SaveAsync(bill), isNew ? "Đã tạo phiếu báo tiền thành công!" : "Đã cập nhật phiếu báo tiền thành công!"))
+        {
+            bill = null;
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeleteBillAsync(int billId)
+    {
+        if (!await ConfirmAsync("Xác nhận xóa phiếu báo tiền? Bạn không thể hoàn tác sau khi xóa!")) return;
+        if (await RunAsync(() => Billing.DeleteAsync(billId), "Phiếu báo tiền đã được xóa.")) await LoadAsync();
+    }
+
+    private async Task RecordPaymentAsync()
+    {
+        if (d?.Contract == null) return;
+        var userId = await GetUserIdAsync();
+        int id = 0;
+        if (await RunAsync(async () => id = await Billing.RecordRoomPaymentAsync(d.Contract.Id, payAmount, payDate, payNote, userId), "Đã ghi nhận thanh toán."))
+        {
+            lastReceiptId = id;
+            payNote = null;
+            await LoadAsync();
+        }
+    }
+}

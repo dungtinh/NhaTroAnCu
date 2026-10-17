@@ -1,0 +1,89 @@
+﻿@inherits LayoutComponentBase
+@inject Microsoft.Extensions.Options.IOptions<LandlordOptions> Landlord
+@inject NavigationManager NavigationManager
+
+<nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+        <a class="navbar-brand" href="">@BrandName</a>
+        <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav"
+                aria-expanded="false" aria-label="Mở menu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+            <AuthorizeView>
+                <Authorized>
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="" Match="NavLinkMatch.All"><i class="fas fa-th-large"></i> Sơ đồ phòng</NavLink>
+                        </li>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="Contracts"><i class="fas fa-file-contract"></i> Danh sách hợp đồng</NavLink>
+                        </li>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="IncomeExpense"><i class="fas fa-chart-line"></i> Báo cáo tiền phòng</NavLink>
+                        </li>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="ContractTenants"><i class="fas fa-user"></i> Danh sách người thuê</NavLink>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav navbar-right">
+                        <li class="nav-item">
+                            <NavLink class="nav-link user-link" href="Account/Manage"><i class="fas fa-user-circle"></i> @context.User.Identity?.Name</NavLink>
+                        </li>
+                        <li class="nav-item">
+                            <form action="Account/Logout" method="post" class="d-inline">
+                                <AntiforgeryToken />
+                                <input type="hidden" name="ReturnUrl" value="" />
+                                <button type="submit" class="nav-link btn btn-link logout-link"><i class="fas fa-sign-out-alt"></i> Đăng xuất</button>
+                            </form>
+                        </li>
+                    </ul>
+                </Authorized>
+                <NotAuthorized>
+                    <ul class="navbar-nav navbar-right">
+                        <li class="nav-item"><NavLink class="nav-link" href="Account/Register"><i class="fas fa-user-plus"></i> Đăng ký</NavLink></li>
+                        <li class="nav-item"><NavLink class="nav-link login-btn" href="Account/Login"><i class="fas fa-sign-in-alt"></i> Đăng nhập</NavLink></li>
+                    </ul>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </div>
+</nav>
+
+<div class="container body-content">
+    @Body
+</div>
+
+<footer class="nh-footer">
+    <div class="container">
+        <h4>@Landlord.Value.Name.ToUpper(Fmt.Vi)</h4>
+        <p>
+            @if (!string.IsNullOrWhiteSpace(Landlord.Value.Address))
+            {
+                <i class="fas fa-map-marker-alt"></i> <span>ĐỊA CHỈ: @Landlord.Value.Address.ToUpper(Fmt.Vi)</span><br />
+            }
+            @if (!string.IsNullOrWhiteSpace(Landlord.Value.Owner))
+            {
+                <i class="fas fa-id-card"></i> <span>CHỦ NHÀ TRỌ: @Landlord.Value.Owner.ToUpper(Fmt.Vi)@(string.IsNullOrWhiteSpace(Landlord.Value.OwnerIdentityCard) ? "" : " - CCCD: " + Landlord.Value.OwnerIdentityCard)</span><br />
+            }
+            @if (!string.IsNullOrWhiteSpace(Landlord.Value.Phone))
+            {
+                <i class="fas fa-phone"></i> <span>ĐIỆN THOẠI: @Landlord.Value.Phone</span>
+            }
+        </p>
+    </div>
+</footer>
+
+<Toasts @rendermode="InteractiveServer" />
+
+<div id="blazor-error-ui" data-nosnippet>
+    Đã có lỗi xảy ra.
+    <a href="." class="reload">Tải lại trang</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private string BrandName => Landlord.Value.Name.Length > 0
+        ? Fmt.Vi.TextInfo.ToTitleCase(Landlord.Value.Name.ToLower(Fmt.Vi))
+        : "Nhà trọ";
+}

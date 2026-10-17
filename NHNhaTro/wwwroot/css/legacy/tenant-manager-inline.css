@@ -1,0 +1,134 @@
+/* CSS inline từ Views/ContractTenants/TenantManager.cshtml của bản MVC cũ */
+.tenant-card {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        position: relative;
+        animation: slideIn 0.3s ease;
+    }
+
+    @*@keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }*@
+
+    .tenant-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .tenant-number {
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 1.1rem;
+    }
+
+    .btn-remove-tenant {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 5px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .btn-remove-tenant:hover {
+        background: #c82333;
+    }
+
+    .scan-section {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+
+    .form-row {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .form-row .form-group {
+        flex: 1;
+    }
+
+    .btn-add-tenant {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 1rem;
+    }
+
+    .btn-add-tenant:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .contract-info-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .contract-info-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+
+    .contract-info-header p {
+        margin: 5px 0 0;
+        opacity: 0.95;
+    }
+
+    .btn-submit {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        font-size: 1.1rem;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .btn-submit:hover {
+        background: #218838;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+    }
+
+    .tenant-list-container {
+        min-height: 100px;
+        padding: 10px;
+        background: #fafafa;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .empty-message {
+        text-align: center;
+        color: #6c757d;
+        padding: 30px;
+        font-style: italic;
+    }

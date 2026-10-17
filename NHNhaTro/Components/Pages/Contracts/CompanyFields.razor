@@ -1,0 +1,75 @@
+@* Thông tin công ty trên form hợp đồng. Nhập mã số thuế đã có sẽ tự điền thông tin công ty cũ. *@
+@inject ContractService Contracts
+
+<div class="form-row">
+    <div class="form-group">
+        <label>Tên công ty <span class="text-danger">*</span></label>
+        <input class="form-control" maxlength="200" @bind="Company.CompanyName" />
+    </div>
+    <div class="form-group">
+        <label>Mã số thuế</label>
+        <input class="form-control" maxlength="50" @bind="Company.TaxCode" @bind:after="LookupAsync" />
+        @if (found)
+        {
+            <small class="text-success"><i class="fas fa-check"></i> Đã có công ty này, thông tin được điền sẵn.</small>
+        }
+    </div>
+</div>
+<div class="form-row">
+    <div class="form-group">
+        <label>Người đại diện <span class="text-danger">*</span></label>
+        <input class="form-control" maxlength="100" @bind="Company.Representative" />
+    </div>
+    <div class="form-group">
+        <label>SĐT người đại diện</label>
+        <input class="form-control" maxlength="20" @bind="Company.RepresentativePhone" />
+    </div>
+</div>
+<div class="form-row">
+    <div class="form-group">
+        <label>Điện thoại công ty</label>
+        <input class="form-control" maxlength="20" @bind="Company.Phone" />
+    </div>
+    <div class="form-group">
+        <label>Email công ty</label>
+        <input type="email" class="form-control" maxlength="100" @bind="Company.Email" />
+    </div>
+</div>
+<div class="form-group">
+    <label>Địa chỉ công ty</label>
+    <input class="form-control" maxlength="500" @bind="Company.Address" />
+</div>
+<div class="form-row">
+    <div class="form-group">
+        <label>Số tài khoản</label>
+        <input class="form-control" maxlength="50" @bind="Company.BankAccount" />
+    </div>
+    <div class="form-group">
+        <label>Ngân hàng</label>
+        <input class="form-control" maxlength="200" @bind="Company.BankName" />
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Company Company { get; set; } = new();
+    [Parameter] public bool AutoFill { get; set; } = true;
+    private bool found;
+
+    private async Task LookupAsync()
+    {
+        found = false;
+        if (!AutoFill || string.IsNullOrWhiteSpace(Company.TaxCode)) return;
+        var existing = await Contracts.FindCompanyByTaxCodeAsync(Company.TaxCode);
+        if (existing == null) return;
+        found = true;
+        Company.CompanyName = existing.CompanyName;
+        Company.Address = existing.Address;
+        Company.Phone = existing.Phone;
+        Company.Email = existing.Email;
+        Company.Representative = existing.Representative;
+        Company.RepresentativePhone = existing.RepresentativePhone;
+        Company.RepresentativeEmail = existing.RepresentativeEmail;
+        Company.BankAccount = existing.BankAccount;
+        Company.BankName = existing.BankName;
+    }
+}

@@ -1,0 +1,172 @@
+/* CSS inline từ Views/Rooms/Index.cshtml của bản MVC cũ */
+/* Reset và override Bootstrap */
+    .room-card {
+        border-radius: 12px !important;
+        padding: 20px !important;
+        text-align: center !important;
+        position: relative !important;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1) !important;
+        border: 2px solid transparent !important;
+        cursor: pointer !important;
+        overflow: hidden !important;
+        color: white !important;
+        min-height: 150px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        transition: all 0.3s ease !important;
+        margin-bottom: 10px !important;
+    }
+
+    .room-card:hover {
+        transform: translateY(-5px) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    /* Màu sắc cho từng trạng thái */
+    .room-card.room-gray,
+    .room-card.gray {
+        background: linear-gradient(135deg, #95a5a6, #7f8c8d) !important;
+    }
+
+    .room-card.room-blue,
+    .room-card.blue {
+        background: linear-gradient(135deg, #3498db, #2980b9) !important;
+    }
+
+    .room-card.room-green,
+    .room-card.green {
+        background: linear-gradient(135deg, #27ae60, #229954) !important;
+    }
+
+    .room-card.room-yellow,
+    .room-card.yellow {
+        background: linear-gradient(135deg, #f39c12, #d68910) !important;
+    }
+
+    .room-card.room-orange,
+    .room-card.orange {
+        background: linear-gradient(135deg, #e67e22, #d35400) !important;
+    }
+
+    .room-card.room-red,
+    .room-card.red {
+        background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+    }
+
+    .room-card.room-purple,
+    .room-card.purple {
+        background: linear-gradient(135deg, #9b59b6, #8e44ad) !important;
+    }
+
+    /* Animation cho phòng hết hạn */
+  
+
+    .room-card.room-red,
+    .room-card.red {
+        animation: pulse 2s infinite;
+    }
+
+    /* Room content styles */
+    .room-number {
+        font-size: 1.5rem !important;
+        font-weight: 700 !important;
+        margin-bottom: 8px !important;
+        color: white !important;
+    }
+
+    .room-tenant {
+        font-size: 0.9rem !important;
+        margin-bottom: 15px !important;
+        opacity: 0.9 !important;
+        min-height: 20px !important;
+        color: white !important;
+    }
+
+    .room-actions {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    .btn-room {
+        background: rgba(255, 255, 255, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        color: white !important;
+        padding: 8px 16px !important;
+        border-radius: 6px !important;
+        text-decoration: none !important;
+        font-size: 0.85rem !important;
+        font-weight: 500 !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .btn-room:hover {
+        background: rgba(255, 255, 255, 0.3) !important;
+        color: white !important;
+        text-decoration: none !important;
+    }
+
+    /* Icons */
+    .edit-icon, .history-icon {
+        position: absolute !important;
+        color: rgba(255, 255, 255, 0.8) !important;
+        font-size: 1rem !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .edit-icon {
+        top: 10px !important;
+        left: 10px !important;
+    }
+
+    .history-icon {
+        top: 10px !important;
+        right: 10px !important;
+    }
+
+    .edit-icon:hover, .history-icon:hover {
+        color: white !important;
+        transform: scale(1.2) !important;
+    }
+
+    /* Filter section */
+    .filter-card {
+        background: white !important;
+        border-radius: 12px !important;
+        padding: 25px !important;
+        margin-bottom: 25px !important;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Summary dashboard */
+    .summary-dashboard {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        border-radius: 15px !important;
+        padding: 25px !important;
+        margin: 20px 0 !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+        color: white !important;
+    }
+
+    /* Room grid */
+    .room-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+        gap: 20px !important;
+        padding: 10px 0 !important;
+    }
+
+    /* Area section */
+    .area-section {
+        background: white !important;
+        border-radius: 12px !important;
+        padding: 25px !important;
+        margin-bottom: 25px !important;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1) !important;
+    }
+
+/* Bổ sung cho bản Blazor: nút trong thẻ phòng */
+button.btn-room { cursor: pointer; font-family: inherit; }
+.room-card .badge { font-size: .75rem; }

@@ -1,0 +1,166 @@
+@page "/Contracts/Create"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject ContractService Contracts
+
+<PageTitle>Tạo hợp đồng</PageTitle>
+<HeadContent><link rel="stylesheet" href="css/legacy/contract-action.css" /></HeadContent>
+
+<div class="contract-form-container">
+    <div class="form-header">
+        <h2><i class="fas fa-file-contract"></i> Tạo Hợp Đồng Thuê Nhà</h2>
+    </div>
+
+    @if (rooms == null)
+    {
+        <div class="nh-loading">Đang tải...</div>
+    }
+    else
+    {
+        <div class="form-section">
+            <div class="section-title"><i class="fas fa-users"></i> Loại Khách Hàng</div>
+            <div class="contract-type-selector">
+                <div class="type-card @(!form.IsCompany ? "active selected" : "")" @onclick="() => SetType(ContractType.Individual)">
+                    <i class="fas fa-user"></i>
+                    <h4>Khách Hàng Cá Nhân</h4>
+                    <p>Hộ gia đình hoặc cá nhân thuê 1 phòng</p>
+                </div>
+                <div class="type-card @(form.IsCompany ? "active selected" : "")" @onclick="() => SetType(ContractType.Company)">
+                    <i class="fas fa-building"></i>
+                    <h4>Khách Hàng Công Ty</h4>
+                    <p>Công ty thuê nhiều phòng cho nhân viên</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="section-title"><i class="fas fa-info-circle"></i> Thông Tin Hợp Đồng</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Ngày bắt đầu <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" @bind="form.StartDate" />
+                </div>
+                <div class="form-group">
+                    <label>Số tháng thuê <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control" min="1" max="120" @bind="form.Months" />
+                    <small class="text-muted">Kết thúc: @Fmt.Date(form.StartDate.AddMonths(Math.Clamp(form.Months, 0, 120)))</small>
+                </div>
+                <div class="form-group">
+                    <label>Ngày chuyển vào (ngày chốt tiền) <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" @bind="form.MoveInDate" />
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Giá điện (đ/kWh) <span class="text-danger">*</span></label>
+                    <MoneyInput @bind-Value="form.ElectricityPrice" />
+                </div>
+                <div class="form-group">
+                    <label>Giá nước (đ/m³) <span class="text-danger">*</span></label>
+                    <MoneyInput @bind-Value="form.WaterPrice" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Ghi chú</label>
+                <textarea class="form-control" rows="2" maxlength="500" @bind="form.Note"></textarea>
+            </div>
+        </div>
+
+        @if (!form.IsCompany)
+        {
+            <div class="form-section">
+                <div class="section-title"><i class="fas fa-door-open"></i> Chọn Phòng</div>
+                @if (rooms.Count == 0)
+                {
+                    <div class="alert alert-warning">Không còn phòng trống.</div>
+                }
+                else
+                {
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Chọn phòng <span class="text-danger">*</span></label>
+                            <select class="form-control" value="@form.RoomId" @onchange="OnRoomChanged">
+                                <option value="">-- Chọn phòng --</option>
+                                @foreach (var r in rooms)
+                                {
+                                    <option value="@r.RoomId">@r.RoomName - @Fmt.Money(r.DefaultPrice) VNĐ</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Giá thuê (đ/tháng)</label>
+                            <MoneyInput Value="form.RoomPrice ?? 0" ValueChanged="v => form.RoomPrice = v" />
+                            <small class="form-text text-muted">Mặc định lấy giá của phòng</small>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="form-section">
+                <div class="section-title"><i class="fas fa-building"></i> Thông Tin Công Ty</div>
+                <CompanyFields Company="form.Company" />
+                <CompanyRoomPicker Rooms="form.Rooms" />
+            </div>
+        }
+
+        <div class="form-section">
+            <div class="alert alert-info mb-0">
+                <i class="fas fa-info-circle"></i>
+                Sau khi tạo hợp đồng, nhập người thuê ở mục <strong>Quản lý người thuê</strong> của từng phòng (có thể quét CCCD để tự điền).
+            </div>
+        </div>
+
+        <div class="text-center mb-4">
+            <button type="button" class="btn-submit btn btn-primary btn-lg" disabled="@Busy" @onclick="SaveAsync">
+                <i class="fas @(Busy ? "fa-spinner fa-spin" : "fa-save")"></i> Tạo hợp đồng
+            </button>
+            <a href="Contracts" class="btn btn-secondary btn-lg" style="margin-left: 10px;"><i class="fas fa-times"></i> Hủy</a>
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery] public int? RoomId { get; set; }
+
+    private readonly ContractForm form = new();
+    private List<RoomChoice>? rooms;
+
+    protected override async Task OnInitializedAsync()
+    {
+        rooms = await Contracts.GetAvailableRoomsAsync();
+        form.Rooms = rooms.Select(r => new RoomChoice { RoomId = r.RoomId, RoomName = r.RoomName, Area = r.Area, Floor = r.Floor, DefaultPrice = r.DefaultPrice, AgreedPrice = r.DefaultPrice }).ToList();
+        if (RoomId is int id && rooms.FirstOrDefault(r => r.RoomId == id) is { } room)
+        {
+            form.RoomId = id;
+            form.RoomPrice = room.DefaultPrice;
+        }
+    }
+
+    private void SetType(string type) => form.ContractType = type;
+
+    private void OnRoomChanged(ChangeEventArgs e)
+    {
+        form.RoomId = int.TryParse(e.Value?.ToString(), out var id) ? id : null;
+        form.RoomPrice = rooms?.FirstOrDefault(r => r.RoomId == form.RoomId)?.DefaultPrice;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (form.IsCompany && string.IsNullOrWhiteSpace(form.Company.Representative))
+        {
+            Toast.Warning("Vui lòng nhập người đại diện của công ty.");
+            return;
+        }
+        int id = 0;
+        if (await RunAsync(async () => id = await Contracts.CreateAsync(form), "Đã tạo hợp đồng thành công!"))
+        {
+            if (!form.IsCompany && form.RoomId is int roomId)
+                Nav.NavigateTo($"ContractTenants/TenantManager?contractId={id}&roomId={roomId}");
+            else
+                Nav.NavigateTo($"Contracts/Details/{id}");
+        }
+    }
+}

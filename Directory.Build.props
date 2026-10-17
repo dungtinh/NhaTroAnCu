@@ -1,0 +1,17 @@
+<Project>
+  <!--
+    Né lỗi "Your Windows doesn't fully support CET" trên Windows 10 chưa cập nhật:
+    mọi apphost .exe build bằng .NET 10 (csc.exe, VBCSCompiler.exe trong sdk\<ver>\Roslyn\bincore) chết ngay khi khởi động.
+    Áp dụng cho cả dotnet CLI (MSBuild .NET Core) và Visual Studio 2026 (MSBuild .NET Framework):
+    cả hai đều gọi compiler bincore của SDK đang dùng (RoslynCompilerType=Core vì DOTNET_HOST_PATH có giá trị).
+    => Tắt compiler server và gọi csc.dll qua dotnet.exe bằng wrapper build\csc.cmd.
+    Đường dẫn dotnet.exe và csc.dll được truyền cho wrapper qua CscEnvironment, đặt trong Directory.Build.targets
+    vì RoslynTargetsPath chỉ trỏ đúng tới Roslyn của SDK sau khi Microsoft.NET.Sdk.BeforeCommon.targets chạy.
+    Cách khác (cần tải gói NuGet microsoft.net.sdk.compilers.toolset): BuildWithNetFrameworkHostedCompiler=true cho Visual Studio.
+  -->
+  <PropertyGroup>
+    <UseSharedCompilation>false</UseSharedCompilation>
+    <CscToolPath>$(MSBuildThisFileDirectory)build\</CscToolPath>
+    <CscToolExe>csc.cmd</CscToolExe>
+  </PropertyGroup>
+</Project>

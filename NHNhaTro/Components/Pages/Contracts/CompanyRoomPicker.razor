@@ -1,0 +1,117 @@
+@* Chọn nhiều phòng và giá thỏa thuận cho hợp đồng công ty. *@
+<div class="room-section-container">
+    <div class="room-section-title">
+        <i class="fas fa-door-open"></i> Chọn phòng
+        <span class="room-count-badge"><i class="fas fa-home"></i> @Rooms.Count phòng có thể chọn</span>
+    </div>
+
+    <div class="room-filter-bar">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" class="form-control" placeholder="Tìm kiếm phòng..." @bind="search" @bind:event="oninput" />
+        </div>
+        <div class="filter-buttons">
+            <button type="button" class="btn-filter @(onlySelected ? "" : "active")" @onclick="() => onlySelected = false">Tất cả</button>
+            <button type="button" class="btn-filter @(onlySelected ? "active" : "")" @onclick="() => onlySelected = true">Đã chọn <span class="selected-count">@Selected.Count</span></button>
+        </div>
+    </div>
+
+    @if (Rooms.Count == 0)
+    {
+        <div class="empty-state"><i class="fas fa-home-lg-alt"></i><h4>Không có phòng trống</h4></div>
+    }
+    else
+    {
+        <div class="room-selection-grid">
+            @foreach (var room in Visible)
+            {
+                <div class="room-card @(room.IsSelected ? "selected" : "")" @key="room.RoomId">
+                    <div class="room-card-header">
+                        <div class="room-checkbox-wrapper">
+                            <input type="checkbox" class="company-room-checkbox" id="@($"company_room_{room.RoomId}")" checked="@room.IsSelected"
+                                   @onchange="() => Toggle(room)" />
+                            <label for="@($"company_room_{room.RoomId}")" class="room-name-label"><i class="fas fa-door-closed room-icon"></i> @room.RoomName</label>
+                        </div>
+                        <div class="room-status-badge">@(room.IsSelected ? "Đã chọn" : "Trống")</div>
+                    </div>
+                    <div class="room-card-body">
+                        <div class="room-info-row"><span class="info-label">Giá mặc định:</span><span class="info-value default-price">@Fmt.Vnd(room.DefaultPrice)</span></div>
+                        @if (room.IsSelected)
+                        {
+                            <div class="room-details-section">
+                                <div class="price-input-group">
+                                    <label class="input-label"><i class="fas fa-tag"></i> Giá thỏa thuận</label>
+                                    <div class="input-with-unit">
+                                        <MoneyInput CssClass="form-control room-agreed-price money" Value="room.AgreedPrice" ValueChanged="v => SetPrice(room, v)" />
+                                        <span class="unit">đ/tháng</span>
+                                    </div>
+                                </div>
+                                <div class="notes-input-group">
+                                    <label class="input-label"><i class="fas fa-sticky-note"></i> Ghi chú</label>
+                                    <textarea class="form-control" rows="2" @bind="room.Notes"></textarea>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="company-summary-section">
+        <div class="summary-card">
+            <h5><i class="fas fa-chart-bar"></i> Tổng quan lựa chọn</h5>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-icon"><i class="fas fa-door-open"></i></div>
+                    <div class="summary-content"><span class="summary-label">Số phòng đã chọn</span><span class="summary-value">@Selected.Count</span></div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-icon"><i class="fas fa-money-bill-wave"></i></div>
+                    <div class="summary-content"><span class="summary-label">Tổng tiền thuê/tháng</span><span class="summary-value">@Fmt.Vnd(Selected.Sum(r => r.AgreedPrice))</span></div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-icon"><i class="fas fa-percentage"></i></div>
+                    <div class="summary-content"><span class="summary-label">Giảm giá trung bình</span><span class="summary-value">@AvgDiscount.ToString("0.#")%</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public List<RoomChoice> Rooms { get; set; } = [];
+    [Parameter] public EventCallback Changed { get; set; }
+
+    private string search = "";
+    private bool onlySelected;
+
+    private List<RoomChoice> Selected => Rooms.Where(r => r.IsSelected).ToList();
+
+    private IEnumerable<RoomChoice> Visible => Rooms
+        .Where(r => !onlySelected || r.IsSelected)
+        .Where(r => string.IsNullOrWhiteSpace(search) || r.RoomName.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    private decimal AvgDiscount
+    {
+        get
+        {
+            var s = Selected;
+            var def = s.Sum(r => r.DefaultPrice);
+            return def > 0 ? Math.Max(0, (def - s.Sum(r => r.AgreedPrice)) / def * 100) : 0;
+        }
+    }
+
+    private async Task Toggle(RoomChoice room)
+    {
+        room.IsSelected = !room.IsSelected;
+        if (room.IsSelected && room.AgreedPrice == 0) room.AgreedPrice = room.DefaultPrice;
+        await Changed.InvokeAsync();
+    }
+
+    private async Task SetPrice(RoomChoice room, decimal value)
+    {
+        room.AgreedPrice = value;
+        await Changed.InvokeAsync();
+    }
+}

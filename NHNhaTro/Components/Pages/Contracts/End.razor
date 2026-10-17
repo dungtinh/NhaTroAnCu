@@ -1,0 +1,134 @@
+@page "/Contracts/End/{Id:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject ContractService Contracts
+
+<PageTitle>Kết thúc hợp đồng #@Id</PageTitle>
+
+<div class="container py-2">
+    @if (c == null)
+    {
+        <div class="nh-loading">@(notFound ? "Không tìm thấy hợp đồng." : "Đang tải...")</div>
+    }
+    else
+    {
+        var totalBilled = c.UtilityBills.Sum(b => b.TotalAmount);
+        var totalPaid = c.IncomeExpenses.Where(i => i.Category.Name == SystemCategories.RoomPayment).Sum(i => i.Amount);
+        var refunded = c.IncomeExpenses.Where(i => i.Category.Name == SystemCategories.DepositRefund).Sum(i => i.Amount);
+        var balance = totalPaid - totalBilled - refunded;
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-danger text-white"><h4 class="mb-0"><i class="fas fa-stop-circle"></i> Kết thúc hợp đồng #@c.Id</h4></div>
+            <div class="card-body">
+                @if (c.Status == ContractStatus.Ended)
+                {
+                    <div class="alert alert-info">Hợp đồng này đã được kết thúc trước đó.</div>
+                }
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary"><i class="fas fa-file-contract"></i> Thông tin hợp đồng</h6>
+                        <p class="mb-1"><strong>Loại:</strong> @ContractType.Display(c.ContractType) @(c.Company != null ? "- " + c.Company.CompanyName : "")</p>
+                        <p class="mb-1"><strong>Thời hạn:</strong> @Fmt.Date(c.StartDate) - @Fmt.Date(c.EndDate)</p>
+                        <p class="mb-1"><strong>Tiền thuê/tháng:</strong> @Fmt.Vnd(c.PriceAgreed)</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary"><i class="fas fa-calculator"></i> Đối chiếu công nợ</h6>
+                        <p class="mb-1"><strong>Tổng phiếu báo:</strong> @Fmt.Vnd(totalBilled)</p>
+                        <p class="mb-1"><strong>Tổng đã thu:</strong> @Fmt.Vnd(totalPaid)</p>
+                        @if (refunded > 0)
+                        {
+                            <p class="mb-1"><strong>Đã trả cọc:</strong> @Fmt.Vnd(refunded)</p>
+                        }
+                        <p class="mb-1"><strong>Số dư:</strong> <span class="fw-bold @(balance >= 0 ? "text-success" : "text-danger")">@Fmt.Vnd(balance)</span> @(balance >= 0 ? "(tiền thừa/cọc)" : "(khách còn nợ)")</p>
+                    </div>
+                </div>
+
+                <h6 class="mt-3"><i class="fas fa-door-open"></i> Phòng</h6>
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light"><tr><th>Phòng</th><th>Giá thuê</th><th>Trạng thái</th></tr></thead>
+                    <tbody>
+                        @foreach (var cr in c.ContractRooms)
+                        {
+                            <tr><td>@cr.Room.Name</td><td>@Fmt.Vnd(cr.PriceAgreed)</td><td>@(cr.Room.IsOccupied ? "Đang có người ở" : "Trống")</td></tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (c.ContractTenants.Count > 0)
+                {
+                    <h6><i class="fas fa-users"></i> Người thuê</h6>
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light"><tr><th>Họ tên</th><th>Số điện thoại</th><th>CCCD/CMND</th><th>Phòng</th></tr></thead>
+                        <tbody>
+                            @foreach (var ct in c.ContractTenants)
+                            {
+                                <tr><td>@ct.Tenant.FullName</td><td>@ct.Tenant.PhoneNumber</td><td>@ct.Tenant.IdentityCard</td><td>@ct.Room.Name</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+
+                @if (c.Status != ContractStatus.Ended)
+                {
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-4">
+                            <label class="form-label">Ngày kết thúc</label>
+                            <input type="date" class="form-control" @bind="endDate" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Số tiền trả cọc</label>
+                            <MoneyInput @bind-Value="refundAmount" />
+                            <small class="text-muted">Để 0 nếu không trả cọc. Sẽ ghi một khoản chi "Trả tiền cọc".</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="refundNote">Ghi chú</label>
+                            <input id="refundNote" class="form-control" maxlength="400" @bind="refundNote" />
+                        </div>
+                    </div>
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> Sau khi kết thúc, các phòng trong hợp đồng sẽ chuyển về trạng thái trống.
+                    </div>
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-danger" disabled="@Busy" @onclick="EndAsync"><i class="fas fa-stop"></i> Xác nhận kết thúc</button>
+                        <a href="@($"Contracts/Details/{c.Id}")" class="btn btn-secondary ms-2">Hủy</a>
+                    </div>
+                }
+                else
+                {
+                    <a href="@($"Contracts/Details/{c.Id}")" class="btn btn-secondary">Quay lại hợp đồng</a>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Contract? c;
+    private bool notFound;
+    private DateTime endDate = DateTime.Today;
+    private decimal refundAmount;
+    private string? refundNote;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        c = await Contracts.GetDetailsAsync(Id);
+        notFound = c == null;
+        if (c != null)
+        {
+            var paid = c.IncomeExpenses.Where(i => i.Category.Name == SystemCategories.RoomPayment).Sum(i => i.Amount);
+            var refunded = c.IncomeExpenses.Where(i => i.Category.Name == SystemCategories.DepositRefund).Sum(i => i.Amount);
+            refundAmount = Math.Max(0, paid - c.UtilityBills.Sum(b => b.TotalAmount) - refunded);
+        }
+    }
+
+    private async Task EndAsync()
+    {
+        if (!await ConfirmAsync($"Xác nhận kết thúc hợp đồng #{Id}?")) return;
+        var userId = await GetUserIdAsync();
+        if (await RunAsync(() => Contracts.EndAsync(Id, endDate, refundAmount, refundNote, userId), $"Đã kết thúc hợp đồng #{Id} thành công."))
+            Nav.NavigateTo($"Contracts/Details/{Id}");
+    }
+}

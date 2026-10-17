@@ -1,0 +1,136 @@
+@page "/IncomeExpense/Categories"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject IncomeExpenseService Service
+
+<PageTitle>Danh mục thu chi</PageTitle>
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h2 class="mb-0"><i class="fas fa-tags"></i> Quản lý danh mục thu chi</h2>
+        <a href="IncomeExpense" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Thu chi</a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header"><h5 class="mb-0"><i class="fas fa-plus"></i> Thêm danh mục mới</h5></div>
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-6"><label>Tên danh mục</label><input class="form-control" maxlength="100" @bind="newName" /></div>
+                <div class="col-md-3">
+                    <label>Loại</label>
+                    <select class="form-control" @bind="newType">
+                        <option value="@CategoryType.Income">Thu</option>
+                        <option value="@CategoryType.Expense">Chi</option>
+                    </select>
+                </div>
+                <div class="col-md-3"><button type="button" class="btn btn-success w-100" @onclick="CreateAsync"><i class="fas fa-plus"></i> Thêm</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between">
+            <h5 class="mb-0"><i class="fas fa-list"></i> Danh sách danh mục</h5>
+            <span class="small text-muted">Thu: @categories.Count(c => c.Type == CategoryType.Income) · Chi: @categories.Count(c => c.Type == CategoryType.Expense)</span>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light"><tr><th>Tên danh mục</th><th>Loại</th><th>Trạng thái</th><th width="200">Thao tác</th></tr></thead>
+                <tbody>
+                    @foreach (var c in categories)
+                    {
+                        <tr @key="c.Id">
+                            <td>
+                                @if (editingId == c.Id)
+                                {
+                                    <input class="form-control form-control-sm edit-input" @bind="editName" />
+                                }
+                                else
+                                {
+                                    @c.Name
+                                    @if (c.IsSystem) { <span class="badge bg-secondary ms-1">Hệ thống</span> }
+                                }
+                            </td>
+                            <td><span class="badge @(c.Type == CategoryType.Income ? "bg-success" : "bg-danger")">@CategoryType.Display(c.Type)</span></td>
+                            <td>
+                                @if (editingId == c.Id)
+                                {
+                                    <label><input type="checkbox" @bind="editActive" /> Đang dùng</label>
+                                }
+                                else
+                                {
+                                    <span class="badge @(c.IsActive ? "bg-primary" : "bg-light text-dark")">@(c.IsActive ? "Đang dùng" : "Đã ẩn")</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!c.IsSystem)
+                                {
+                                    if (editingId == c.Id)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-primary" @onclick="() => UpdateAsync(c.Id)"><i class="fas fa-check"></i> Lưu</button>
+                                        <button type="button" class="btn btn-sm btn-secondary" @onclick="() => editingId = null">Hủy</button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-sm btn-warning" @onclick="() => StartEdit(c)"><i class="fas fa-edit"></i></button>
+                                        <button type="button" class="btn btn-sm btn-danger" @onclick="() => DeleteAsync(c)"><i class="fas fa-trash"></i></button>
+                                    }
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<IncomeExpenseCategory> categories = [];
+    private string newName = "";
+    private string newType = CategoryType.Expense;
+    private int? editingId;
+    private string editName = "";
+    private bool editActive;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync() => categories = await Service.ListCategoriesAsync();
+
+    private async Task CreateAsync()
+    {
+        if (await RunAsync(() => Service.CreateCategoryAsync(newName, newType), "Đã thêm danh mục thành công."))
+        {
+            newName = "";
+            await LoadAsync();
+        }
+    }
+
+    private void StartEdit(IncomeExpenseCategory c)
+    {
+        editingId = c.Id;
+        editName = c.Name;
+        editActive = c.IsActive;
+    }
+
+    private async Task UpdateAsync(int id)
+    {
+        if (await RunAsync(() => Service.UpdateCategoryAsync(id, editName, editActive), "Đã cập nhật danh mục thành công."))
+        {
+            editingId = null;
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeleteAsync(IncomeExpenseCategory c)
+    {
+        if (!await ConfirmAsync($"Xóa danh mục \"{c.Name}\"? Nếu đã có giao dịch, danh mục sẽ chỉ bị ẩn.")) return;
+        string message = "";
+        if (await RunAsync(async () => message = await Service.DeleteCategoryAsync(c.Id)))
+        {
+            Toast.Success(message);
+            await LoadAsync();
+        }
+    }
+}

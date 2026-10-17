@@ -1,0 +1,115 @@
+@page "/Rooms/Create"
+@page "/Rooms/Edit/{Id:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject RoomService Rooms
+
+<PageTitle>@(IsCreate ? "Thêm phòng" : $"Chỉnh sửa phòng {room?.Name}")</PageTitle>
+<HeadContent><link rel="stylesheet" href="css/legacy/room-action.css" /></HeadContent>
+
+<div class="edit-container">
+    <div class="page-header">
+        <h2><i class="fas fa-door-open"></i> @(IsCreate ? "Thêm Phòng Mới" : "Chỉnh Sửa Thông Tin Phòng")</h2>
+        <p>@(IsCreate ? "Nhập thông tin và tiện ích phòng trọ" : "Cập nhật thông tin và tiện ích phòng trọ")</p>
+        @if (!IsCreate && room != null)
+        {
+            <span class="room-badge"><i class="fas fa-tag"></i> @room.Name</span>
+        }
+    </div>
+
+    @if (room == null)
+    {
+        <div class="nh-loading">@(notFound ? "Không tìm thấy phòng." : "Đang tải...")</div>
+    }
+    else
+    {
+        <div class="form-card">
+            <EditForm Model="room" OnValidSubmit="SaveAsync" FormName="room-edit">
+                <div class="form-body">
+                    <div class="section-header">
+                        <div class="section-icon"><i class="fas fa-home"></i></div>
+                        <div class="section-title">Thông Tin Cơ Bản</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Dãy phòng</label>
+                            <input class="form-control" maxlength="1" @bind="room.Area" placeholder="A, B, C..." />
+                        </div>
+                        <div class="form-group">
+                            <label>Tầng</label>
+                            <InputNumber class="form-control" @bind-Value="room.Floor" min="0" max="50" />
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Số phòng</label>
+                            <InputNumber class="form-control" @bind-Value="room.RoomNumber" min="0" max="999" />
+                        </div>
+                        <div class="form-group">
+                            <label>Tên phòng</label>
+                            <input class="form-control" maxlength="10" @bind="room.Name" placeholder="Để trống: tự đặt P+Dãy+Tầng+Số" />
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Giá thuê mặc định</label>
+                            <div class="input-group">
+                                <MoneyInput @bind-Value="room.DefaultPrice" />
+                                <span class="input-addon">VNĐ</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Trạng thái</label>
+                            <select class="form-control" @bind="room.IsOccupied">
+                                <option value="False">Phòng trống</option>
+                                <option value="True">Đang có người ở</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="section-header" style="margin-top: 40px;">
+                        <div class="section-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="section-title">Tiện Ích Phòng</div>
+                    </div>
+                    <div class="amenities-grid">
+                        <Amenity Label="Máy lạnh / Điều hòa" Icon="fa-snowflake" @bind-Value="room.HasAirCondition" />
+                        <Amenity Label="Tủ lạnh" Icon="fa-cube" @bind-Value="room.HasFridge" />
+                        <Amenity Label="Bình nóng lạnh" Icon="fa-fire" @bind-Value="room.HasWaterHeater" />
+                        <Amenity Label="Giường" Icon="fa-bed" @bind-Value="room.HasBed" />
+                        <Amenity Label="Tủ quần áo" Icon="fa-door-closed" @bind-Value="room.HasWardrobe" />
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <a href="@(IsCreate ? "Rooms" : $"Rooms/Details/{room.Id}")" class="btn btn-default"><i class="fas fa-arrow-left"></i> Quay lại</a>
+                    <button type="submit" class="btn btn-primary" disabled="@Busy"><i class="fas fa-save"></i> Lưu</button>
+                </div>
+            </EditForm>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    private Room? room;
+    private bool notFound;
+    private bool IsCreate => Id == null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsCreate)
+        {
+            room = new Room { Area = "A", Floor = 1 };
+            return;
+        }
+        room = await Rooms.GetAsync(Id!.Value);
+        notFound = room == null;
+    }
+
+    private async Task SaveAsync()
+    {
+        int id = 0;
+        if (await RunAsync(async () => id = await Rooms.SaveAsync(room!), "Đã lưu thông tin phòng."))
+            Nav.NavigateTo($"Rooms/Details/{id}");
+    }
+}
