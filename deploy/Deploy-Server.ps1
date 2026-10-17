@@ -1,4 +1,4 @@
-<#
+﻿<#
   Publish NHNhaTro và cập nhật lên máy chủ IIS qua WinRM (PowerShell Remoting).
 
   Không chứa mật khẩu nào:

@@ -3,6 +3,19 @@
 Tài liệu này cũng dành cho Claude Code chạy trên máy chủ: làm lần lượt từng bước, kiểm tra xong bước này mới sang bước sau.
 **Không ghi mật khẩu vào file nào nằm trong git** (repo có hook chặn, xem README).
 
+## 0. Cập nhật bản mới (đã cài đặt xong)
+
+Máy chủ hiện tại: `WIN-2VO4M17R0NR` (192.168.1.89), site IIS `NHNhaTro` tại `C:\inetpub\wwwroot\NhaTroAnCu`,
+tên miền `nhatro.ancuhaiphong.vn`, dữ liệu tải lên ở `D:\NHNhaTroData\Uploads`. Từ máy dev, một lệnh là publish và cập nhật:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File deploy\Deploy-Server.ps1
+```
+
+Script dùng PowerShell Remoting với tài khoản quản trị máy chủ lưu mã hóa trong `%USERPROFILE%\.nhnhatro-server-cred.xml`
+(tạo một lần bằng `Get-Credential | Export-Clixml ...`) và không ghi đè `appsettings.Production.json` trên máy chủ.
+Các mục dưới đây là hướng dẫn cài từ đầu.
+
 ## 1. Điều kiện trên máy chủ
 
 | Kiểm tra | Lệnh (PowerShell, quyền Administrator) | Cần thấy |
