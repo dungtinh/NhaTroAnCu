@@ -75,6 +75,10 @@ Có thể thêm các trường `giathue`, `giathue_text`, `giadien`, `gianuoc`, 
 
 **Font PDF**: PDF dùng Times New Roman của Windows. Máy chủ không có font này thì đặt file `.ttf` vào thư mục `NHNhaTro/Fonts`.
 
+## Triển khai lên IIS
+
+Xem [docs/TRIEN-KHAI-IIS.md](docs/TRIEN-KHAI-IIS.md): điều kiện máy chủ, publish, chuỗi kết nối, tạo site và bảng tra lỗi.
+
 ## Chuyển từ bản MVC 5 cũ sang
 
 1. **Sao lưu database** đang chạy.

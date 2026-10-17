@@ -492,3 +492,4 @@ secrets.json
 appsettings.*.local.json
 *.pubxml.user
 .env
+appsettings.Production.json

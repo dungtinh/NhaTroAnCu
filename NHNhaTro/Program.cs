@@ -71,6 +71,13 @@ builder.Services.AddScoped<RegistrationPolicy>();
 
 var app = builder.Build();
 
+if (!app.Environment.IsDevelopment() && connectionString.Contains("(localdb)", StringComparison.OrdinalIgnoreCase))
+{
+    // Trên IIS app chạy ở Production: User Secrets không được nạp, LocalDB không chạy được dưới app pool.
+    app.Logger.LogCritical("Chuỗi kết nối đang trỏ tới LocalDB. Trên máy chủ hãy tạo appsettings.Production.json " +
+        "hoặc đặt biến môi trường ConnectionStrings__DefaultConnection (xem docs/TRIEN-KHAI-IIS.md).");
+}
+
 // Font cho PDF: nạp mọi .ttf trong thư mục Fonts (nếu có) để máy chủ không có Times New Roman vẫn in được tiếng Việt.
 var fontDir = Path.Combine(app.Environment.ContentRootPath, "Fonts");
 if (Directory.Exists(fontDir))
@@ -78,7 +85,7 @@ if (Directory.Exists(fontDir))
     foreach (var font in Directory.EnumerateFiles(fontDir, "*.ttf"))
     {
         using var fs = File.OpenRead(font);
-        QuestPDF.Drawing.FontManager.RegisterFont(fs);
+        QuestPDF.Drawing.FontManager.RegisterFontFromStream(fs);
     }
 }
 
