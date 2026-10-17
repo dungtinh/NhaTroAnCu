@@ -1,0 +1,3 @@
+# Hook git chạy bằng sh: luôn giữ xuống dòng LF
+.githooks/* text eol=lf
+*.sh text eol=lf
