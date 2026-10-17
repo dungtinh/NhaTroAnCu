@@ -40,7 +40,7 @@
                 <div class="border rounded p-2 mt-2">
                     <div class="mb-1">Mật khẩu mới cho <strong>@resetFor.Email</strong></div>
                     <div class="input-group" style="max-width: 420px">
-                        <input type="newPassword" class="form-control" autocomplete="new-newPassword" @bind="resetPwd" />
+                        <input type="password" class="form-control" autocomplete="new-password" @bind="resetPwd" />
                         <button type="button" class="btn btn-primary" @onclick="ResetAsync">Lưu</button>
                         <button type="button" class="btn btn-secondary" @onclick="() => resetFor = null">Hủy</button>
                     </div>
@@ -52,7 +52,7 @@
         <div class="nh-card">
             <h5>Thêm người dùng</h5>
             <label class="form-label">Email</label><input type="email" class="form-control mb-2" autocomplete="off" @bind="email" />
-            <label class="form-label">Mật khẩu</label><input type="newPassword" class="form-control mb-2" autocomplete="new-newPassword" @bind="newPassword" />
+            <label class="form-label">Mật khẩu</label><input type="password" class="form-control mb-2" autocomplete="new-password" @bind="newPassword" />
             <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="adm" @bind="isAdmin" /><label class="form-check-label" for="adm">Quyền quản trị</label></div>
             <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="CreateAsync"><i class="fas fa-plus"></i> Tạo</button>
             <div class="small text-muted mt-2">Nhân viên: nhận/trả phòng, thu tiền, ghi sửa chữa, mua sắm. Chỉ quản trị được xóa giao dịch, phiếu và sửa cấu hình.</div>
