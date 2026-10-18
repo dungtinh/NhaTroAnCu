@@ -1,0 +1,22 @@
+@page "/tra-phong"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+
+<PageTitle>Trả phòng</PageTitle>
+
+<div class="nh-page-title">
+    <h2><i class="fas fa-sign-out-alt"></i> Trả phòng</h2>
+</div>
+
+<div class="nh-card">
+    <h5>Chọn phòng khách đang trả</h5>
+    <RoomPicker Mode="RoomPicker.PickMode.Occupied" Picked="OnPicked" />
+</div>
+
+@code {
+    private void OnPicked(RoomCard? r)
+    {
+        if (r?.LeaseId is int id) Nav.NavigateTo($"tra-phong/{id}");
+    }
+}

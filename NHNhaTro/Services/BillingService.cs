@@ -140,6 +140,10 @@ public class BillingService(IDbContextFactory<ApplicationDbContext> dbFactory)
         var bill = await db.Bills.Include(b => b.Lease).ThenInclude(l => l.Room).FirstOrDefaultAsync(b => b.Id == form.BillId)
             ?? throw new InvalidOperationException("Không tìm thấy phiếu.");
         if (!await db.Accounts.AnyAsync(a => a.Id == form.AccountId)) throw new InvalidOperationException("Chọn tài khoản nhận tiền.");
+        var paid = await db.Transactions.Where(t => t.BillId == bill.Id).SumAsync(t => (decimal?)t.Amount) ?? 0;
+        var due = bill.TotalAmount - paid;
+        if (due <= 0) throw new InvalidOperationException("Phiếu này đã thu đủ.");
+        if (form.Amount > due) throw new InvalidOperationException($"Số tiền thu ({Fmt.Vnd(form.Amount)}) lớn hơn số còn phải thu ({Fmt.Vnd(due)}). Nếu khách đưa thừa, ghi phần thừa ở Thu chi > Thu khác.");
         var room = bill.Lease.Room;
         var tx = new MoneyTransaction
         {

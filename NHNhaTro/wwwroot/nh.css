@@ -213,3 +213,52 @@ body:has(.nh-bottomnav) .nh-callbar { display: none !important; }
 .nh-navbar .navbar-nav::-webkit-scrollbar { display: none; }
 .nh-navbar .navbar-brand { flex: 0 0 auto; }
 @media (min-width: 992px) and (max-width: 1399.98px) { .nh-navbar .nav-link { padding: .45rem .5rem !important; font-size: .92rem; } }
+
+/* ---------- Chọn phòng theo bước ---------- */
+.nh-steps { display: flex; gap: 6px; margin-bottom: 10px; }
+.nh-step { flex: 1; text-align: center; font-size: .78rem; font-weight: 600; padding: 6px 4px; border-radius: 999px; background: #eef2f7; color: #94a3b8; }
+.nh-step.on { background: var(--nh-primary); color: #fff; }
+.nh-step.done { background: #dcfce7; color: #166534; }
+.nh-pick-grid { display: grid; gap: 8px; }
+.nh-pick-grid.two { grid-template-columns: repeat(2, 1fr); }
+.nh-pick-grid.four { grid-template-columns: repeat(4, 1fr); }
+.nh-pick { border: 1px solid var(--nh-border); border-radius: 14px; background: #fff; padding: 14px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--nh-ink); min-height: 72px; }
+.nh-pick:active { transform: scale(.97); }
+.nh-pick .big { font-weight: 800; font-size: 1.15rem; }
+.nh-pick .sub { font-size: .72rem; opacity: .9; line-height: 1.2; }
+.nh-pick .sub.name { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nh-pick.room { color: #fff; border: 0; padding: 10px 4px; min-height: 84px; }
+.nh-pick.room.empty { background: linear-gradient(135deg, #94a3b8, #64748b); }
+.nh-pick.room.nobill { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.nh-pick.room.unpaid { background: linear-gradient(135deg, #f97316, #ea580c); }
+.nh-pick.room.paid { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.nh-pick.room.maint { background: linear-gradient(135deg, #a855f7, #7e22ce); }
+.nh-pick.room.off { opacity: .45; }
+.nh-picked { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 2px solid #86efac; background: #f0fdf4; border-radius: 14px; padding: 10px 12px; }
+.nh-picked .code { font-weight: 800; font-size: 1.25rem; color: #14532d; }
+@media (min-width: 768px) { .nh-pick-grid.four { grid-template-columns: repeat(8, 1fr); } .nh-pick-grid.two { grid-template-columns: repeat(4, 1fr); } }
+
+/* ---------- Trang chính: 5 nghiệp vụ ---------- */
+.nh-ops { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.nh-op { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 108px; border-radius: 18px; color: #fff; text-decoration: none; font-weight: 700; font-size: 1rem; box-shadow: 0 4px 14px rgba(15,23,42,.12); }
+.nh-op:hover, .nh-op:focus { color: #fff; filter: brightness(1.05); }
+.nh-op:active { transform: scale(.97); }
+.nh-op i { font-size: 1.9rem; }
+.nh-op small { font-weight: 500; font-size: .75rem; opacity: .9; }
+.nh-op.in { background: linear-gradient(135deg, #16a34a, #22c55e); }
+.nh-op.out { background: linear-gradient(135deg, #dc2626, #f87171); }
+.nh-op.bill { background: linear-gradient(135deg, #1a5490, #2980b9); grid-column: 1 / -1; min-height: 92px; flex-direction: row; font-size: 1.15rem; }
+.nh-op.fix { background: linear-gradient(135deg, #d97706, #f59e0b); }
+.nh-op.buy { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
+@media (min-width: 768px) { .nh-ops { grid-template-columns: repeat(5, 1fr); } .nh-op.bill { grid-column: auto; flex-direction: column; font-size: 1rem; } }
+.nh-info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.nh-info-grid a { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 4px; border-radius: 12px; background: #fff; border: 1px solid var(--nh-border); color: var(--nh-ink); text-decoration: none; font-size: .74rem; text-align: center; line-height: 1.15; }
+.nh-info-grid a i { font-size: 1.3rem; color: var(--nh-primary); }
+@media (min-width: 768px) { .nh-info-grid { grid-template-columns: repeat(8, 1fr); } }
+.nh-navbar .dropdown-menu { font-size: .95rem; }
+.nh-navbar .dropdown-toggle::after { vertical-align: .2em; }
+.nh-guide h5 { margin-top: 22px; display: flex; align-items: center; gap: 8px; }
+.nh-guide h5:first-of-type { margin-top: 0; }
+.nh-guide ol, .nh-guide ul { padding-left: 1.2rem; }
+.nh-guide li { margin-bottom: 6px; }
+.nh-guide h5 { scroll-margin-top: 70px; }

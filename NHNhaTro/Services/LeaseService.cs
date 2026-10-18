@@ -79,7 +79,7 @@ public class CheckoutForm
 }
 
 public record CheckoutPreview(decimal Deposit, int LastMeter, int UsedKwh, decimal Electricity, decimal Penalties, decimal Other,
-    decimal UnpaidBills, List<(Bill Bill, decimal Due)> UnpaidList, List<string> FurnitureWarnings)
+    decimal UnpaidBills, List<(Bill Bill, decimal Due)> UnpaidList, List<string> FurnitureWarnings, List<string> MissingBills)
 {
     /// <summary>Dương = trả lại khách, âm = khách phải nộp thêm.</summary>
     public decimal Balance => Deposit - Electricity - Penalties - Other - UnpaidBills;
@@ -184,6 +184,12 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         var room = await db.Rooms.FirstOrDefaultAsync(r => r.Id == form.RoomId) ?? throw new InvalidOperationException("Không tìm thấy phòng.");
         if (room.Status == RoomStatus.Occupied || await db.Leases.AnyAsync(l => l.RoomId == room.Id && l.Status == LeaseStatus.Active))
             throw new InvalidOperationException($"Phòng {room.Code} đang có người thuê.");
+        if (room.Status == RoomStatus.Maintenance)
+            throw new InvalidOperationException($"Phòng {room.Code} đang sửa, chưa cho thuê được (bỏ đánh dấu ở trang phòng trước).");
+        if (form.MoveInDate.Date > DateTime.Today.AddDays(31)) throw new InvalidOperationException("Ngày vào quá xa trong tương lai, kiểm tra lại.");
+        if (form.MoveInDate.Date < DateTime.Today.AddYears(-2)) throw new InvalidOperationException("Ngày vào quá xa trong quá khứ, kiểm tra lại.");
+        if (form.StartMeterReading < 0) throw new InvalidOperationException("Số điện không được âm.");
+        if (form.DepositPaid > form.Deposit) throw new InvalidOperationException($"Tiền cọc đã thu ({Fmt.Vnd(form.DepositPaid)}) lớn hơn tiền cọc ({Fmt.Vnd(form.Deposit)}).");
         if (tenants.Count > room.MaxOccupants) throw new InvalidOperationException($"Phòng {room.Code} tối đa {room.MaxOccupants} người.");
         foreach (var t in tenants)
         {
@@ -207,6 +213,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         }
 
         var period = CalculateFirstPeriod(form.MonthlyRent, lease.StartDate, settings.BillingDay, settings.WaterPricePerPerson, tenants.Count);
+        if (form.FirstPaymentPaid > period.Total) throw new InvalidOperationException($"Tiền phòng đã thu ({Fmt.Vnd(form.FirstPaymentPaid)}) lớn hơn tiền kỳ đầu ({Fmt.Vnd(period.Total)}).");
         var bill = new Bill
         {
             Lease = lease, Kind = BillKind.MoveIn, Month = lease.StartDate.Month, Year = lease.StartDate.Year,
@@ -377,8 +384,18 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         var held = await db.Transactions.Where(t => t.LeaseId == lease.Id && (t.Category == TxCategory.Deposit || t.Category == TxCategory.DepositRefund))
             .SumAsync(t => (decimal?)t.Amount) ?? 0;
 
+        // Kỳ tháng nào đã đến ngày thu (trước ngày trả) mà chưa lập phiếu thì tiền phòng kỳ đó sẽ không được thu: cảnh báo.
+        var missing = new List<string>();
+        for (var d = new DateTime(lease.StartDate.Year, lease.StartDate.Month, 1); d <= form.EndDate.Date; d = d.AddMonths(1))
+        {
+            var due = new DateTime(d.Year, d.Month, Math.Min(settings.BillingDay, DateTime.DaysInMonth(d.Year, d.Month)));
+            if (due > form.EndDate.Date || !RoomService.NeedsMonthlyBill(lease, d.Month, d.Year)) continue;
+            if (!bills.Any(b => b.Bill.Kind == BillKind.Monthly && b.Bill.Month == d.Month && b.Bill.Year == d.Year))
+                missing.Add($"{d.Month:00}/{d.Year}");
+        }
+
         return new CheckoutPreview(Math.Max(0, held), lastMeter, used, used * settings.ElectricityPrice, form.Penalties.Sum(p => p.Amount), form.OtherAmount,
-            unpaid.Sum(u => u.Item2), unpaid, warnings);
+            unpaid.Sum(u => u.Item2), unpaid, warnings, missing);
     }
 
     public async Task CheckoutAsync(CheckoutForm form, string? user)
@@ -396,6 +413,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         var lease = await db.Leases.Include(l => l.Room).ThenInclude(r => r.Furniture).Include(l => l.Tenants).FirstAsync(l => l.Id == form.LeaseId);
         if (lease.Status != LeaseStatus.Active) throw new InvalidOperationException("Hợp đồng đã kết thúc.");
         if (form.EndDate.Date < lease.StartDate) throw new InvalidOperationException("Ngày trả phòng trước ngày nhận phòng.");
+        if (form.EndDate.Date > DateTime.Today.AddDays(7)) throw new InvalidOperationException("Ngày trả phòng quá xa trong tương lai, kiểm tra lại.");
 
         await using var tx = await db.Database.BeginTransactionAsync();
         var date = form.EndDate.Date;

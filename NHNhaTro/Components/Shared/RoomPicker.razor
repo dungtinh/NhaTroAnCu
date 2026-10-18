@@ -1,0 +1,148 @@
+@* Chọn phòng theo 3 bước: Dãy → Tầng → Phòng. Phòng có khách hiện khóa và tên khách, phòng trống màu xám, đang sửa màu tím. *@
+@inject RoomService Rooms
+
+@if (map == null)
+{
+    <div class="nh-loading py-3"><i class="fas fa-spinner fa-spin"></i></div>
+}
+else if (Selected is { } sel)
+{
+    <div class="nh-picked">
+        <div>
+            <div class="small text-muted">@Label</div>
+            <div class="code"><i class="fas @(sel.LeaseId != null ? "fa-lock" : "fa-door-open")"></i> Phòng @sel.Code</div>
+            <div class="small">@(sel.LeaseId != null ? $"{sel.RepresentativeName} · {sel.PersonCount} người" : RoomStatus.Display(sel.Status) + " · " + Fmt.Vnd(sel.Rent) + "/tháng")</div>
+        </div>
+        <button type="button" class="btn btn-outline-primary" @onclick="Reset"><i class="fas fa-exchange-alt"></i> Đổi phòng</button>
+    </div>
+}
+else
+{
+    <div class="nh-steps">
+        <div class="nh-step @(block == null ? "on" : "done")">1. Dãy</div>
+        <div class="nh-step @(block != null && floor == null ? "on" : floor != null ? "done" : "")">2. Tầng</div>
+        <div class="nh-step @(floor != null ? "on" : "")">3. Phòng</div>
+    </div>
+
+    @if (AllowNone && block == null)
+    {
+        <button type="button" class="btn btn-outline-secondary w-100 mb-2 @(noneChosen ? "active" : "")" @onclick="ChooseNone"><i class="fas fa-building"></i> @NoneText</button>
+    }
+
+    @if (block == null)
+    {
+        <div class="nh-pick-grid two">
+            @foreach (var b in map.Rooms.GroupBy(r => r.BlockCode))
+            {
+                int free = b.Count(r => r.LeaseId == null && r.Status != RoomStatus.Maintenance), used = b.Count(r => r.LeaseId != null);
+                <button type="button" class="nh-pick" @onclick="() => block = b.Key">
+                    <span class="big">Dãy @b.Key</span>
+                    <span class="sub">@used có khách · @free trống</span>
+                </button>
+            }
+        </div>
+    }
+    else if (floor == null)
+    {
+        <button type="button" class="btn btn-link px-0 mb-2" @onclick="() => block = null"><i class="fas fa-chevron-left"></i> Dãy @block</button>
+        <div class="nh-pick-grid two">
+            @foreach (var f in map.Rooms.Where(r => r.BlockCode == block).GroupBy(r => r.Floor).OrderBy(g => g.Key))
+            {
+                int free = f.Count(r => r.LeaseId == null && r.Status != RoomStatus.Maintenance), used = f.Count(r => r.LeaseId != null);
+                <button type="button" class="nh-pick" @onclick="() => floor = f.Key">
+                    <span class="big">Tầng @(f.Key + 1)</span>
+                    <span class="sub">@used có khách · @free trống</span>
+                </button>
+            }
+        </div>
+    }
+    else
+    {
+        <button type="button" class="btn btn-link px-0 mb-2" @onclick="() => floor = null"><i class="fas fa-chevron-left"></i> Dãy @block · Tầng @(floor + 1)</button>
+        <div class="nh-pick-grid four">
+            @foreach (var r in map.Rooms.Where(r => r.BlockCode == block && r.Floor == floor).OrderBy(r => r.Number))
+            {
+                bool ok = Selectable(r);
+                <button type="button" class="nh-pick room @r.Color @(ok ? "" : "off")" disabled="@(!ok)" @onclick="() => ChooseAsync(r)" title="@(ok ? "" : "Không chọn được")">
+                    <span class="big">@r.Code</span>
+                    @if (r.LeaseId != null)
+                    {
+                        <span class="sub"><i class="fas fa-lock"></i> Có khách</span>
+                        <span class="sub name">@r.RepresentativeName</span>
+                    }
+                    else if (r.Status == RoomStatus.Maintenance) { <span class="sub"><i class="fas fa-tools"></i> Đang sửa</span> }
+                    else { <span class="sub">Trống</span><span class="sub name">@Fmt.Money(r.Rent / 1000)k</span> }
+                </button>
+            }
+        </div>
+        <div class="small text-muted mt-2">
+            @(Mode == PickMode.Empty ? "Chỉ chọn được phòng trống (xám)." : Mode == PickMode.Occupied ? "Chỉ chọn được phòng đang có khách." : "")
+        </div>
+    }
+}
+
+@code {
+    public enum PickMode { Empty, Occupied, All }
+
+    [Parameter] public PickMode Mode { get; set; } = PickMode.All;
+    [Parameter] public int? RoomId { get; set; }
+    [Parameter] public EventCallback<int?> RoomIdChanged { get; set; }
+    /// <summary>Cho chọn "không phòng" (khu vực chung).</summary>
+    [Parameter] public bool AllowNone { get; set; }
+    [Parameter] public string NoneText { get; set; } = "Khu vực chung (không thuộc phòng nào)";
+    [Parameter] public string Label { get; set; } = "Phòng đã chọn";
+    /// <summary>Mã phòng chọn sẵn (từ đường dẫn).</summary>
+    [Parameter] public string? PresetCode { get; set; }
+    [Parameter] public EventCallback<RoomCard?> Picked { get; set; }
+
+    private RoomMap? map;
+    private string? block;
+    private int? floor;
+    private bool noneChosen;
+
+    private RoomCard? Selected => RoomId is int id ? map?.Rooms.FirstOrDefault(r => r.Id == id) : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        map = await Rooms.GetMapAsync();
+        if (RoomId == null && PresetCode != null && map.Rooms.FirstOrDefault(r => r.Code == PresetCode) is { } r && Selectable(r))
+            await ChooseAsync(r);
+    }
+
+    private bool Selectable(RoomCard r) => Mode switch
+    {
+        PickMode.Empty => r.LeaseId == null && r.Status != RoomStatus.Maintenance,
+        PickMode.Occupied => r.LeaseId != null,
+        _ => true
+    };
+
+    private async Task ChooseAsync(RoomCard r)
+    {
+        noneChosen = false;
+        RoomId = r.Id;
+        await RoomIdChanged.InvokeAsync(r.Id);
+        await Picked.InvokeAsync(r);
+    }
+
+    private async Task ChooseNone()
+    {
+        noneChosen = true;
+        RoomId = null;
+        await RoomIdChanged.InvokeAsync(null);
+        await Picked.InvokeAsync(null);
+    }
+
+    public async Task RefreshAsync()
+    {
+        map = await Rooms.GetMapAsync();
+        StateHasChanged();
+    }
+
+    private void Reset()
+    {
+        RoomId = null;
+        noneChosen = false;
+        _ = RoomIdChanged.InvokeAsync(null);
+        _ = Picked.InvokeAsync(null);
+    }
+}

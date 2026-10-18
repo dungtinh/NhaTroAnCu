@@ -18,12 +18,16 @@
     <div class="nh-card border border-primary">
         <h5>@(form.IsAdvertising ? "Chi phí quảng cáo" : "Khoản mua sắm mới")</h5>
         <div class="row g-2">
-            <div class="col-md-3"><label class="form-label">Ngày</label><input type="date" class="form-control" @bind="form.Date" /></div>
+            <div class="col-6 col-md-3"><label class="form-label">Ngày</label><input type="date" class="form-control" @bind="form.Date" /></div>
             <div class="col-md-5"><label class="form-label">Nội dung <span class="text-danger">*</span></label><input class="form-control" maxlength="1000" placeholder="VD: Mua 2 quạt treo tường" @bind="form.Description" /></div>
             <div class="col-md-4"><label class="form-label">Nơi bán</label><input class="form-control" @bind="form.Supplier" /></div>
-            <div class="col-md-3"><label class="form-label">Số tiền <span class="text-danger">*</span></label><MoneyInput @bind-Value="form.Amount" /></div>
-            <div class="col-md-3"><label class="form-label">Cho phòng (nếu có)</label>
-                <select class="form-select" @bind="form.RoomId"><option value="">-- Chung --</option>@foreach (var r in rooms) {<option value="@r.Id">@r.Code</option>}</select></div>
+            <div class="col-6 col-md-3"><label class="form-label">Số tiền <span class="text-danger">*</span></label><MoneyInput @bind-Value="form.Amount" /></div>
+            <div class="col-12">
+                <details>
+                    <summary class="small text-primary">Mua cho một phòng cụ thể? (không bắt buộc)</summary>
+                    <div class="mt-2"><RoomPicker Mode="RoomPicker.PickMode.All" AllowNone="true" NoneText="Dùng chung, không thuộc phòng nào" Label="Mua cho" @bind-RoomId="form.RoomId" /></div>
+                </details>
+            </div>
             <div class="col-md-3"><label class="form-label">Chi từ tài khoản</label>
                 <select class="form-select" @bind="form.AccountId">@foreach (var a in accounts) {<option value="@a.Id">@a.Name</option>}</select></div>
             <div class="col-md-3 pt-md-4">

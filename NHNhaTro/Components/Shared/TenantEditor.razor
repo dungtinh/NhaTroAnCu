@@ -37,6 +37,12 @@
             <div class="col-md-5"><label class="form-label">Họ và tên <span class="text-danger">*</span></label><input class="form-control" maxlength="100" @bind="t.FullName" @bind:after="() => Changed.InvokeAsync()" /></div>
             <div class="col-md-4"><label class="form-label">Số CCCD/Hộ chiếu <span class="text-danger">*</span></label><input class="form-control" maxlength="30" @bind="t.IdentityCard" @bind:after="() => OnCardChangedAsync(t)" /></div>
             <div class="col-6 col-md-3"><label class="form-label">Điện thoại</label><input class="form-control" maxlength="20" type="tel" inputmode="tel" @bind="t.Phone" /></div>
+            @if (Compact && !expanded.Contains(t))
+            {
+                <div class="col-12"><button type="button" class="btn btn-link btn-sm px-0" @onclick="() => expanded.Add(t)"><i class="fas fa-plus"></i> Thêm ngày sinh, giới tính, quê quán, biển số xe</button></div>
+            }
+            else
+            {
             <div class="col-6 col-md-3"><label class="form-label">Ngày sinh</label><input type="date" class="form-control" @bind="t.BirthDate" /></div>
             <div class="col-6 col-md-2">
                 <label class="form-label">Giới tính</label>
@@ -46,6 +52,7 @@
             <div class="col-6 col-md-2"><label class="form-label">Quốc tịch</label><input class="form-control" maxlength="50" @bind="t.Nationality" /></div>
             <div class="col-6 col-md-3"><label class="form-label">Biển số xe</label><input class="form-control" maxlength="20" @bind="t.VehiclePlate" /></div>
             <div class="col-12"><label class="form-label">Địa chỉ thường trú</label><input class="form-control" maxlength="300" @bind="t.PermanentAddress" /></div>
+            }
         </div>
     </div>
 }
@@ -61,6 +68,10 @@
     [Parameter] public int MaxPeople { get; set; } = 4;
     [Parameter] public int? ExceptLeaseId { get; set; }
     [Parameter] public EventCallback Changed { get; set; }
+    /// <summary>Chỉ hiện ảnh, tên, CCCD, điện thoại; các ô khác mở khi cần (dùng ở Nhận phòng).</summary>
+    [Parameter] public bool Compact { get; set; }
+
+    private readonly HashSet<TenantInput> expanded = [];
 
     private bool scanConfigured;
     private TenantInput? scanning;

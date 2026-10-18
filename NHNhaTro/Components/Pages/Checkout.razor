@@ -38,7 +38,10 @@ else
             </div>
 
             <div class="nh-card">
-                <h5>2. Kiểm tra đồ đạc</h5>
+                <h5>2. Đồ đạc trong phòng</h5>
+                <details>
+                    <summary class="text-primary">@(preview?.FurnitureWarnings.Count > 0 ? $"Có {preview.FurnitureWarnings.Count} khác biệt, bấm để xem" : "Đủ theo cấu hình phòng · bấm nếu thiếu hoặc hỏng")</summary>
+                    <div class="mt-2">
                 <table class="nh-table">
                     <thead><tr><th>Đồ đạc</th><th class="text-center">Mặc định dãy</th><th class="text-center">Cấu hình phòng</th><th style="width:120px">Thực tế</th></tr></thead>
                     <tbody>
@@ -63,6 +66,8 @@ else
                         <ul class="mb-0">@foreach (var w in preview.FurnitureWarnings) { <li>@w</li> }</ul>
                     </div>
                 }
+                    </div>
+                </details>
             </div>
 
             <div class="nh-card">
@@ -101,6 +106,13 @@ else
                 <h5>5. Quyết toán</h5>
                 @if (preview != null)
                 {
+                    @if (preview.MissingBills.Count > 0)
+                    {
+                        <div class="alert alert-danger small py-2">
+                            <i class="fas fa-exclamation-triangle"></i> Chưa lập phiếu tháng <strong>@string.Join(", ", preview.MissingBills)</strong> cho phòng này.
+                            Tiền phòng, nước kỳ đó sẽ không được tính. <a href="thu-tien">Lập phiếu ở Thu tiền tháng</a> rồi quay lại.
+                        </div>
+                    }
                     <table class="nh-table mb-2">
                         <tr><td>Tiền cọc đã thu, đang giữ</td><td class="text-end fw-bold">@Fmt.Money(preview.Deposit)</td></tr>
                         @if (preview.Deposit < lease.Deposit)
@@ -200,6 +212,7 @@ else
     {
         await RefreshAsync();
         if (preview == null) return;
+        if (preview.MissingBills.Count > 0 && !await ConfirmAsync($"Chưa lập phiếu tháng {string.Join(", ", preview.MissingBills)}. Tiền phòng kỳ đó sẽ KHÔNG được thu. Vẫn trả phòng?")) return;
         if (Mismatch != 0 && !await ConfirmAsync($"Số tiền lệch quyết toán {Fmt.Vnd(Mismatch)}. Vẫn hoàn tất trả phòng?")) return;
         if (preview.FurnitureWarnings.Count > 0 && !await ConfirmAsync("Đồ đạc phòng khác cấu hình/mặc định:\n- " + string.Join("\n- ", preview.FurnitureWarnings) + "\n\nVẫn hoàn tất?")) return;
         var user = await GetUserNameAsync();

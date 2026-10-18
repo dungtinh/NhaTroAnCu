@@ -68,3 +68,16 @@ Những chỗ yêu cầu chưa nói rõ được ghi là **Giả định**; đ�
 - **Quản trị** (chủ nhà): toàn quyền, cấu hình, quản lý nhân viên, sửa/xóa chứng từ tiền.
 - **Nhân viên**: nhận/trả phòng, thu tiền, ghi sửa chữa, mua sắm; không sửa/xóa chứng từ tiền, không đổi cấu hình.
 - Tài khoản đầu tiên đăng ký là Quản trị; nhân viên do Quản trị tạo.
+
+## Rà soát luồng vào/ra (18/10/2026)
+
+Các kiểm tra phần mềm tự chặn hoặc cảnh báo:
+
+- **Nhận phòng**: không nhận vào phòng đang có khách hoặc đang sửa; khách đang ở phòng khác phải trả phòng cũ trước;
+  ngày vào không quá 31 ngày tới hoặc 2 năm trước; tiền cọc, tiền kỳ đầu đã thu không được lớn hơn số phải thu.
+- **Thu tiền**: không thu quá số còn phải thu của phiếu (khách đưa thừa thì ghi ở Thu chi > Thu khác); phiếu đã đủ thì không thu thêm.
+- **Trả phòng**: số điện cuối không nhỏ hơn số đã chốt; ngày trả không trước ngày vào và không quá 7 ngày tới;
+  cọc dùng để quyết toán là **cọc đã thu thật** (không phải số ghi trên hợp đồng); trả cọc không quá số đang giữ;
+  **cảnh báo khi còn kỳ tháng đã đến ngày thu mà chưa lập phiếu** (tiền phòng kỳ đó sẽ không được thu nếu cứ trả phòng).
+- **Giới hạn đã biết**: nợ còn lại của hợp đồng đã trả phòng (khi cố tình trả phòng mà khách chưa nộp đủ) không hiện trên sơ đồ,
+  chỉ xem được ở trang hợp đồng/phòng. Không hoàn tiền phòng đã thu khi khách đi giữa kỳ.

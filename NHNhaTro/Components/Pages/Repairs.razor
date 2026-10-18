@@ -17,25 +17,22 @@
 {
     <div class="nh-card border border-primary">
         <h5>Phiếu sửa chữa mới</h5>
-        <div class="row g-2">
-            <div class="col-md-3"><label class="form-label">Ngày</label><input type="date" class="form-control" @bind="form.Date" /></div>
-            <div class="col-md-3"><label class="form-label">Phạm vi</label>
-                <select class="form-select" @bind="form.RoomId">
-                    <option value="">Khu vực chung</option>
-                    @foreach (var r in rooms) { <option value="@r.Id">Phòng @r.Code</option> }
-                </select></div>
+        <label class="form-label">Sửa ở đâu?</label>
+        <RoomPicker Mode="RoomPicker.PickMode.All" AllowNone="true" PresetCode="@RoomCode" Label="Sửa tại" @bind-RoomId="form.RoomId" Picked="_ => StateHasChanged()" />
+        <div class="row g-2 mt-1">
             @if (form.RoomId == null)
             {
-                <div class="col-md-3"><label class="form-label">Vị trí <span class="text-danger">*</span></label><input class="form-control" placeholder="VD: Cầu thang dãy A, bể nước" @bind="form.Location" /></div>
+                <div class="col-md-6"><label class="form-label">Vị trí khu vực chung <span class="text-danger">*</span></label><input class="form-control" placeholder="VD: Cầu thang dãy A, bể nước" @bind="form.Location" /></div>
             }
-            <div class="col-md-3"><label class="form-label">Đồ đạc</label>
+            <div class="col-6 col-md-3"><label class="form-label">Ngày</label><input type="date" class="form-control" @bind="form.Date" /></div>
+            <div class="col-6 col-md-3"><label class="form-label">Đồ đạc</label>
                 <select class="form-select" @bind="form.FurnitureItemId">
                     <option value="">-- Không / khác --</option>
                     @foreach (var i in items) { <option value="@i.Id">@i.Name</option> }
                 </select></div>
             <div class="col-md-6"><label class="form-label">Nội dung sửa <span class="text-danger">*</span></label><input class="form-control" maxlength="1000" @bind="form.Description" /></div>
-            <div class="col-md-3"><label class="form-label">Người/đơn vị sửa</label><input class="form-control" @bind="form.PerformedBy" /></div>
-            <div class="col-md-3"><label class="form-label">Số tiền</label><MoneyInput @bind-Value="form.Amount" /></div>
+            <div class="col-6 col-md-3"><label class="form-label">Người/đơn vị sửa</label><input class="form-control" @bind="form.PerformedBy" /></div>
+            <div class="col-6 col-md-3"><label class="form-label">Số tiền</label><MoneyInput @bind-Value="form.Amount" /></div>
             <div class="col-md-3"><label class="form-label">Chi từ tài khoản</label>
                 <select class="form-select" @bind="form.AccountId">@foreach (var a in accounts) {<option value="@a.Id">@a.Name</option>}</select></div>
             <div class="col-md-4"><FileUpload Kind="Repairs" Label="Ảnh hư hỏng (trước)" Camera="true" Accept="image/*" Required="true" @bind-Files="form.BeforePhotos" /></div>
@@ -135,7 +132,6 @@
         {
             scope = room.Id.ToString();
             OpenForm();
-            form!.RoomId = room.Id;
         }
         await LoadAsync();
     }

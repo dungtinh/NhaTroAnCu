@@ -3,93 +3,69 @@
 @rendermode InteractiveServer
 @inherits NhPage
 @inject RoomService Rooms
+@inject SetupService Setup
 
-<PageTitle>Sơ đồ phòng</PageTitle>
+<PageTitle>Trang chính</PageTitle>
 
-<div class="nh-page-title">
-    <h2><i class="fas fa-th"></i> Sơ đồ phòng</h2>
-    <div class="d-none d-lg-flex gap-2">
-        <a class="btn btn-primary" href="nhan-phong"><i class="fas fa-door-open"></i> Nhận phòng</a>
-        <a class="btn btn-success" href="thu-tien"><i class="fas fa-file-invoice-dollar"></i> Thu tiền tháng</a>
+<div class="nh-ops mb-3">
+    <a class="nh-op in" href="nhan-phong"><i class="fas fa-door-open"></i><span>Nhận phòng</span><small>Khách mới vào ở</small></a>
+    <a class="nh-op out" href="tra-phong"><i class="fas fa-sign-out-alt"></i><span>Trả phòng</span><small>Khách chuyển đi</small></a>
+    <a class="nh-op bill" href="thu-tien"><i class="fas fa-file-invoice-dollar"></i><span>Thu tiền tháng</span><small>Ghi số điện, thu tiền</small></a>
+    <a class="nh-op fix" href="sua-chua"><i class="fas fa-tools"></i><span>Sửa chữa</span><small>Ảnh + chứng từ</small></a>
+    <a class="nh-op buy" href="mua-sam"><i class="fas fa-shopping-cart"></i><span>Mua sắm</span><small>Hóa đơn</small></a>
+</div>
+
+@if (map != null)
+{
+    <div class="row g-2 mb-3">
+        <div class="col-4"><a class="nh-stat d-block text-decoration-none text-reset" href="so-do"><div class="v text-primary">@map.Occupied<span class="text-muted fs-6">/@map.Total</span></div><div class="l">Phòng có khách</div></a></div>
+        <div class="col-4"><a class="nh-stat d-block text-decoration-none text-reset" href="so-do"><div class="v text-secondary">@map.Empty</div><div class="l">Phòng trống</div></a></div>
+        <div class="col-4"><a class="nh-stat d-block text-decoration-none text-reset" href="thu-tien"><div class="v text-danger">@Fmt.Money(map.Outstanding / 1000)k</div><div class="l">Còn phải thu</div></a></div>
+    </div>
+    @if (unpaid.Count > 0)
+    {
+        <div class="nh-card mb-3">
+            <h5><i class="fas fa-exclamation-circle text-danger"></i> Phòng còn nợ (@unpaid.Count)</h5>
+            <div class="nh-chips">
+                @foreach (var r in unpaid) { <a class="btn btn-sm btn-outline-danger" href="@($"phong/{r.Code}")">@r.Code · @Fmt.Money(r.Outstanding / 1000)k</a> }
+            </div>
+        </div>
+    }
+    @if (noBill.Count > 0)
+    {
+        <div class="nh-card mb-3">
+            <h5><i class="fas fa-bolt text-primary"></i> Chưa ghi số điện kỳ @map.BillingMonth.ToString("00")/@map.BillingYear (@noBill.Count)</h5>
+            <div class="nh-chips">
+                @foreach (var r in noBill) { <a class="btn btn-sm btn-outline-primary" href="thu-tien">@r.Code</a> }
+            </div>
+        </div>
+    }
+}
+
+<div class="nh-card">
+    <h5><i class="fas fa-info-circle"></i> Thông tin</h5>
+    <div class="nh-info-grid">
+        <a href="so-do"><i class="fas fa-th-large"></i><span>Sơ đồ phòng</span></a>
+        <a href="khach-thue"><i class="fas fa-users"></i><span>Khách thuê</span></a>
+        <a href="thu-chi"><i class="fas fa-wallet"></i><span>Thu chi</span></a>
+        <a href="bao-cao"><i class="fas fa-chart-bar"></i><span>Báo cáo</span></a>
+        <a href="quang-cao"><i class="fas fa-bullhorn"></i><span>Quảng cáo</span></a>
+        @if (isAdmin) { <a href="cau-hinh"><i class="fas fa-cog"></i><span>Cấu hình</span></a> }
+        <a href="huong-dan"><i class="fas fa-question-circle"></i><span>Hướng dẫn</span></a>
+        <a href="gioi-thieu" target="_blank"><i class="fas fa-globe-asia"></i><span>Trang khách xem</span></a>
     </div>
 </div>
 
-@if (map == null)
-{
-    <div class="nh-loading"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
-}
-else
-{
-    <div class="row g-2 mb-3">
-        <div class="col-6 col-md-3"><div class="nh-stat"><div class="v">@map.Total</div><div class="l">Tổng số phòng</div></div></div>
-        <div class="col-6 col-md-3"><div class="nh-stat"><div class="v text-primary">@map.Occupied</div><div class="l">Đang thuê (@(map.Total > 0 ? (100 * map.Occupied / map.Total) : 0)%)</div></div></div>
-        <div class="col-6 col-md-3"><div class="nh-stat"><div class="v text-secondary">@map.Empty</div><div class="l">Phòng trống</div></div></div>
-        <div class="col-6 col-md-3"><div class="nh-stat"><div class="v text-danger">@Fmt.Money(map.Outstanding)</div><div class="l">Còn phải thu (đ)</div></div></div>
-    </div>
-
-    <div class="nh-legend mb-3">
-        <span><i class="box" style="background:#64748b"></i> Trống</span>
-        <span><i class="box" style="background:#2563eb"></i> Chưa lập phiếu kỳ @map.BillingMonth.ToString("00")/@map.BillingYear</span>
-        <span><i class="box" style="background:#ea580c"></i> Còn nợ</span>
-        <span><i class="box" style="background:#16a34a"></i> Đã thu đủ</span>
-        <span><i class="box" style="background:#7e22ce"></i> Đang sửa</span>
-        <span><i class="fas fa-exclamation-triangle text-warning"></i> Đồ đạc khác mặc định</span>
-    </div>
-
-    <div class="nh-chips mb-3">
-        @foreach (var b in new[] { "" }.Concat(map.Rooms.Select(r => r.BlockCode).Distinct()))
-        {
-            <button type="button" class="btn btn-sm @(blockFilter == b ? "btn-primary" : "btn-outline-primary")" @onclick="() => blockFilter = b">@(b == "" ? "Cả 2 dãy" : "Dãy " + b)</button>
-        }
-        <span class="vr mx-1"></span>
-        @foreach (var (c, label) in ColorFilters)
-        {
-            <button type="button" class="btn btn-sm @(colorFilter == c ? "btn-dark" : "btn-outline-secondary")" @onclick="() => colorFilter = colorFilter == c ? null : c">@label (@map.Rooms.Count(r => r.Color == c))</button>
-        }
-    </div>
-
-    <div class="row g-3">
-        @foreach (var block in map.Rooms.Where(r => blockFilter == "" || r.BlockCode == blockFilter).GroupBy(r => r.BlockCode))
-        {
-            <div class="@(blockFilter == "" ? "col-xl-6" : "col-12")">
-                <div class="nh-card">
-                    <h5><i class="fas fa-building"></i> Dãy @block.Key
-                        <small class="text-muted fw-normal ms-2">@block.Count(r => r.LeaseId != null)/@block.Count() phòng đang thuê</small>
-                    </h5>
-                    @foreach (var floor in block.GroupBy(r => r.Floor).OrderByDescending(f => f.Key))
-                    {
-                        <div class="nh-floor">
-                            <div class="nh-floor-label">Tầng @(floor.Key + 1)</div>
-                            @foreach (var r in floor.OrderBy(r => r.Number))
-                            {
-                                <a class="nh-room @r.Color" style="@(colorFilter != null && r.Color != colorFilter ? "opacity:.18" : null)" href="@($"phong/{r.Code}")" @key="r.Id" title="@Tooltip(r)">
-                                    @if (r.FurnitureDiffers) { <i class="fas fa-exclamation-triangle warn text-warning"></i> }
-                                    <span class="code">@r.Code</span>
-                                    <span class="who">@(r.RepresentativeName ?? (r.Status == RoomStatus.Maintenance ? "Đang sửa" : "Trống"))</span>
-                                    <span class="meta">
-                                        <span>@if (r.LeaseId != null) {<i class="fas fa-user"></i> @r.PersonCount} else {@(Fmt.Money(r.Rent / 1000) + "k")}</span>
-                                        @if (r.Outstanding > 0) { <span>-@Fmt.Money(r.Outstanding / 1000)k</span> }
-                                    </span>
-                                </a>
-                            }
-                        </div>
-                    }
-                </div>
-            </div>
-        }
-    </div>
-}
-
 @code {
     private RoomMap? map;
-    private string blockFilter = "";
-    private string? colorFilter;
-    private static readonly (string, string)[] ColorFilters =
-        [(RoomColor.Empty, "Trống"), (RoomColor.NoBill, "Chưa lập phiếu"), (RoomColor.Unpaid, "Còn nợ"), (RoomColor.Paid, "Đã thu đủ")];
+    private List<RoomCard> unpaid = [], noBill = [];
+    private bool isAdmin;
 
-    protected override async Task OnInitializedAsync() => map = await Rooms.GetMapAsync();
-
-    private static string Tooltip(RoomCard r) => r.LeaseId == null
-        ? $"{r.Code} - {RoomStatus.Display(r.Status)} - {Fmt.Vnd(r.Rent)}/tháng"
-        : $"{r.Code} - {r.RepresentativeName} ({r.PersonCount} người) - vào {Fmt.Date(r.StartDate)}" + (r.Outstanding > 0 ? $" - còn nợ {Fmt.Vnd(r.Outstanding)}" : "");
+    protected override async Task OnInitializedAsync()
+    {
+        isAdmin = await IsAdminAsync();
+        map = await Rooms.GetMapAsync();
+        unpaid = map.Rooms.Where(r => r.Outstanding > 0).OrderByDescending(r => r.Outstanding).ToList();
+        noBill = map.Rooms.Where(r => r.Color == RoomColor.NoBill).ToList();
+    }
 }

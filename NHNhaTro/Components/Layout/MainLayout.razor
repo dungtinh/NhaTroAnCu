@@ -8,10 +8,19 @@
         <AuthorizeView>
             <Authorized>
                 <ul class="navbar-nav flex-row gap-1 me-auto d-none d-lg-flex">
-                    @foreach (var m in Menu.Where(m => !m.AdminOnly || context.User.IsInRole(Roles.Admin)))
+                    @foreach (var m in Menu)
                     {
                         <li class="nav-item"><NavLink class="nav-link" href="@m.Href" Match="@(m.Href == "" ? NavLinkMatch.All : NavLinkMatch.Prefix)"><i class="fas @m.Icon"></i> @m.Text</NavLink></li>
                     }
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-info-circle"></i> Thông tin</a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            @foreach (var m in Info.Where(m => !m.AdminOnly || context.User.IsInRole(Roles.Admin)))
+                            {
+                                <li><a class="dropdown-item" href="@m.Href"><i class="fas @m.Icon fa-fw"></i> @m.Text</a></li>
+                            }
+                        </ul>
+                    </li>
                 </ul>
                 <div class="d-flex align-items-center gap-1">
                     <NavLink class="nav-link nh-user d-none d-lg-inline-flex" href="Account/Manage" title="@(context.User.IsInRole(Roles.Admin) ? "Quản trị" : "Nhân viên")">
@@ -49,11 +58,11 @@
 <AuthorizeView>
     <Authorized>
         <nav class="nh-bottomnav d-lg-none" aria-label="Điều hướng chính">
-            <NavLink href="" Match="NavLinkMatch.All"><i class="fas fa-th-large"></i><span>Sơ đồ</span></NavLink>
+            <NavLink href="" Match="NavLinkMatch.All"><i class="fas fa-home"></i><span>Trang chính</span></NavLink>
             <NavLink href="thu-tien"><i class="fas fa-file-invoice-dollar"></i><span>Thu tiền</span></NavLink>
-            <NavLink href="nhan-phong" class="nh-fab" title="Nhận phòng"><i class="fas fa-plus"></i><span>Nhận phòng</span></NavLink>
-            <NavLink href="thu-chi"><i class="fas fa-wallet"></i><span>Thu chi</span></NavLink>
-            <button type="button" data-bs-toggle="offcanvas" data-bs-target="#nhMore" aria-controls="nhMore"><i class="fas fa-bars"></i><span>Thêm</span></button>
+            <NavLink href="nhan-phong" class="nh-fab" title="Nhận phòng"><i class="fas fa-door-open"></i><span>Nhận phòng</span></NavLink>
+            <NavLink href="tra-phong"><i class="fas fa-sign-out-alt"></i><span>Trả phòng</span></NavLink>
+            <button type="button" data-bs-toggle="offcanvas" data-bs-target="#nhMore" aria-controls="nhMore"><i class="fas fa-info-circle"></i><span>Thông tin</span></button>
         </nav>
 
         <div class="offcanvas offcanvas-bottom nh-more d-lg-none" tabindex="-1" id="nhMore" aria-labelledby="nhMoreTitle">
@@ -63,13 +72,13 @@
                 <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Đóng"></button>
             </div>
             <div class="offcanvas-body pt-2">
+                <div class="small text-muted fw-bold mb-1">Nghiệp vụ</div>
+                <div class="nh-more-grid mb-3">
+                    @foreach (var m in Menu.Skip(1)) { <a href="@m.Href"><i class="fas @m.Icon"></i><span>@m.Text</span></a> }
+                </div>
+                <div class="small text-muted fw-bold mb-1">Thông tin</div>
                 <div class="nh-more-grid">
-                    @foreach (var m in Menu.Where(m => !m.AdminOnly || context.User.IsInRole(Roles.Admin)))
-                    {
-                        <a href="@m.Href"><i class="fas @m.Icon"></i><span>@m.Text</span></a>
-                    }
-                    <a href="bao-cao"><i class="fas fa-chart-bar"></i><span>Báo cáo</span></a>
-                    <a href="gioi-thieu"><i class="fas fa-globe-asia"></i><span>Trang khách xem</span></a>
+                    @foreach (var m in Info.Where(m => !m.AdminOnly || context.User.IsInRole(Roles.Admin))) { <a href="@m.Href"><i class="fas @m.Icon"></i><span>@m.Text</span></a> }
                     <a href="Account/Manage"><i class="fas fa-user-cog"></i><span>Tài khoản</span></a>
                 </div>
                 <form action="Account/Logout" method="post" class="mt-3">
@@ -93,16 +102,28 @@
 @code {
     private record MenuItem(string Href, string Icon, string Text, bool AdminOnly = false);
 
+    // 5 nghiệp vụ chính (theo yêu cầu: tối giản cho người dùng)
     private static readonly MenuItem[] Menu =
     [
-        new("", "fa-th-large", "Sơ đồ phòng"),
-        new("thu-tien", "fa-file-invoice-dollar", "Thu tiền"),
-        new("khach-thue", "fa-users", "Khách thuê"),
+        new("", "fa-home", "Trang chính"),
+        new("nhan-phong", "fa-door-open", "Nhận phòng"),
+        new("tra-phong", "fa-sign-out-alt", "Trả phòng"),
+        new("thu-tien", "fa-file-invoice-dollar", "Thu tiền tháng"),
         new("sua-chua", "fa-tools", "Sửa chữa"),
         new("mua-sam", "fa-shopping-cart", "Mua sắm"),
+    ];
+
+    // Phần còn lại gom vào "Thông tin"
+    private static readonly MenuItem[] Info =
+    [
+        new("so-do", "fa-th-large", "Sơ đồ phòng"),
+        new("khach-thue", "fa-users", "Khách thuê"),
         new("thu-chi", "fa-wallet", "Thu chi"),
+        new("bao-cao", "fa-chart-bar", "Báo cáo"),
         new("quang-cao", "fa-bullhorn", "Quảng cáo"),
         new("cau-hinh", "fa-cog", "Cấu hình", AdminOnly: true),
+        new("huong-dan", "fa-question-circle", "Hướng dẫn"),
+        new("gioi-thieu", "fa-globe-asia", "Trang khách xem"),
     ];
 
     private AppSetting? settings;
