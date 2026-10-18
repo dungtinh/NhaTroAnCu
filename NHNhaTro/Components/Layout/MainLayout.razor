@@ -23,6 +23,7 @@
                     </li>
                 </ul>
                 <div class="d-flex align-items-center gap-1">
+                    <ChatBadge @rendermode="InteractiveServer" />
                     <NavLink class="nav-link nh-user d-none d-lg-inline-flex" href="Account/Manage" title="@(context.User.IsInRole(Roles.Admin) ? "Quản trị" : "Nhân viên")">
                         <i class="fas fa-user-circle"></i> <span class="d-none d-xl-inline ms-1">@context.User.Identity?.Name</span>
                     </NavLink>
@@ -116,6 +117,7 @@
     // Phần còn lại gom vào "Thông tin"
     private static readonly MenuItem[] Info =
     [
+        new("chat", "fa-comments", "Chat nội bộ"),
         new("so-do", "fa-th-large", "Sơ đồ phòng"),
         new("khach-thue", "fa-users", "Khách thuê"),
         new("thu-chi", "fa-wallet", "Thu chi"),
@@ -124,6 +126,7 @@
         new("cau-hinh", "fa-cog", "Cấu hình", AdminOnly: true),
         new("huong-dan", "fa-question-circle", "Hướng dẫn"),
         new("gioi-thieu", "fa-globe-asia", "Trang khách xem"),
+        new("app", "fa-mobile-alt", "Cài ứng dụng"),
     ];
 
     private AppSetting? settings;

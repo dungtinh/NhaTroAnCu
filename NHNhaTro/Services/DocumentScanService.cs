@@ -107,6 +107,16 @@ public class DocumentScanService(IDbContextFactory<ApplicationDbContext> dbFacto
         DateTime.TryParseExact(s?.Trim(), ["dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "dd-MM-yyyy", "dd.MM.yyyy"], CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)
         && d.Year is > 1900 and < 2100 ? d : null;
 
+    /// <summary>Hỏi đáp bằng chữ (trợ lý trong chat). Trả về câu trả lời thuần văn bản.</summary>
+    public async Task<string> AskTextAsync(string prompt)
+    {
+        AppSetting s;
+        await using (var db = await dbFactory.CreateDbContextAsync()) s = await db.Settings.AsNoTracking().FirstAsync();
+        if (!Configured(s)) throw new InvalidOperationException("Chưa cấu hình AI (Cấu hình > Quét CCCD và chứng từ) nên trợ lý chưa trả lời được.");
+        var text = s.ScanProvider == ScanProvider.Claude ? await CallClaudeAsync(s, prompt, [], json: false) : await CallGeminiAsync(s, prompt, [], json: false);
+        return text.Trim();
+    }
+
     private async Task<JsonObject> AskAsync(string prompt, List<string> webPaths)
     {
         AppSetting s;
@@ -132,7 +142,7 @@ public class DocumentScanService(IDbContextFactory<ApplicationDbContext> dbFacto
         return ParseJsonObject(text);
     }
 
-    private async Task<string> CallGeminiAsync(AppSetting s, string prompt, List<(string Mime, string Base64)> images)
+    private async Task<string> CallGeminiAsync(AppSetting s, string prompt, List<(string Mime, string Base64)> images, bool json = true)
     {
         var parts = new JsonArray { new JsonObject { ["text"] = prompt } };
         foreach (var (mime, data) in images)
@@ -140,7 +150,7 @@ public class DocumentScanService(IDbContextFactory<ApplicationDbContext> dbFacto
         var body = new JsonObject
         {
             ["contents"] = new JsonArray { new JsonObject { ["role"] = "user", ["parts"] = parts } },
-            ["generationConfig"] = new JsonObject { ["responseMimeType"] = "application/json", ["temperature"] = 0 }
+            ["generationConfig"] = json ? new JsonObject { ["responseMimeType"] = "application/json", ["temperature"] = 0 } : new JsonObject { ["temperature"] = 0.3 }
         };
         var model = string.IsNullOrWhiteSpace(s.GeminiModel) ? ScanProvider.DefaultGeminiModel : s.GeminiModel.Trim();
         using var req = new HttpRequestMessage(HttpMethod.Post, $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}:generateContent")
@@ -156,7 +166,7 @@ public class DocumentScanService(IDbContextFactory<ApplicationDbContext> dbFacto
         throw new InvalidOperationException("Gemini không trả về kết quả (ảnh có thể bị chặn hoặc không đọc được).");
     }
 
-    private async Task<string> CallClaudeAsync(AppSetting s, string prompt, List<(string Mime, string Base64)> images)
+    private async Task<string> CallClaudeAsync(AppSetting s, string prompt, List<(string Mime, string Base64)> images, bool json = true)
     {
         var content = new JsonArray();
         foreach (var (mime, data) in images)

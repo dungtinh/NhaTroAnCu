@@ -35,3 +35,20 @@ document.addEventListener('click', function (e) {
     var inst = window.bootstrap.Offcanvas.getInstance(panel);
     if (inst) inst.hide();
 });
+
+// Chat nội bộ
+window.nhChat = {
+    scrollBottom: function (id) { var el = document.getElementById(id); if (el) el.scrollTop = el.scrollHeight; },
+    clear: function (el) { if (el) { el.value = ''; el.style.height = ''; } }
+};
+
+// Cài ứng dụng (PWA): giữ sự kiện cài để trang /app bấm nút là cài được.
+window.nhInstall = { prompt: null };
+window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); window.nhInstall.prompt = e; document.dispatchEvent(new Event('nh-can-install')); });
+window.nhInstall.canInstall = function () { return !!window.nhInstall.prompt; };
+window.nhInstall.isStandalone = function () { return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; };
+window.nhInstall.isIOS = function () { return /iphone|ipad|ipod/i.test(navigator.userAgent); };
+window.nhInstall.show = async function () {
+    var p = window.nhInstall.prompt; if (!p) return 'none';
+    p.prompt(); var r = await p.userChoice; window.nhInstall.prompt = null; return r.outcome;
+};

@@ -1,0 +1,162 @@
+@page "/chat"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@implements IDisposable
+@inject ChatService Chats
+@inject ChatHub Hub
+@inject DocumentScanService Scanner
+
+<PageTitle>Chat nội bộ</PageTitle>
+
+<div class="nh-chat">
+    <div class="nh-chat-head">
+        <div>
+            <strong><i class="fas fa-comments"></i> Chat nội bộ</strong>
+            <div class="small text-muted">Mọi người dùng phần mềm đều thấy. Gõ <code>@@ai</code> đầu câu để hỏi trợ lý@(aiReady ? "" : " (chưa bật AI)").</div>
+        </div>
+        @if (!loadedAll)
+        {
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="LoadOlderAsync">Tin cũ hơn</button>
+        }
+    </div>
+
+    <div class="nh-chat-body" id="chatBody">
+        @{ DateTime? lastDay = null; }
+        @foreach (var m in messages)
+        {
+            if (lastDay != m.SentAt.Date)
+            {
+                lastDay = m.SentAt.Date;
+                <div class="nh-chat-day">@(m.SentAt.Date == DateTime.Today ? "Hôm nay" : m.SentAt.Date == DateTime.Today.AddDays(-1) ? "Hôm qua" : Fmt.Date(m.SentAt))</div>
+            }
+            bool mine = m.Sender == me;
+            <div class="nh-msg @(mine ? "mine" : "") @(m.IsAssistant ? "ai" : "")" @key="m.Id">
+                @if (!mine) { <div class="who"><i class="fas @(m.IsAssistant ? "fa-robot" : "fa-user-circle")"></i> @m.DisplayName</div> }
+                <div class="bubble">
+                    @if (m.RoomCode != null) { <a class="room" href="@($"phong/{m.RoomCode}")"><i class="fas fa-door-closed"></i> @m.RoomCode</a> }
+                    <span class="text">@m.Text</span>
+                    @if (m.Attachments.Count > 0)
+                    {
+                        <div class="pics">
+                            @foreach (var a in m.Attachments)
+                            {
+                                @if (a.IsImage) { <a href="@a.Path" target="_blank"><img src="@a.Path" alt="" loading="lazy" /></a> }
+                                else { <a href="@a.Path" target="_blank" class="file"><i class="fas fa-file"></i> @a.FileName</a> }
+                            }
+                        </div>
+                    }
+                    <div class="time">@m.SentAt.ToString("HH:mm")
+                        @if (isAdmin || mine) { <button type="button" class="btn btn-link btn-sm p-0 ms-2 text-danger" title="Xóa" @onclick="() => DeleteAsync(m)"><i class="fas fa-trash-alt"></i></button> }
+                    </div>
+                </div>
+            </div>
+        }
+        @if (messages.Count == 0) { <div class="text-center text-muted py-4">Chưa có tin nhắn. Hãy chào mọi người!</div> }
+        @if (aiThinking) { <div class="nh-msg ai"><div class="who"><i class="fas fa-robot"></i> Trợ lý AI</div><div class="bubble"><i class="fas fa-ellipsis-h fa-fade"></i> đang trả lời...</div></div> }
+    </div>
+
+    <div class="nh-chat-input">
+        @if (roomId != null)
+        {
+            <div class="mb-2"><span class="badge bg-primary fs-6 fw-normal"><i class="fas fa-door-closed"></i> @roomCode <button type="button" class="btn-close btn-close-white btn-sm ms-1" @onclick="() => { roomId = null; roomCode = null; }"></button></span></div>
+        }
+        @if (pickRoom)
+        {
+            <div class="nh-card mb-2"><RoomPicker Mode="RoomPicker.PickMode.All" Label="Nói về phòng" Picked="OnRoomPicked" /></div>
+        }
+        <div class="d-flex gap-2 align-items-end">
+            <button type="button" class="btn btn-light" title="Gắn phòng đang nói tới" @onclick="() => pickRoom = !pickRoom"><i class="fas fa-door-closed"></i></button>
+            <FileUpload Kind="Chat" Files="files" FilesChanged="f => files = f" ButtonText="" Camera="true" />
+            <textarea class="form-control" rows="1" placeholder="Nhắn cho mọi người... (@@ai để hỏi trợ lý)" @bind="text" @bind:event="oninput" @onkeydown="OnKey" @ref="input"></textarea>
+            <button type="button" class="btn btn-primary" disabled="@(Busy || (string.IsNullOrWhiteSpace(text) && files.Count == 0))" @onclick="SendAsync"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<ChatMessageView> messages = [];
+    private string? me, text, roomCode;
+    private int? roomId;
+    private bool isAdmin, aiReady, aiThinking, pickRoom, loadedAll;
+    private List<PendingFile> files = [];
+    private IDisposable? sub;
+    private ElementReference input;
+
+    protected override async Task OnInitializedAsync()
+    {
+        me = await GetUserNameAsync();
+        isAdmin = await IsAdminAsync();
+        aiReady = await Scanner.IsConfiguredAsync();
+        messages = await Chats.GetRecentAsync();
+        loadedAll = messages.Count < 100;
+        if (messages.Count > 0 && me != null) await Chats.MarkReadAsync(me, messages[^1].Id);
+        sub = Hub.Subscribe(OnMessageAsync);
+    }
+
+    private Task OnMessageAsync(ChatMessageView m) => InvokeAsync(async () =>
+    {
+        if (messages.Any(x => x.Id == m.Id)) return;
+        messages.Add(m);
+        if (m.IsAssistant) aiThinking = false;
+        if (me != null) await Chats.MarkReadAsync(me, m.Id);
+        StateHasChanged();
+        await ScrollAsync();
+    });
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await ScrollAsync();
+    }
+
+    private async Task ScrollAsync()
+    {
+        try { await JS.InvokeVoidAsync("nhChat.scrollBottom", "chatBody"); } catch (Exception) { }
+    }
+
+    private async Task OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey && !e.CtrlKey) await SendAsync();
+    }
+
+    private async Task SendAsync()
+    {
+        var t = (text ?? "").Trim();
+        if (t.Length == 0 && files.Count == 0) return;
+        var sendFiles = files.ToList();
+        var rid = roomId;
+        bool ask = t.StartsWith("@ai", StringComparison.OrdinalIgnoreCase) || t.StartsWith("/ai", StringComparison.OrdinalIgnoreCase) || t.StartsWith("@trợ lý", StringComparison.OrdinalIgnoreCase);
+        if (await RunAsync(() => Chats.SendAsync(me ?? "?", t, rid, sendFiles)))
+        {
+            text = null;
+            files = [];
+            roomId = null; roomCode = null; pickRoom = false;
+            if (ask && aiReady) aiThinking = true;
+            try { await JS.InvokeVoidAsync("nhChat.clear", input); } catch (Exception) { }
+            await ScrollAsync();
+        }
+    }
+
+    private async Task LoadOlderAsync()
+    {
+        if (messages.Count == 0) return;
+        var older = await Chats.GetRecentAsync(100, messages[0].Id);
+        if (older.Count < 100) loadedAll = true;
+        messages.InsertRange(0, older);
+    }
+
+    private void OnRoomPicked(RoomCard? r)
+    {
+        roomId = r?.Id;
+        roomCode = r?.Code;
+        pickRoom = false;
+    }
+
+    private async Task DeleteAsync(ChatMessageView m)
+    {
+        if (!await ConfirmAsync("Xóa tin nhắn này?")) return;
+        if (await RunAsync(() => Chats.DeleteAsync(m.Id))) messages.Remove(m);
+    }
+
+    public void Dispose() => sub?.Dispose();
+}

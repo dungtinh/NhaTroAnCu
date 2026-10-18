@@ -1,0 +1,24 @@
+{
+  "name": "Nhà trọ An Cư",
+  "short_name": "Nhà trọ",
+  "description": "Quản lý nhà trọ: nhận phòng, trả phòng, thu tiền tháng, sửa chữa, mua sắm, chat nội bộ.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f1f4f9",
+  "theme_color": "#1a5490",
+  "lang": "vi",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Nhận phòng", "url": "/nhan-phong", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Thu tiền tháng", "url": "/thu-tien", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Trả phòng", "url": "/tra-phong", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Chat nội bộ", "url": "/chat", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

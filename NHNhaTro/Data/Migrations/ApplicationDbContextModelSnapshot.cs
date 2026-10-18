@@ -524,6 +524,59 @@ namespace NHNhaTro.Migrations
                     b.ToTable("BlockFurniture");
                 });
 
+            modelBuilder.Entity("NHNhaTro.Data.Entities.ChatMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsAssistant")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("RoomId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Sender")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoomId");
+
+                    b.HasIndex("SentAt");
+
+                    b.ToTable("ChatMessages");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.ChatRead", b =>
+                {
+                    b.Property<string>("UserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("LastReadId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ReadAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("UserName");
+
+                    b.ToTable("ChatReads");
+                });
+
             modelBuilder.Entity("NHNhaTro.Data.Entities.FurnitureItem", b =>
                 {
                     b.Property<int>("Id")
@@ -1175,6 +1228,16 @@ namespace NHNhaTro.Migrations
                     b.Navigation("Block");
 
                     b.Navigation("FurnitureItem");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.ChatMessage", b =>
+                {
+                    b.HasOne("NHNhaTro.Data.Entities.Room", "Room")
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Room");
                 });
 
             modelBuilder.Entity("NHNhaTro.Data.Entities.Lease", b =>

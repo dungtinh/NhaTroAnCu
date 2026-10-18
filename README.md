@@ -85,6 +85,12 @@ Key Gemini miễn phí lấy tại aistudio.google.com/apikey, key Claude tại 
 Khi đã bật, ảnh CCCD tự điền thông tin người ở; ảnh chứng từ (chuyển khoản, hóa đơn) tự điền số tiền, ngày và nội dung ở các ô thu tiền,
 thu cọc, trả cọc, sửa chữa, mua sắm, thu chi. Luôn kiểm tra lại số đã điền.
 
+**Chat nội bộ**: `/chat`, tin đến tức thì qua kết nối SignalR sẵn có của Blazor Server (ChatHub phát trong tiến trình, một máy chủ).
+Gõ `@ai` đầu câu để hỏi trợ lý; trợ lý dùng Gemini/Claude đã cấu hình và được kèm tình hình phòng, nợ hiện tại.
+
+**Cài như ứng dụng (PWA)**: gửi link `https://<tên miền>/app`; trang này có nút cài, hướng dẫn iOS/Android và mã QR.
+Gồm `manifest.webmanifest`, `sw.js` (chỉ hiện trang offline khi mất mạng), biểu tượng trong `wwwroot/icons`.
+
 ## Dữ liệu nghiệm thu
 
 ```bash

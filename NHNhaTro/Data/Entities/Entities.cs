@@ -410,8 +410,31 @@ public class Attachment
     public bool IsImage => System.IO.Path.GetExtension(Path).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".gif" or ".webp" or ".bmp";
 }
 
+/// <summary>Tin nhắn chat nội bộ giữa những người dùng phần mềm.</summary>
+public class ChatMessage
+{
+    public int Id { get; set; }
+    public DateTime SentAt { get; set; }
+    /// <summary>Email đăng nhập của người gửi; "assistant" là trợ lý AI.</summary>
+    public string Sender { get; set; } = "";
+    public string Text { get; set; } = "";
+    /// <summary>Tin nhắn gắn với một phòng (tùy chọn).</summary>
+    public int? RoomId { get; set; }
+    public bool IsAssistant { get; set; }
+    public Room? Room { get; set; }
+}
+
+/// <summary>Tin nhắn cuối mỗi người đã đọc, để đếm chưa đọc.</summary>
+public class ChatRead
+{
+    public string UserName { get; set; } = "";
+    public int LastReadId { get; set; }
+    public DateTime ReadAt { get; set; }
+}
+
 public static class AttachmentOwner
 {
+    public const string Chat = "Chat";
     public const string Lease = "Lease";
     public const string Transaction = "Transaction";
     public const string Repair = "Repair";

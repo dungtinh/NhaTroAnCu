@@ -1,0 +1,108 @@
+@page "/app"
+@attribute [AllowAnonymous]
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+@inject SetupService Setup
+
+<PageTitle>Cài ứng dụng Nhà trọ</PageTitle>
+
+<div class="nh-card nh-install-hero">
+    <div class="icon"><i class="fas fa-building"></i></div>
+    <h2 class="fw-bold mb-1">@(name ?? "Nhà trọ An Cư")</h2>
+    <p class="text-muted">Cài lên điện thoại để mở nhanh như ứng dụng, chạy toàn màn hình, không cần gõ địa chỉ.</p>
+
+    @if (standalone)
+    {
+        <div class="alert alert-success"><i class="fas fa-check-circle"></i> Bạn đang dùng bản ứng dụng đã cài. <a href="">Vào phần mềm</a></div>
+    }
+    else if (canInstall)
+    {
+        <button type="button" class="btn btn-primary btn-lg px-4" @onclick="InstallAsync"><i class="fas fa-download"></i> Cài ứng dụng</button>
+        @if (outcome == "dismissed") { <div class="small text-muted mt-2">Bạn đã bỏ qua. Có thể cài sau từ menu trình duyệt.</div> }
+    }
+    else if (ios)
+    {
+        <div class="text-start d-inline-block">
+            <div class="fw-bold mb-1">Trên iPhone/iPad (Safari):</div>
+            <ol class="nh-install-steps mb-0">
+                <li>Bấm nút <strong>Chia sẻ</strong> <i class="fas fa-share-square"></i> ở thanh dưới Safari.</li>
+                <li>Kéo xuống, chọn <strong>Thêm vào MH chính</strong>.</li>
+                <li>Bấm <strong>Thêm</strong>. Biểu tượng "Nhà trọ" xuất hiện ở màn hình chính.</li>
+            </ol>
+        </div>
+    }
+    else
+    {
+        <div class="text-start d-inline-block">
+            <div class="fw-bold mb-1">Trên Android (Chrome):</div>
+            <ol class="nh-install-steps mb-0">
+                <li>Bấm nút <strong>⋮</strong> góc trên phải.</li>
+                <li>Chọn <strong>Thêm vào màn hình chính</strong> hoặc <strong>Cài đặt ứng dụng</strong>.</li>
+                <li>Bấm <strong>Cài đặt</strong>.</li>
+            </ol>
+            <div class="small text-muted mt-2">Trên máy tính Chrome/Edge: bấm biểu tượng cài đặt <i class="fas fa-download"></i> ở cuối thanh địa chỉ.</div>
+        </div>
+    }
+</div>
+
+<div class="row g-3 mt-1">
+    <div class="col-md-6">
+        <div class="nh-card text-center">
+            <h5>Gửi link cho người khác</h5>
+            <img src="qr.png?to=app&size=10" alt="QR cài ứng dụng" style="max-width: 220px; width: 100%" />
+            <div class="mt-2"><code>@link</code></div>
+            <button type="button" class="btn btn-outline-primary btn-sm mt-2" @onclick="CopyAsync"><i class="fas fa-copy"></i> @(copied ? "Đã chép" : "Chép link")</button>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="nh-card">
+            <h5>Sau khi cài</h5>
+            <ul class="mb-0">
+                <li>Mở từ biểu tượng trên màn hình chính, đăng nhập một lần, lần sau vào thẳng.</li>
+                <li>Nhấn giữ biểu tượng để mở nhanh Nhận phòng, Thu tiền, Trả phòng, Chat.</li>
+                <li>Cần mạng để làm việc; mất mạng sẽ hiện thông báo.</li>
+                <li>Bản ứng dụng luôn là bản mới nhất, không cần cập nhật tay.</li>
+            </ul>
+            <a class="btn btn-success w-100 mt-3" href="">Vào phần mềm</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? name, link, outcome;
+    private bool canInstall, standalone, ios, copied;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { name = (await Setup.GetSettingsAsync()).Name; } catch (InvalidOperationException) { }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        link = await JS.InvokeAsync<string>("eval", "location.origin + '/app'");
+        standalone = await JS.InvokeAsync<bool>("nhInstall.isStandalone");
+        ios = await JS.InvokeAsync<bool>("nhInstall.isIOS");
+        canInstall = await JS.InvokeAsync<bool>("nhInstall.canInstall");
+        StateHasChanged();
+        if (!canInstall && !standalone && !ios)
+        {
+            // Chrome có thể bắn sự kiện cài sau vài giây
+            await Task.Delay(2500);
+            canInstall = await JS.InvokeAsync<bool>("nhInstall.canInstall");
+            StateHasChanged();
+        }
+    }
+
+    private async Task InstallAsync()
+    {
+        outcome = await JS.InvokeAsync<string>("nhInstall.show");
+        if (outcome == "accepted") { standalone = true; }
+        else canInstall = await JS.InvokeAsync<bool>("nhInstall.canInstall");
+    }
+
+    private async Task CopyAsync()
+    {
+        try { await JS.InvokeVoidAsync("navigator.clipboard.writeText", link); copied = true; } catch (Exception) { }
+    }
+}

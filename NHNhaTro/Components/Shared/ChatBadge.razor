@@ -1,0 +1,43 @@
+@* Nút chat trên thanh trên kèm số tin chưa đọc; cập nhật ngay khi có tin mới (qua ChatHub). *@
+@implements IDisposable
+@inject ChatService Chats
+@inject ChatHub Hub
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider Auth
+
+<a class="nh-chatbtn" href="chat" title="Chat nội bộ">
+    <i class="fas fa-comments"></i>
+    @if (unread > 0) { <span class="n">@(unread > 99 ? "99+" : unread.ToString())</span> }
+</a>
+
+@code {
+    private int unread;
+    private string? me;
+    private IDisposable? sub;
+
+    protected override async Task OnInitializedAsync()
+    {
+        me = (await Auth.GetAuthenticationStateAsync()).User.Identity?.Name;
+        if (me == null) return;
+        unread = await Chats.CountUnreadAsync(me);
+        sub = Hub.Subscribe(m => InvokeAsync(async () =>
+        {
+            if (m.Sender == me) return;
+            if (Nav.Uri.TrimEnd('/').EndsWith("/chat", StringComparison.OrdinalIgnoreCase)) { unread = 0; }
+            else unread = await Chats.CountUnreadAsync(me);
+            StateHasChanged();
+        }));
+        Nav.LocationChanged += OnNav;
+    }
+
+    private void OnNav(object? s, LocationChangedEventArgs e)
+    {
+        if (e.Location.TrimEnd('/').EndsWith("/chat", StringComparison.OrdinalIgnoreCase)) { unread = 0; InvokeAsync(StateHasChanged); }
+    }
+
+    public void Dispose()
+    {
+        sub?.Dispose();
+        Nav.LocationChanged -= OnNav;
+    }
+}

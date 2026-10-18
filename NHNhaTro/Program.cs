@@ -60,6 +60,8 @@ builder.Services.AddScoped<SetupService>();
 builder.Services.AddScoped<RoomService>();
 builder.Services.AddScoped<LeaseService>();
 builder.Services.AddScoped<DocumentScanService>();
+builder.Services.AddSingleton<ChatHub>();
+builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<BillingService>();
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<ExpenseService>();
@@ -167,10 +169,12 @@ files.MapGet("/ledger.xlsx", async ([AsParameters] LedgerQuery q, Documents docs
     Results.File(await docs.LedgerAsync(q.ToFilter()), Documents.XlsxMime, $"SoThuChi_{DateTime.Now:yyyyMMdd_HHmm}.xlsx"));
 
 // Mã QR dẫn tới trang giới thiệu (in lên phướn quảng cáo)
-app.MapGet("/qr.png", (HttpContext ctx, int? size) =>
+app.MapGet("/qr.png", (HttpContext ctx, int? size, string? to) =>
 {
-    var url = $"{ctx.Request.Scheme}://{ctx.Request.Host}/gioi-thieu";
-    return Results.File(Documents.QrPng(url, Math.Clamp(size ?? 12, 4, 40)), "image/png", "QR-gioi-thieu.png");
+    // to = "app" cho đường link cài ứng dụng; mặc định trang giới thiệu
+    var path = to == "app" ? "app" : "gioi-thieu";
+    var url = $"{ctx.Request.Scheme}://{ctx.Request.Host}/{path}";
+    return Results.File(Documents.QrPng(url, Math.Clamp(size ?? 12, 4, 40)), "image/png", $"QR-{path}.png");
 });
 
 // Ảnh và chứng từ (đường dẫn /Uploads/...). Thư mục Public (ảnh quảng cáo) xem không cần đăng nhập.

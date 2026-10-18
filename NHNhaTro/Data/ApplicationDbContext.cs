@@ -22,6 +22,8 @@ namespace NHNhaTro.Data
         public DbSet<Repair> Repairs => Set<Repair>();
         public DbSet<Purchase> Purchases => Set<Purchase>();
         public DbSet<Attachment> Attachments => Set<Attachment>();
+        public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+        public DbSet<ChatRead> ChatReads => Set<ChatRead>();
 
         protected override void ConfigureConventions(ModelConfigurationBuilder b)
         {
@@ -176,6 +178,18 @@ namespace NHNhaTro.Data
                 e.Property(x => x.Supplier).HasMaxLength(200);
                 e.Property(x => x.CreatedBy).HasMaxLength(256);
                 e.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId);
+            });
+
+            builder.Entity<ChatMessage>(e =>
+            {
+                e.Property(x => x.Sender).HasMaxLength(256).IsRequired();
+                e.Property(x => x.Text).HasMaxLength(4000).IsRequired();
+                e.HasIndex(x => x.SentAt);
+            });
+            builder.Entity<ChatRead>(e =>
+            {
+                e.HasKey(x => x.UserName);
+                e.Property(x => x.UserName).HasMaxLength(256);
             });
 
             builder.Entity<Attachment>(e =>
