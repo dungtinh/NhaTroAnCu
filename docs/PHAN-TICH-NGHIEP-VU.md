@@ -36,7 +36,8 @@ Những chỗ yêu cầu chưa nói rõ được ghi là **Giả định**; đ�
     Tính theo tháng 30 ngày: vào trước mồng 10 số ngày = 10 − ngày vào; vào sau mồng 10 số ngày = 30 + 10 − ngày vào;
     tiền = giá tháng × số ngày / 30, làm tròn nghìn. Phiếu và màn hình ghi rõ **số ngày × giá ÷ 30**.
     Giá 2.000.000: vào 01/09 → 9 ngày → 600.000đ, thu ngày 10/09. Vào 20/09 → 20 ngày → 1.333.000đ, thu ngày 10/10.
-    Vào đúng mồng 10: không có đoạn lẻ, tháng trả trước tính từ ngày vào, kỳ thu đầu là mồng 10 tháng sau với đủ tháng.
+    Vào đúng mồng 10: thu như bình thường, không thêm bớt gì: khi vào nộp 1 tháng + cọc (tháng trả trước tính từ ngày vào),
+    từ mồng 10 tháng sau thu đủ tháng + điện + nước (xác nhận của chủ nhà 19/10/2026).
   - **Tiền điện** = số điện đã dùng (nhập) × 3.500.
   - **Tiền nước** = số người × 80.000 (đủ tháng, không chia ngày).
 - **Các kỳ sau**: tiền phòng **đủ tháng** (2.000.000) + điện theo số đã dùng + nước cố định ± khoản khác.

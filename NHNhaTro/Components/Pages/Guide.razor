@@ -65,7 +65,8 @@
         <li><strong>Kỳ thu:</strong> từ ngày @billingDay tháng này đến ngày @billingDay tháng sau.</li>
         <li><strong>Khi vào:</strong> thu đủ 1 tháng tiền phòng (trả trước) + cọc. <strong>Kỳ chốt đầu</strong> là ngày @billingDay gần nhất sau ngày vào (vào trước ngày @billingDay → ngày @billingDay tháng đó; vào sau → ngày @billingDay tháng sau): thu tiền phòng từ ngày vào đến ngày chốt (số ngày × giá tháng ÷ 30) + điện theo số đã dùng + nước đủ tháng. Các kỳ sau thu đủ tháng.
             Ví dụ giá 2.000.000đ, cọc 1.000.000đ: vào 01/09 nộp 3.000.000đ; ngày 10/09 thu 9 ngày = 600.000đ + điện + nước; từ 10/10 thu 2.000.000đ + điện + nước.
-            Vào 20/09 nộp 3.000.000đ; ngày 10/10 thu 20 ngày = 1.333.000đ + điện + nước 80.000đ/người; từ 10/11 thu 2.000.000đ + điện + nước.</li>
+            Vào 20/09 nộp 3.000.000đ; ngày 10/10 thu 20 ngày = 1.333.000đ + điện + nước 80.000đ/người; từ 10/11 thu 2.000.000đ + điện + nước.
+            Vào đúng ngày @billingDay: thu như bình thường, không thêm bớt (nộp 1 tháng + cọc khi vào, từ ngày @billingDay tháng sau thu đủ tháng + điện + nước).</li>
         <li><strong>Điện:</strong> @Fmt.Money(s?.ElectricityPrice ?? 0)đ mỗi số. <strong>Nước:</strong> @Fmt.Money(s?.WaterPricePerPerson ?? 0)đ mỗi người mỗi tháng. Đổi ở Cấu hình, không cần ghi ở đâu khác.</li>
         <li><strong>Cọc:</strong> @Fmt.Money(s?.DefaultDeposit ?? 0)đ cho mọi khách (đổi ở Cấu hình), giữ ở tài khoản cá nhân, trả lại khi trả phòng sau khi trừ điện, phạt, nợ.</li>
         <li><strong>Hai tài khoản:</strong> tiền phòng, điện, nước vào <em>hộ kinh doanh</em>; cọc, sửa chữa, mua sắm ở <em>cá nhân</em>. Số dư xem ở Thông tin → Thu chi.</li>

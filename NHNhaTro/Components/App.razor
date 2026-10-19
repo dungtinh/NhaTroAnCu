@@ -26,6 +26,8 @@
 <body>
     <Routes />
     <ReconnectModal />
+    @* Safari cũ (iOS 16.3 trở xuống) chưa có Promise.withResolvers mà Blazor .NET 10 cần khi mở kết nối: không có thì mọi nút đều không bấm được. *@
+    <script>if (!Promise.withResolvers) Promise.withResolvers = function () { var r, j; var p = new Promise(function (res, rej) { r = res; j = rej; }); return { promise: p, resolve: r, reject: j }; };</script>
     <script src="@Assets["lib/bootstrap/dist/js/bootstrap.bundle.min.js"]"></script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script src="@Assets["nh.js"]"></script>
