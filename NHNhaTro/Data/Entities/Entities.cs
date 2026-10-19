@@ -250,6 +250,29 @@ public class Bill
     public List<MoneyTransaction> Payments { get; set; } = [];
 }
 
+/// <summary>
+/// Hóa đơn điện, nước tổng của cả nhà trọ trong một kỳ (chủ nhà trả cho điện lực, công ty nước).
+/// Mỗi kỳ (tháng/năm theo kỳ chốt thu tiền) một dòng; lưu thì sinh dòng chi trong sổ thu chi.
+/// </summary>
+public class UtilityBill
+{
+    public int Id { get; set; }
+    public int Month { get; set; }
+    public int Year { get; set; }
+    /// <summary>Tổng số điện trên hóa đơn điện lực (kWh), để so với tổng số điện thu của khách.</summary>
+    public int? ElectricityKwh { get; set; }
+    public decimal ElectricityAmount { get; set; }
+    /// <summary>Số khối nước trên hóa đơn (m³), không bắt buộc.</summary>
+    public int? WaterM3 { get; set; }
+    public decimal WaterAmount { get; set; }
+    public DateTime PaidDate { get; set; }
+    public int AccountId { get; set; }
+    public string? Note { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public string? CreatedBy { get; set; }
+    public MoneyAccount Account { get; set; } = null!;
+}
+
 // ============================ TÀI KHOẢN, THU CHI ============================
 
 public static class AccountKind
@@ -324,6 +347,8 @@ public class MoneyTransaction
     public int? BillId { get; set; }
     public int? RepairId { get; set; }
     public int? PurchaseId { get; set; }
+    /// <summary>Dòng chi sinh từ hóa đơn điện, nước tổng của tháng.</summary>
+    public int? UtilityBillId { get; set; }
     /// <summary>Hai dòng của một lần chuyển nội bộ dùng chung mã này.</summary>
     public Guid? TransferGroup { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -437,6 +462,7 @@ public static class AttachmentOwner
     public const string Transaction = "Transaction";
     public const string Repair = "Repair";
     public const string Purchase = "Purchase";
+    public const string Utility = "Utility";
     public const string Site = "Site";
     public const string Room = "Room";
 }

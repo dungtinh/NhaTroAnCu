@@ -39,8 +39,24 @@ public class ManualTransactionForm
 }
 
 public record MonthlyCategoryRow(string Category, decimal Income, decimal Expense);
-public record MonthlyReportData(int Month, int Year, List<(MoneyAccount Account, decimal Opening, decimal Income, decimal Expense, decimal Closing)> Accounts,
-    List<MonthlyCategoryRow> Categories, List<(string RoomCode, decimal Amount)> RevenueByRoom);
+
+/// <summary>Một tháng trong báo cáo quý/năm: thu, chi (không tính chuyển nội bộ, cọc giữ hộ).</summary>
+public record PeriodPoint(int Month, int Year, decimal Income, decimal Expense)
+{
+    public decimal Profit => Income - Expense;
+}
+
+/// <summary>Điện nước trong kỳ báo cáo: tính cho khách theo phiếu và trả tổng cho điện lực, nước sạch.</summary>
+public record UtilitySummary(int BilledKwh, decimal BilledElectricity, decimal BilledWater, int? PaidKwh, decimal PaidElectricity, decimal PaidWater);
+
+public record ReportData(DateTime From, DateTime To, List<(MoneyAccount Account, decimal Opening, decimal Income, decimal Expense, decimal Closing)> Accounts,
+    List<MonthlyCategoryRow> Categories, List<(string RoomCode, decimal Amount)> RevenueByRoom, List<PeriodPoint> Months, UtilitySummary Utility,
+    decimal DepositIn, decimal DepositOut)
+{
+    public decimal Income => Months.Sum(m => m.Income);
+    public decimal Expense => Months.Sum(m => m.Expense);
+    public decimal Profit => Income - Expense;
+}
 
 public class AccountService(IDbContextFactory<ApplicationDbContext> dbFactory, FileStorage files)
 {
@@ -132,6 +148,8 @@ public class AccountService(IDbContextFactory<ApplicationDbContext> dbFactory, F
         var tx = await db.Transactions.FindAsync(id) ?? throw new InvalidOperationException("Không tìm thấy giao dịch.");
         if (tx.RepairId != null || tx.PurchaseId != null)
             throw new InvalidOperationException("Giao dịch của phiếu sửa chữa/mua sắm: hãy xóa phiếu đó.");
+        if (tx.UtilityBillId != null)
+            throw new InvalidOperationException("Đây là tiền điện/nước tổng của kỳ: sửa hoặc xóa ở trang Ghi số điện.");
         var list = tx.TransferGroup != null ? await db.Transactions.Where(t => t.TransferGroup == tx.TransferGroup).ToListAsync() : [tx];
         var ids = list.Select(t => t.Id).ToList();
         var atts = await db.Attachments.Where(a => a.EntityType == AttachmentOwner.Transaction && ids.Contains(a.EntityId)).ToListAsync();
@@ -141,30 +159,51 @@ public class AccountService(IDbContextFactory<ApplicationDbContext> dbFactory, F
         foreach (var a in atts) files.Delete(a.Path);
     }
 
-    public async Task<MonthlyReportData> GetMonthlyReportAsync(int month, int year)
+    /// <summary>Không phải doanh thu/chi phí: chuyển giữa hai tài khoản, cọc giữ hộ khách.</summary>
+    private static bool IsNonOperating(string category) => category is TxCategory.Transfer or TxCategory.Deposit or TxCategory.DepositRefund;
+
+    /// <summary>Báo cáo thu chi cho khoảng [from, to) (tháng, quý hoặc năm), kèm số liệu từng tháng.</summary>
+    public async Task<ReportData> GetReportAsync(DateTime from, DateTime to)
     {
-        var from = new DateTime(year, month, 1);
-        var to = from.AddMonths(1);
+        from = from.Date; to = to.Date;
         await using var db = await dbFactory.CreateDbContextAsync();
         var accounts = await db.Accounts.AsNoTracking().OrderBy(a => a.Id).ToListAsync();
         var before = await db.Transactions.Where(t => t.Date < from).GroupBy(t => t.AccountId).Select(g => new { g.Key, Sum = g.Sum(t => t.Amount) }).ToDictionaryAsync(x => x.Key, x => x.Sum);
-        var monthTx = await db.Transactions.AsNoTracking().Include(t => t.Room).Where(t => t.Date >= from && t.Date < to).ToListAsync();
+        var txs = await db.Transactions.AsNoTracking().Include(t => t.Room).Where(t => t.Date >= from && t.Date < to).ToListAsync();
 
         var accRows = accounts.Select(a =>
         {
             var opening = a.OpeningBalance + before.GetValueOrDefault(a.Id);
-            var inc = monthTx.Where(t => t.AccountId == a.Id && t.Amount > 0).Sum(t => t.Amount);
-            var exp = -monthTx.Where(t => t.AccountId == a.Id && t.Amount < 0).Sum(t => t.Amount);
+            var inc = txs.Where(t => t.AccountId == a.Id && t.Amount > 0).Sum(t => t.Amount);
+            var exp = -txs.Where(t => t.AccountId == a.Id && t.Amount < 0).Sum(t => t.Amount);
             return (a, opening, inc, exp, opening + inc - exp);
         }).ToList();
 
-        var cats = monthTx.Where(t => t.Category != TxCategory.Transfer).GroupBy(t => t.Category)
+        var cats = txs.Where(t => t.Category != TxCategory.Transfer).GroupBy(t => t.Category)
             .Select(g => new MonthlyCategoryRow(g.Key, g.Where(t => t.Amount > 0).Sum(t => t.Amount), -g.Where(t => t.Amount < 0).Sum(t => t.Amount)))
             .OrderByDescending(r => r.Income + r.Expense).ToList();
 
-        var byRoom = monthTx.Where(t => t.Amount > 0 && t.Room != null && t.Category is TxCategory.BillPayment or TxCategory.Rent or TxCategory.Electricity or TxCategory.Water or TxCategory.Penalty)
-            .GroupBy(t => t.Room!.Code).Select(g => (g.Key, g.Sum(t => t.Amount))).OrderBy(x => x.Key).ToList();
+        var byRoom = txs.Where(t => t.Amount > 0 && t.Room != null && t.Category is TxCategory.BillPayment or TxCategory.Rent or TxCategory.Electricity or TxCategory.Water or TxCategory.Penalty)
+            .GroupBy(t => t.Room!.Code).Select(g => (g.Key, g.Sum(t => t.Amount))).OrderByDescending(x => x.Item2).ToList();
 
-        return new MonthlyReportData(month, year, accRows, cats, byRoom);
+        var ops = txs.Where(t => !IsNonOperating(t.Category)).ToList();
+        var months = new List<PeriodPoint>();
+        for (var m = new DateTime(from.Year, from.Month, 1); m < to; m = m.AddMonths(1))
+        {
+            var inMonth = ops.Where(t => t.Date.Year == m.Year && t.Date.Month == m.Month).ToList();
+            months.Add(new PeriodPoint(m.Month, m.Year, inMonth.Where(t => t.Amount > 0).Sum(t => t.Amount), -inMonth.Where(t => t.Amount < 0).Sum(t => t.Amount)));
+        }
+
+        // Điện nước: kỳ thu (tháng/năm của phiếu) nằm trong khoảng báo cáo
+        int fromKey = from.Year * 12 + from.Month - 1, toKey = to.Year * 12 + to.Month - 1;
+        var bills = await db.Bills.AsNoTracking().Where(b => b.Year * 12 + b.Month - 1 >= fromKey && b.Year * 12 + b.Month - 1 < toKey)
+            .Select(b => new { b.ElectricityKwh, b.ElectricityAmount, b.WaterAmount }).ToListAsync();
+        var utils = await db.UtilityBills.AsNoTracking().Where(u => u.Year * 12 + u.Month - 1 >= fromKey && u.Year * 12 + u.Month - 1 < toKey).ToListAsync();
+        var utility = new UtilitySummary(bills.Sum(b => b.ElectricityKwh), bills.Sum(b => b.ElectricityAmount), bills.Sum(b => b.WaterAmount),
+            utils.Any(u => u.ElectricityKwh != null) ? utils.Sum(u => u.ElectricityKwh ?? 0) : null, utils.Sum(u => u.ElectricityAmount), utils.Sum(u => u.WaterAmount));
+
+        decimal depIn = txs.Where(t => t.Category == TxCategory.Deposit).Sum(t => t.Amount);
+        decimal depOut = -txs.Where(t => t.Category == TxCategory.DepositRefund).Sum(t => t.Amount);
+        return new ReportData(from, to, accRows, cats, byRoom, months, utility, depIn, depOut);
     }
 }

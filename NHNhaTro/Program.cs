@@ -63,6 +63,7 @@ builder.Services.AddScoped<DocumentScanService>();
 builder.Services.AddSingleton<ChatHub>();
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<BillingService>();
+builder.Services.AddScoped<UtilityService>();
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<ExpenseService>();
 builder.Services.AddScoped<AttachmentService>();
@@ -163,6 +164,13 @@ files.MapGet("/residents.xlsx", async (bool? all, string? q, LeaseService leases
 {
     var rows = await leases.ListResidentsAsync(all != true, q);
     return Results.File(await docs.ResidentRegisterAsync(rows), Documents.XlsxMime, $"SoLuuTru_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
+});
+
+// Mẫu Excel ghi số điện các phòng của kỳ (điền cột "Số điện (kWh)" rồi nhập lại ở trang Ghi số điện)
+files.MapGet("/so-dien.xlsx", async (int month, int year, BillingService billing) =>
+{
+    var sheet = await billing.GetSheetAsync(month, year);
+    return Results.File(Documents.MeterTemplate(sheet), Documents.XlsxMime, $"SoDien_{year}{month:00}.xlsx");
 });
 
 files.MapGet("/ledger.xlsx", async ([AsParameters] LedgerQuery q, Documents docs) =>

@@ -10,7 +10,7 @@
 <div class="nh-ops mb-3">
     <a class="nh-op in" href="nhan-phong"><i class="fas fa-door-open"></i><span>Nhận phòng</span><small>Khách mới vào ở</small></a>
     <a class="nh-op out" href="tra-phong"><i class="fas fa-sign-out-alt"></i><span>Trả phòng</span><small>Khách chuyển đi</small></a>
-    <a class="nh-op bill" href="thu-tien"><i class="fas fa-file-invoice-dollar"></i><span>Thu tiền tháng</span><small>Ghi số điện, thu tiền</small></a>
+    <a class="nh-op bill" href="thu-tien"><i class="fas fa-file-invoice-dollar"></i><span>Thu tiền tháng</span><small>Lập phiếu, thu tiền, in phiếu</small></a>
     <a class="nh-op fix" href="sua-chua"><i class="fas fa-tools"></i><span>Sửa chữa</span><small>Ảnh + chứng từ</small></a>
     <a class="nh-op buy" href="mua-sam"><i class="fas fa-shopping-cart"></i><span>Mua sắm</span><small>Hóa đơn</small></a>
 </div>
@@ -36,7 +36,7 @@
         <div class="nh-card mb-3">
             <h5><i class="fas fa-bolt text-primary"></i> Chưa ghi số điện kỳ @map.BillingMonth.ToString("00")/@map.BillingYear (@noBill.Count)</h5>
             <div class="nh-chips">
-                @foreach (var r in noBill) { <a class="btn btn-sm btn-outline-primary" href="thu-tien">@r.Code</a> }
+                @foreach (var r in noBill) { <a class="btn btn-sm btn-outline-primary" href="so-dien">@r.Code</a> }
             </div>
         </div>
     }

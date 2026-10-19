@@ -42,6 +42,12 @@ Những chỗ yêu cầu chưa nói rõ được ghi là **Giả định**; đ�
   theo **dãy A → B, tầng thấp → cao, số phòng bé → to**. Mỗi dòng chỉ cần **nhập số điện đã dùng**; tiền phòng, nước, điện tự tính
   theo cấu hình. Có nút **Lập phiếu / Lưu**, **Thu tiền** (kèm chứng từ), **In phiếu thu**; trạng thái **Đã thu / Chưa thu**.
 - Phòng nhận trong chính tháng đó chưa đến kỳ chốt đầu nên không hiện (có thể bật "Hiện cả phòng không cần lập").
+- **Ghi số điện** là bước riêng (trang Ghi số điện, cập nhật 20/10/2026): bảng mọi phòng cần thu kỳ này theo dãy, tầng;
+  gõ số điện đã dùng từng phòng (Enter xuống phòng sau) hoặc **nhập từ file Excel** (tải file mẫu, điền cột "Số điện (kWh)").
+  Lưu thì lập/cập nhật phiếu tháng. Màn hình Thu tiền tháng chỉ còn thu tiền, sửa phiếu, in phiếu.
+- **Tiền điện, nước tổng** của cả dãy trọ (hóa đơn điện lực, nước sạch) nhập mỗi kỳ ở trang Ghi số điện: tổng số điện (kWh),
+  tiền điện, số nước (m³), tiền nước, ngày trả, tài khoản chi (mặc định hộ kinh doanh), chứng từ. Lưu thì ghi 2 khoản chi
+  "Tiền điện", "Tiền nước" vào sổ thu chi; có bảng so sánh số điện, tiền điện, nước thu của khách với số trả tổng.
 - Thu tiền vào tài khoản hộ kinh doanh, thu một phần được, theo dõi còn nợ.
 
 ### Trả phòng (khách ra)
@@ -69,7 +75,9 @@ Những chỗ yêu cầu chưa nói rõ được ghi là **Giả định**; đ�
 ## 5. Tài khoản và báo cáo
 - 2 tài khoản: **Cá nhân** và **Hộ kinh doanh**, mỗi tài khoản có **số dư đầu kỳ** và ngày đầu kỳ.
 - Mọi khoản thu/chi ghi vào một tài khoản; số dư hiện tại = đầu kỳ + thu − chi. Chuyển tiền giữa 2 tài khoản được ghi 2 dòng.
-- Báo cáo theo tháng và theo loại: tiền phòng, điện, nước, cọc, trả cọc, phạt, sửa chữa, mua sắm, quảng cáo, khác.
+- Báo cáo theo **tháng, quý, năm**: doanh thu, chi phí, lãi (không tính chuyển nội bộ và cọc giữ hộ), bảng và biểu đồ từng tháng,
+  theo loại (tiền phòng, điện, nước, cọc, trả cọc, phạt, sửa chữa, mua sắm, quảng cáo, khác), điện nước tính cho khách so với trả tổng,
+  số dư từng tài khoản đầu/cuối kỳ, doanh thu theo phòng.
 
 ## 6. Quảng cáo
 - Trang **giới thiệu công khai** (không cần đăng nhập): ảnh nhà trọ, bản đồ **định vị**, mô tả, số điện thoại,

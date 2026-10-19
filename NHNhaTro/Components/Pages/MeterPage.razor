@@ -1,0 +1,248 @@
+@page "/so-dien"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject BillingService Billing
+@inject UtilityService Utility
+@inject SetupService Setup
+
+<PageTitle>Ghi số điện</PageTitle>
+
+<div class="nh-page-title">
+    <h2><i class="fas fa-bolt"></i> Ghi số điện</h2>
+    <div class="nh-month">
+        <button type="button" class="btn" title="Kỳ trước" @onclick="() => ShiftAsync(-1)"><i class="fas fa-chevron-left"></i></button>
+        <input type="month" class="form-control" value="@($"{year:0000}-{month:00}")" @onchange="OnMonthChanged" />
+        <button type="button" class="btn" title="Kỳ sau" @onclick="() => ShiftAsync(1)"><i class="fas fa-chevron-right"></i></button>
+    </div>
+</div>
+
+@if (sheet == null)
+{
+    <div class="nh-skeleton nh-card"></div>
+}
+else
+{
+    decimal ep = sheet.ElectricityPrice;
+    int filled = rows.Count(r => r.Kwh != null), totalKwh = rows.Sum(r => Math.Max(0, r.Kwh ?? 0));
+    decimal collectEl = rows.Sum(r => r.Electricity(ep)), collectWa = rows.Sum(r => r.Water(sheet.WaterPerPerson));
+
+    <div class="nh-toolbar">
+        <div class="hint"><i class="fas fa-keyboard"></i> Gõ số điện đã dùng từng phòng, bấm <kbd>Enter</kbd> để xuống phòng sau. Đã ghi <strong>@filled/@rows.Count</strong> phòng.</div>
+        <div class="tools">
+            <a class="btn btn-outline-success" href="@($"files/so-dien.xlsx?month={month}&year={year}")" target="_blank"><i class="fas fa-file-excel"></i> Tải file mẫu</a>
+            <label class="btn btn-success mb-0 @(importing ? "disabled" : "")">
+                <i class="fas @(importing ? "fa-spinner fa-spin" : "fa-file-import")"></i> Nhập từ Excel
+                <InputFile class="d-none" accept=".xlsx" OnChange="ImportAsync" />
+            </label>
+        </div>
+    </div>
+
+    <div class="nh-gwrap">
+        <div class="nh-gtable meter">
+            <div class="gr gh">
+                <div>Phòng</div><div>Người thuê</div><div class="n">Người</div><div class="n">Số điện (kWh)</div><div class="n">Tiền điện</div><div>Phiếu</div>
+            </div>
+            @foreach (var floor in rows.GroupBy(r => (r.BlockCode, r.Floor)))
+            {
+                <div class="gr sec"><div>Dãy @floor.Key.BlockCode · @(floor.Key.Floor == 0 ? "Tầng trệt" : $"Tầng {floor.Key.Floor}")</div></div>
+                @foreach (var r in floor)
+                {
+                    bool changed = r.Kwh != original.GetValueOrDefault(r.LeaseId);
+                    <div class="gr @(changed ? "changed" : "") @(imported.Contains(r.LeaseId) ? "imported" : "")" @key="r.LeaseId">
+                        <div class="c-room"><a href="@($"phong/{r.RoomCode}")" class="room">@r.RoomCode</a></div>
+                        <div class="c-name"><div class="name">@r.Representative</div>
+                            @if (r.IsFirstMonth) { <div class="sub">Kỳ đầu từ @Fmt.Date(r.PeriodFrom)</div> }</div>
+                        <div class="c-ppl n">@r.PersonCount</div>
+                        <div class="c-kwh n"><input type="number" min="0" inputmode="numeric" placeholder="-" class="form-control nh-kwh @(r.Kwh < 0 ? "is-invalid" : "")" @bind="r.Kwh" @bind:event="oninput" /></div>
+                        <div class="c-money n">@(r.Kwh is int ? Fmt.Money(r.Electricity(ep)) : "")</div>
+                        <div class="c-state">
+                            @if (r.IsPaid(ep, sheet.WaterPerPerson)) { <span class="pill pill-done"><i class="fas fa-check"></i> Đã thu</span> }
+                            else if (r.BillId != null) { <span class="pill pill-unpaid">Đã lập</span> }
+                            else { <span class="pill pill-skip">Chưa lập</span> }
+                        </div>
+                    </div>
+                }
+            }
+            @if (rows.Count == 0) { <div class="gr sec"><div class="text-center text-muted py-3">Không có phòng nào cần ghi số điện kỳ này.</div></div> }
+        </div>
+    </div>
+
+    <div class="nh-action-bar justify-content-end">
+        <a class="btn btn-outline-primary" href="thu-tien"><i class="fas fa-file-invoice-dollar"></i> Thu tiền</a>
+        <button type="button" class="btn btn-primary btn-lg" disabled="@(Busy || ChangedCount == 0)" @onclick="SaveAllAsync">
+            <i class="fas @(Busy ? "fa-spinner fa-spin" : "fa-save")"></i> Lưu<span class="d-none d-sm-inline"> số điện và lập phiếu</span> @(ChangedCount > 0 ? $"({ChangedCount})" : "")
+        </button>
+    </div>
+
+    <div class="row g-3 mt-1">
+        <div class="col-xl-7">
+            <section class="nh-card h-100">
+                <h5><i class="fas fa-file-invoice text-warning"></i> Tiền điện, nước tổng kỳ chốt @Fmt.Date(sheet.DueDate)</h5>
+                <div class="small text-muted mb-2">Hóa đơn chung của cả dãy trọ (điện lực, nước sạch). Lưu thì ghi khoản chi vào sổ thu chi.</div>
+                <div class="nh-form-grid">
+                    <label class="nh-field"><span>Tổng số điện <small>kWh, không bắt buộc</small></span><input type="number" min="0" inputmode="numeric" class="form-control" @bind="ub.ElectricityKwh" /></label>
+                    <label class="nh-field"><span>Tiền điện tổng</span><MoneyInput @bind-Value="ub.ElectricityAmount" /></label>
+                    <label class="nh-field"><span>Số nước <small>m³, không bắt buộc</small></span><input type="number" min="0" inputmode="numeric" class="form-control" @bind="ub.WaterM3" /></label>
+                    <label class="nh-field"><span>Tiền nước tổng</span><MoneyInput @bind-Value="ub.WaterAmount" /></label>
+                    <label class="nh-field"><span>Ngày trả</span><input type="date" class="form-control" @bind="ub.PaidDate" /></label>
+                    <label class="nh-field"><span>Chi từ tài khoản</span>
+                        <select class="form-select" @bind="ub.AccountId">@foreach (var a in accounts) { <option value="@a.Id">@a.Name</option> }</select></label>
+                    <label class="nh-field wide"><span>Ghi chú</span><input class="form-control" maxlength="500" @bind="ub.Note" /></label>
+                </div>
+                <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
+                    <FileUpload Kind="Receipts" ButtonText="Hóa đơn, chứng từ" @bind-Files="ub.Receipts" />
+                    @if (utilityBill != null) { <AttachmentList EntityType="@AttachmentOwner.Utility" EntityId="utilityBill.Id" ShowEmpty="false" CanDelete="isAdmin" Version="version" /> }
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <button type="button" class="btn btn-warning" disabled="@Busy" @onclick="SaveUtilityAsync"><i class="fas fa-save"></i> @(utilityBill == null ? "Lưu tiền điện nước tổng" : "Cập nhật")</button>
+                    @if (utilityBill != null && isAdmin) { <button type="button" class="btn btn-outline-danger" disabled="@Busy" @onclick="DeleteUtilityAsync"><i class="fas fa-trash"></i> Xóa</button> }
+                    @if (utilityBill != null) { <span class="small text-success align-self-center"><i class="fas fa-check-circle"></i> Đã ghi @Fmt.Vnd(utilityBill.ElectricityAmount + utilityBill.WaterAmount) ngày @Fmt.Date(utilityBill.PaidDate)</span> }
+                </div>
+            </section>
+        </div>
+        <div class="col-xl-5">
+            <section class="nh-card h-100">
+                <h5><i class="fas fa-scale-balanced text-primary"></i> So sánh kỳ này</h5>
+                <table class="nh-compare">
+                    <thead><tr><th></th><th>Thu của khách</th><th>Trả tổng</th><th>Chênh lệch</th></tr></thead>
+                    <tbody>
+                        <tr><th>Số điện</th><td>@totalKwh</td><td>@(utilityBill?.ElectricityKwh?.ToString() ?? "-")</td>
+                            <td class="@Diff(totalKwh, utilityBill?.ElectricityKwh)">@(utilityBill?.ElectricityKwh is int k ? (totalKwh - k).ToString("+#;-#;0") : "-")</td></tr>
+                        <tr><th>Tiền điện</th><td>@Fmt.Money(collectEl)</td><td>@(utilityBill == null ? "-" : Fmt.Money(utilityBill.ElectricityAmount))</td>
+                            <td class="@Diff(collectEl, utilityBill?.ElectricityAmount)">@(utilityBill == null ? "-" : Signed(collectEl - utilityBill.ElectricityAmount))</td></tr>
+                        <tr><th>Tiền nước</th><td>@Fmt.Money(collectWa)</td><td>@(utilityBill == null ? "-" : Fmt.Money(utilityBill.WaterAmount))</td>
+                            <td class="@Diff(collectWa, utilityBill?.WaterAmount)">@(utilityBill == null ? "-" : Signed(collectWa - utilityBill.WaterAmount))</td></tr>
+                    </tbody>
+                </table>
+                <div class="small text-muted mt-2">Thu của khách tính theo số điện đã ghi bên dưới (@filled/@rows.Count phòng) và số người đang ở.</div>
+            </section>
+        </div>
+    </div>
+
+}
+
+@code {
+    private int month, year;
+    private BillingSheet? sheet;
+    private List<BillingRow> rows = [];
+    private Dictionary<int, int?> original = [];
+    private HashSet<int> imported = [];
+    private UtilityBill? utilityBill;
+    private UtilityBillForm ub = new();
+    private List<MoneyAccount> accounts = [];
+    private AppSetting? settings;
+    private bool isAdmin, importing;
+    private int version;
+
+    private int ChangedCount => rows.Count(r => r.Kwh != null && r.Kwh != original.GetValueOrDefault(r.LeaseId));
+
+    private static string Diff(decimal a, decimal? b) => b is not decimal x ? "" : a - x >= 0 ? "text-success" : "text-danger";
+    private static string Signed(decimal v) => (v > 0 ? "+" : "") + Fmt.Money(v);
+
+    protected override async Task OnInitializedAsync()
+    {
+        isAdmin = await IsAdminAsync();
+        settings = await Setup.GetSettingsAsync();
+        accounts = (await Setup.GetAccountsAsync()).Where(a => a.IsActive).ToList();
+        (month, year) = RoomService.CurrentBillingPeriod(settings.BillingDay);
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        sheet = await Billing.GetSheetAsync(month, year);
+        rows = sheet.Rows.Where(r => !r.SkipThisMonth).OrderBy(r => r.BlockCode).ThenBy(r => r.Floor).ThenBy(r => r.Number).ToList();
+        original = rows.ToDictionary(r => r.LeaseId, r => r.Kwh);
+        imported.Clear();
+        utilityBill = await Utility.GetAsync(month, year);
+        ub = utilityBill == null
+            ? new UtilityBillForm { Month = month, Year = year, AccountId = settings!.BusinessAccountId, PaidDate = DateTime.Today }
+            : new UtilityBillForm
+            {
+                Month = month, Year = year, ElectricityKwh = utilityBill.ElectricityKwh, ElectricityAmount = utilityBill.ElectricityAmount,
+                WaterM3 = utilityBill.WaterM3, WaterAmount = utilityBill.WaterAmount, PaidDate = utilityBill.PaidDate, AccountId = utilityBill.AccountId, Note = utilityBill.Note
+            };
+        version++;
+    }
+
+    private async Task ShiftAsync(int delta)
+    {
+        if (ChangedCount > 0 && !await ConfirmAsync($"Có {ChangedCount} phòng đã sửa số điện chưa lưu. Bỏ qua và chuyển kỳ?")) return;
+        var d = new DateTime(year, month, 1).AddMonths(delta);
+        (month, year) = (d.Month, d.Year);
+        sheet = null;
+        await LoadAsync();
+    }
+
+    private async Task OnMonthChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParseExact(e.Value?.ToString(), "yyyy-MM", null, System.Globalization.DateTimeStyles.None, out var d))
+        {
+            (month, year) = (d.Month, d.Year);
+            sheet = null;
+            await LoadAsync();
+        }
+    }
+
+    private async Task SaveAllAsync()
+    {
+        var user = await GetUserNameAsync();
+        var todo = rows.Where(r => r.Kwh != null && r.Kwh != original.GetValueOrDefault(r.LeaseId)).ToList();
+        int ok = 0;
+        var errors = new List<string>();
+        Busy = true;
+        try
+        {
+            foreach (var r in todo)
+            {
+                try { await Billing.SaveBillAsync(month, year, r, user); ok++; }
+                catch (InvalidOperationException ex) { errors.Add(ex.Message); }
+            }
+        }
+        finally { Busy = false; }
+        if (ok > 0) Toast.Success($"Đã lưu số điện và lập phiếu {ok} phòng.");
+        foreach (var e in errors) Toast.Error(e);
+        await LoadAsync();
+    }
+
+    private async Task ImportAsync(InputFileChangeEventArgs e)
+    {
+        importing = true;
+        try
+        {
+            using var ms = new MemoryStream();
+            await e.File.OpenReadStream(5 * 1024 * 1024).CopyToAsync(ms);
+            ms.Position = 0;
+            var (values, errors) = Documents.ParseMeterSheet(ms);
+            var byCode = rows.ToDictionary(r => r.RoomCode, StringComparer.OrdinalIgnoreCase);
+            int n = 0;
+            imported.Clear();
+            foreach (var (code, kwh) in values)
+            {
+                if (byCode.TryGetValue(code, out var r)) { r.Kwh = kwh; imported.Add(r.LeaseId); n++; }
+                else errors.Add($"Phòng {code} không có khách cần ghi số điện kỳ này.");
+            }
+            if (n > 0) Toast.Success($"Đã điền số điện {n} phòng từ Excel. Kiểm tra rồi bấm Lưu.");
+            else Toast.Warning("Không tìm thấy số điện nào trong file.");
+            foreach (var err in errors.Take(8)) Toast.Warning(err);
+        }
+        catch (InvalidOperationException ex) { Toast.Error(ex.Message); }
+        catch (IOException) { Toast.Error("File quá lớn (tối đa 5MB)."); }
+        finally { importing = false; }
+    }
+
+    private async Task SaveUtilityAsync()
+    {
+        var user = await GetUserNameAsync();
+        ub.Month = month; ub.Year = year;
+        if (await RunAsync(() => Utility.SaveAsync(ub, user), "Đã lưu tiền điện, nước tổng và ghi khoản chi vào sổ thu chi."))
+            await LoadAsync();
+    }
+
+    private async Task DeleteUtilityAsync()
+    {
+        if (utilityBill == null || !await ConfirmAsync("Xóa tiền điện, nước tổng của kỳ này và khoản chi trong sổ thu chi?")) return;
+        if (await RunAsync(() => Utility.DeleteAsync(utilityBill.Id), "Đã xóa.")) await LoadAsync();
+    }
+}

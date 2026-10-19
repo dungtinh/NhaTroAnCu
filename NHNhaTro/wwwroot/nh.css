@@ -150,16 +150,17 @@ a.nh-list-item:hover { box-shadow: var(--nh-shadow-2); transform: translateY(-1p
 .nh-list-item .code { font-weight: 800; font-size: 1.15rem; color: #1e3a5f; text-decoration: none; }
 .nh-meter { font-size: 1.35rem !important; font-weight: 700; text-align: center; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
 
-/* ---------- Thu tiền tháng: một thẻ cho mọi cỡ màn hình, container query xếp thành hàng khi rộng ---------- */
+/* ---------- Thanh chọn kỳ, thanh công cụ, công tắc ---------- */
 .nh-month { display: inline-flex; align-items: center; background: #fff; border: 1px solid var(--nh-border); border-radius: 999px; padding: 3px; box-shadow: var(--nh-shadow-1); }
 .nh-month .btn { border: 0; border-radius: 999px; width: 38px; height: 38px; min-height: 38px; padding: 0; display: grid; place-items: center; color: var(--nh-primary); background: transparent; }
 .nh-month .btn:hover { background: color-mix(in srgb, var(--nh-primary-2) 10%, #fff); }
-.nh-month .form-control { border: 0; box-shadow: none; width: 165px; min-height: 36px; font-weight: 700; color: #1e3a5f; text-align: center; background: transparent; }
+.nh-month .form-control { border: 0; box-shadow: none; width: 190px; min-height: 36px; font-weight: 700; color: #1e3a5f; text-align: center; background: transparent; }
 .nh-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 16px; margin-bottom: 12px; padding: 10px 14px;
   background: color-mix(in srgb, var(--nh-primary-2) 6%, #fff); border: 1px solid color-mix(in srgb, var(--nh-primary-2) 18%, var(--nh-border)); border-radius: 14px; }
 .nh-toolbar .hint { color: #334155; font-size: .88rem; }
-.nh-toolbar .hint i { color: #f59e0b; }
-.nh-toolbar .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.nh-toolbar .hint > i { color: #f59e0b; }
+.nh-toolbar .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.nh-toolbar kbd { background: #1e293b; font-size: .75rem; }
 .nh-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; user-select: none; position: relative; }
 .nh-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
 .nh-switch span { width: 40px; height: 22px; border-radius: 999px; background: #cbd5e1; position: relative; transition: background .2s var(--nh-ease); flex: 0 0 auto; }
@@ -167,94 +168,100 @@ a.nh-list-item:hover { box-shadow: var(--nh-shadow-2); transform: translateY(-1p
 .nh-switch input:checked + span { background: var(--nh-primary-2); }
 .nh-switch input:checked + span::after { translate: 18px 0; }
 .nh-switch small { color: #475569; }
+.pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 2px 10px; font-size: .74rem; font-weight: 700; white-space: nowrap; max-width: 100%; }
 
-.nh-bills { container-type: inline-size; display: flex; flex-direction: column; gap: 10px; }
-.nh-group { display: flex; align-items: center; gap: 8px; margin: 8px 2px 0; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #64748b;
-  position: sticky; top: 58px; z-index: 2; padding: 6px 0; background: var(--nh-bg); box-shadow: 0 6px 8px -6px rgba(15,23,42,.12); }
-.nh-group .dot { width: 10px; height: 10px; border-radius: 50%; } .nh-group .dot.red { background: #ef4444; } .nh-group .dot.green { background: #22c55e; }
-.nh-group .n { background: #e2e8f0; color: #334155; border-radius: 999px; padding: 0 8px; font-size: .75rem; }
-
-.nh-bill { display: grid; grid-template-columns: 1fr; gap: 12px; padding: 14px; background: #fff; border: 1px solid var(--nh-border); border-radius: 18px; box-shadow: var(--nh-shadow-1);
-  transition: opacity .35s var(--nh-ease), translate .35s var(--nh-ease), box-shadow .25s var(--nh-ease), border-color .25s, background-color .3s; }
-@starting-style { .nh-bill { opacity: 0; translate: 0 8px; } }
-.nh-bill:hover { box-shadow: var(--nh-shadow-2); }
-.nh-bill:focus-within { border-color: color-mix(in srgb, var(--nh-primary-2) 45%, var(--nh-border)); }
-.nh-bill.done { background: linear-gradient(180deg, #f0fdf4, #fff 70%); border-color: #bbf7d0; }
-.nh-bill.unpaid { border-left: 4px solid #ef4444; }
-.nh-bill.new { border-left: 4px solid var(--nh-primary-2); }
-.nh-bill.skip { opacity: .75; }
-
-.nh-bill .head { display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; align-items: center; }
-/* Điện thoại: tên khách chiếm cả dòng, số tiền và nhãn tình trạng xuống dòng dưới */
-.nh-bill .head .amount { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; padding-top: 6px; border-top: 1px dashed #e2e8f0; }
-.nh-bill .head .amount .pill { max-width: 100%; white-space: normal; text-align: right; }
-.nh-bill > *, .nh-bill .head > * { min-width: 0; }
-.nh-bill .room { font-weight: 800; font-size: 1.25rem; color: #1e3a5f; text-decoration: none; background: #eef2ff; border-radius: 10px; padding: 4px 10px; line-height: 1.2; }
-.nh-bill.done .room { background: #dcfce7; color: #166534; }
-.nh-bill .who { min-width: 0; }
-.nh-bill .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.nh-bill .period { font-size: .76rem; color: var(--nh-muted); display: flex; flex-wrap: wrap; gap: 2px 10px; }
-.nh-bill .period .debt { color: #b91c1c; font-weight: 600; }
-.nh-bill .amount { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.nh-bill .sum { font-weight: 800; font-size: 1.1rem; font-variant-numeric: tabular-nums; color: #0f172a; }
-.pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 2px 10px; font-size: .74rem; font-weight: 700; white-space: nowrap; }
 .pill-done { background: #dcfce7; color: #166534; } .pill-unpaid { background: #fee2e2; color: #b91c1c; } .pill-new { background: #dbeafe; color: #1d4ed8; } .pill-skip { background: #f1f5f9; color: #64748b; }
-
-.nh-bill .inputs { display: grid; grid-template-columns: 1.7fr 1fr; gap: 10px; }
-.nh-field { display: flex; flex-direction: column; gap: 4px; margin: 0; }
+.nh-field { display: flex; flex-direction: column; gap: 4px; margin: 0; min-width: 0; }
 .nh-field > span { font-size: .78rem; font-weight: 600; color: #475569; }
 .nh-field > span small { font-weight: 500; color: var(--nh-muted); }
-.nh-field .form-control { border-radius: 12px; transition: border-color .15s, box-shadow .15s; }
-.nh-field .form-control:focus { border-color: var(--nh-primary-2); box-shadow: 0 0 0 4px color-mix(in srgb, var(--nh-primary-2) 18%, transparent); }
-.nh-field .form-control:disabled { background: #f8fafc; color: #334155; }
-.nh-field.kwh .form-control { min-height: 50px; }
-.nh-field.ppl .form-control { text-align: center; min-height: 50px; font-weight: 700; font-size: 1.1rem; }
-
-.nh-bill .breakdown { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.nh-bill .breakdown:has(li:nth-child(4)) { grid-template-columns: repeat(4, 1fr); }
-.nh-bill .breakdown li { background: #f8fafc; border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.nh-bill .breakdown li span { font-size: .72rem; color: var(--nh-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.nh-bill .breakdown li b { font-variant-numeric: tabular-nums; font-size: .95rem; }
-
-.nh-bill .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
-.nh-bill .actions .btn { flex: 1 1 120px; min-height: 46px; border-radius: 12px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  transition: transform .12s var(--nh-ease), box-shadow .2s, background-color .2s; }
-.nh-bill .actions .btn:active { transform: scale(.97); }
-.nh-bill .actions .btn-primary { background: linear-gradient(135deg, var(--nh-primary), var(--nh-primary-2)); border: 0; box-shadow: 0 4px 12px rgba(26,84,144,.25); }
-.nh-bill .actions .btn-success { background: linear-gradient(135deg, #16a34a, #22c55e); border: 0; box-shadow: 0 4px 12px rgba(22,163,74,.25); }
-.nh-bill .actions .btn-outline-secondary { flex: 0 0 auto; background: #fff; }
-.nh-bill.done .actions .btn-outline-secondary { flex: 1 1 auto; }
-.nh-bill .more { flex: 0 0 auto; position: relative; }
-.nh-bill .more summary { list-style: none; cursor: pointer; width: 46px; height: 46px; border-radius: 12px; border: 1px solid var(--nh-border); display: grid; place-items: center; color: #475569; background: #fff; }
-.nh-bill .more summary::-webkit-details-marker { display: none; }
-.nh-bill .more[open] summary { background: #eef2f7; }
-.nh-bill .more[open] { flex: 1 1 100%; }
-.nh-bill .more[open] summary { width: 100%; }
-.nh-bill .more-body { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; margin-top: 10px; padding: 12px; background: #f8fafc; border-radius: 12px; animation: nh-in .18s var(--nh-ease); }
-
-.nh-empty { text-align: center; color: var(--nh-muted); padding: 40px 10px; display: grid; gap: 8px; justify-items: center; }
-.nh-empty i { font-size: 2rem; opacity: .6; }
-.nh-skeleton { min-height: 150px; background: linear-gradient(100deg, #f1f5f9 30%, #f8fafc 50%, #f1f5f9 70%); background-size: 200% 100%; animation: nh-shimmer 1.2s linear infinite; border-color: transparent; }
+.nh-field .form-control, .nh-field .form-select { border-radius: 10px; }
+.nh-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px 12px; }
+.nh-form-grid .wide { grid-column: 1 / -1; }
+.form-control:focus, .form-select:focus { border-color: var(--nh-primary-2); box-shadow: 0 0 0 4px color-mix(in srgb, var(--nh-primary-2) 18%, transparent); }
+.nh-skeleton { min-height: 220px; background: linear-gradient(100deg, #f1f5f9 30%, #f8fafc 50%, #f1f5f9 70%); background-size: 200% 100%; animation: nh-shimmer 1.2s linear infinite; border-color: transparent; }
 @keyframes nh-shimmer { to { background-position: -200% 0; } }
+.nh-compare { width: 100%; font-variant-numeric: tabular-nums; }
+.nh-compare th, .nh-compare td { padding: 6px 8px; border-bottom: 1px solid #eef2f7; text-align: right; }
+.nh-compare th:first-child { text-align: left; color: #475569; }
+.nh-compare thead th { font-size: .75rem; color: var(--nh-muted); font-weight: 600; }
 
-/* Rộng (máy tính): mỗi thẻ thành một hàng */
-@container (min-width: 880px) {
-  .nh-bill { grid-template-columns: minmax(230px, 1.3fr) 250px minmax(260px, 1.1fr) auto; align-items: center; padding: 10px 14px; border-radius: 14px; }
-  .nh-bill .head .amount { justify-content: flex-start; border-top: 0; padding-top: 0; }
-  .nh-bill .inputs { grid-template-columns: 1.4fr 1fr; }
-  .nh-field.kwh .form-control, .nh-field.ppl .form-control { min-height: 44px; }
-  .nh-field.kwh .form-control { font-size: 1.15rem !important; }
-  .nh-bill .breakdown { gap: 6px; }
-  .nh-bill .breakdown li { padding: 6px 8px; }
-  .nh-bill .actions { flex-wrap: nowrap; justify-content: flex-end; }
-  .nh-bill .actions .btn { flex: 0 0 auto; min-height: 42px; padding-inline: 14px; }
-  .nh-bill .actions .btn-outline-secondary span { display: none; }
-  .nh-bill .more summary { width: 42px; height: 42px; }
-  .nh-bill .more[open] { flex: 0 0 auto; }
-  .nh-bill .more[open] summary { width: 42px; }
-  .nh-bill .more-body { position: absolute; right: 0; top: 48px; width: 420px; z-index: 5; margin-top: 0; box-shadow: var(--nh-shadow-2); border: 1px solid var(--nh-border); background: #fff; }
+/* ---------- Bảng lưới: mọi dòng dùng chung cột của bảng (CSS subgrid) nên luôn thẳng hàng ---------- */
+.nh-gwrap { container-type: inline-size; margin-bottom: 14px; }
+.nh-gtable { background: #fff; border: 1px solid var(--nh-border); border-radius: 16px; box-shadow: var(--nh-shadow-1); }
+.nh-gtable .gr > * { min-width: 0; }
+.nh-gtable .n { text-align: right; font-variant-numeric: tabular-nums; }
+.nh-gtable .gh { font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #64748b; background: #f8fafc; border-radius: 16px 16px 0 0; }
+.nh-gtable .sec { font-size: .78rem; font-weight: 700; color: #475569; background: #f1f5f9; letter-spacing: .02em; }
+.nh-gtable .sec .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; } .dot.red { background: #ef4444; } .dot.green { background: #22c55e; }
+.nh-gtable .gr:not(.gh):not(.sec) { transition: background-color .15s; }
+.nh-gtable .gr:not(.gh):not(.sec):hover { background: color-mix(in srgb, var(--nh-primary-2) 4%, #fff); }
+.nh-gtable .gr:last-child { border-bottom: 0; border-radius: 0 0 16px 16px; }
+.nh-gtable .room { display: inline-block; font-weight: 800; color: #1e3a5f; text-decoration: none; background: #eef2ff; border-radius: 8px; padding: 2px 8px; }
+.nh-gtable .done .room { background: #dcfce7; color: #166534; }
+.nh-gtable .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nh-gtable .sub { font-size: .74rem; color: var(--nh-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nh-gtable .sub .debt { color: #b91c1c; font-weight: 600; }
+.nh-gtable .c-total { font-weight: 800; }
+.nh-gtable .done .c-paid { color: #15803d; font-weight: 600; }
+.nh-gtable .c-act { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.nh-gtable .c-act .btn { border-radius: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.nh-gtable .c-act .btn-light { border: 1px solid var(--nh-border); background: #fff; width: 34px; justify-content: center; padding-inline: 0; }
+.nh-gtable .unpaid { box-shadow: inset 3px 0 0 #ef4444; }
+.nh-gtable .new { box-shadow: inset 3px 0 0 var(--nh-primary-2); }
+.nh-gtable .skip { opacity: .7; }
+.nh-gtable .changed { background: #fefce8; }
+.nh-gtable .imported .nh-kwh { border-color: #22c55e; background: #f0fdf4; }
+.nh-kwh { text-align: right; font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; border-radius: 10px; }
+@starting-style { .nh-gtable .gr { opacity: 0; } }
+.nh-gtable .gr { transition: opacity .3s var(--nh-ease), background-color .15s; }
+
+/* Hẹp (điện thoại): mỗi dòng là một khối gọn */
+.nh-gtable .gr { display: grid; gap: 4px 10px; padding: 10px 12px; border-bottom: 1px solid #eef2f7; align-items: center; }
+.nh-gtable .gh { display: none; }
+.nh-gtable .sec { display: block; }
+.nh-gtable.meter .gr:not(.gh):not(.sec) { grid-template-columns: auto 1fr 110px; grid-template-areas: "room name kwh" "room money kwh"; }
+.nh-gtable.meter .c-room { grid-area: room; } .nh-gtable.meter .c-name { grid-area: name; } .nh-gtable.meter .c-kwh { grid-area: kwh; }
+.nh-gtable.meter .c-money { grid-area: money; text-align: left; font-size: .78rem; color: var(--nh-muted); }
+.nh-gtable.meter .c-ppl, .nh-gtable.meter .c-state { display: none; }
+.nh-gtable.meter .nh-kwh { min-height: 48px; font-size: 1.25rem; }
+.nh-gtable.bill .gr:not(.gh):not(.sec) { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-areas: "room name name total" "room name name state" "kwh rent el wa" "act act act act"; }
+.nh-gtable.bill .c-room { grid-area: room; } .nh-gtable.bill .c-name { grid-area: name; } .nh-gtable.bill .c-total { grid-area: total; font-size: 1.05rem; }
+.nh-gtable.bill .c-state { grid-area: state; text-align: right; }
+.nh-gtable.bill .c-kwh { grid-area: kwh; } .nh-gtable.bill .c-rent { grid-area: rent; } .nh-gtable.bill .c-el { grid-area: el; } .nh-gtable.bill .c-wa { grid-area: wa; }
+.nh-gtable.bill .c-kwh, .nh-gtable.bill .c-rent, .nh-gtable.bill .c-el, .nh-gtable.bill .c-wa { text-align: left; font-size: .8rem; background: #f8fafc; border-radius: 8px; padding: 4px 8px; }
+.nh-gtable.bill .c-kwh::before, .nh-gtable.bill .c-rent::before, .nh-gtable.bill .c-el::before, .nh-gtable.bill .c-wa::before { content: attr(data-l); display: block; font-size: .68rem; color: var(--nh-muted); }
+.nh-gtable.bill .c-paid { display: none; }
+.nh-gtable.bill .c-act { grid-area: act; justify-content: stretch; flex-wrap: nowrap; margin-top: 4px; }
+.nh-gtable.bill .c-act .btn:not(.btn-light) { flex: 1; min-height: 42px; }
+.nh-gtable.bill .c-act .btn-light { width: 42px; min-height: 42px; }
+
+/* Rộng: bảng thật, các dòng dùng subgrid */
+@container (min-width: 640px) {
+  .nh-gtable.meter { display: grid; grid-template-columns: 90px minmax(160px, 1fr) 70px 150px 120px 120px; }
+  .nh-gtable.meter .gr, .nh-gtable.meter .gr:not(.gh):not(.sec) { grid-column: 1 / -1; grid-template-columns: subgrid; grid-template-areas: none !important; padding: 8px 4px; gap: 0; }
+  .nh-gtable.meter .gr > *, .nh-gtable.meter .gr:not(.gh):not(.sec) > * { padding: 0 10px; grid-area: auto !important; }
+  .nh-gtable.meter .gh { display: grid; padding: 10px 4px; }
+  .nh-gtable.meter .sec { display: block; padding: 6px 14px; }
+  .nh-gtable.meter .c-ppl, .nh-gtable.meter .c-state { display: block; }
+  .nh-gtable.meter .c-money { text-align: right; font-size: inherit; color: inherit; }
+  .nh-gtable.meter .nh-kwh { min-height: 38px; font-size: 1.05rem; }
 }
-@media (max-width: 767.98px) { .nh-group { top: 52px; } }
+@container (min-width: 1040px) {
+  .nh-gtable.bill { display: grid; grid-template-columns: 80px minmax(170px, 1.4fr) 76px 105px 95px 90px 110px 105px minmax(130px, 190px) 176px; }
+  .nh-gtable.bill .gr, .nh-gtable.bill .gr:not(.gh):not(.sec) { grid-column: 1 / -1; grid-template-columns: subgrid; grid-template-areas: none !important; padding: 10px 4px; gap: 0; }
+  .nh-gtable.bill .gr > *, .nh-gtable.bill .gr:not(.gh):not(.sec) > * { padding: 0 10px; grid-area: auto !important; }
+  .nh-gtable.bill .gh { display: grid; }
+  .nh-gtable.bill .sec { display: block; padding: 6px 14px; }
+  .nh-gtable.bill .c-kwh, .nh-gtable.bill .c-rent, .nh-gtable.bill .c-el, .nh-gtable.bill .c-wa, .nh-gtable.bill .c-paid { display: block; text-align: right; font-size: inherit; background: none; border-radius: 0; padding: 0 10px; }
+  .nh-gtable.bill .c-kwh::before, .nh-gtable.bill .c-rent::before, .nh-gtable.bill .c-el::before, .nh-gtable.bill .c-wa::before { content: none; }
+  .nh-gtable.bill .c-state { text-align: left; }
+  .nh-gtable.bill .c-state .pill { white-space: normal; line-height: 1.25; padding-block: 3px; }
+  .nh-gtable.bill .c-total { font-size: inherit; }
+  .nh-gtable.bill .c-act { justify-content: flex-end; flex-wrap: nowrap; }
+  .nh-gtable.bill .c-act .btn:not(.btn-light) { flex: 0 0 auto; min-height: 34px; }
+  .nh-gtable.bill .c-act .btn-light { width: 34px; min-height: 34px; }
+}
+
 
 
 /* =================== ĐIỆN THOẠI (< 768px) =================== */
@@ -419,3 +426,22 @@ body:has(.nh-bottomnav) .nh-callbar { display: none !important; }
 .nh-chat-input .nh-upload { display: flex; align-items: center; }
 .nh-chat-input .nh-upload-btn { min-height: 42px; width: 44px; padding: 0; }
 .nh-chat-input .nh-upload-btn span:empty { display: none; }
+
+/* ---------- Báo cáo: chọn Tháng/Quý/Năm, biểu đồ cột ---------- */
+.nh-seg { display: inline-flex; background: #e2e8f0; border-radius: 999px; padding: 3px; gap: 2px; }
+.nh-seg button { border: 0; background: transparent; border-radius: 999px; padding: 6px 14px; font-weight: 600; color: #475569; transition: background-color .2s var(--nh-ease), color .2s; }
+.nh-seg button.on { background: #fff; color: var(--nh-primary); box-shadow: 0 1px 3px rgba(15,23,42,.15); }
+.nh-month .label { min-width: 150px; text-align: center; font-weight: 700; color: #1e3a5f; padding: 0 6px; }
+.nh-bars { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; height: 180px; align-items: end; margin-bottom: 8px; }
+.nh-bars .col { display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; padding: 0; }
+.nh-bars .bars { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 3px; }
+.nh-bars i { display: block; width: min(18px, 40%); border-radius: 6px 6px 0 0; transition: height .5s var(--nh-ease); }
+@starting-style { .nh-bars i { height: 0 !important; } }
+.nh-bars i.in { background: linear-gradient(180deg, #4ade80, #16a34a); }
+.nh-bars i.out { background: linear-gradient(180deg, #fca5a5, #ef4444); }
+.nh-bars .lbl { font-size: .72rem; color: var(--nh-muted); font-weight: 600; }
+
+@media (max-width: 575.98px) {
+  .nh-month .form-control { width: 140px; font-size: 15px; }
+  .nh-month .label { min-width: 110px; }
+}

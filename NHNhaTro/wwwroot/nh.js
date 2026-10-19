@@ -52,3 +52,12 @@ window.nhInstall.show = async function () {
     var p = window.nhInstall.prompt; if (!p) return 'none';
     p.prompt(); var r = await p.userChoice; window.nhInstall.prompt = null; return r.outcome;
 };
+
+// Ghi số điện: Enter ở ô số điện thì chuyển xuống ô của phòng kế tiếp.
+document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' || !e.target.classList || !e.target.classList.contains('nh-kwh')) return;
+    e.preventDefault();
+    var all = Array.prototype.slice.call(document.querySelectorAll('input.nh-kwh'));
+    var next = all[all.indexOf(e.target) + (e.shiftKey ? -1 : 1)];
+    if (next) { next.focus(); next.select(); }
+});

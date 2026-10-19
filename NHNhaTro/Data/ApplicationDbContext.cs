@@ -21,6 +21,7 @@ namespace NHNhaTro.Data
         public DbSet<MoneyTransaction> Transactions => Set<MoneyTransaction>();
         public DbSet<Repair> Repairs => Set<Repair>();
         public DbSet<Purchase> Purchases => Set<Purchase>();
+        public DbSet<UtilityBill> UtilityBills => Set<UtilityBill>();
         public DbSet<Attachment> Attachments => Set<Attachment>();
         public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
         public DbSet<ChatRead> ChatReads => Set<ChatRead>();
@@ -158,7 +159,17 @@ namespace NHNhaTro.Data
                 e.HasOne(x => x.Bill).WithMany(x => x.Payments).HasForeignKey(x => x.BillId);
                 e.HasOne(x => x.Repair).WithMany().HasForeignKey(x => x.RepairId);
                 e.HasOne(x => x.Purchase).WithMany().HasForeignKey(x => x.PurchaseId);
+                e.HasOne<UtilityBill>().WithMany().HasForeignKey(x => x.UtilityBillId);
                 e.HasIndex(x => new { x.AccountId, x.Date });
+            });
+
+            builder.Entity<UtilityBill>(e =>
+            {
+                e.Property(x => x.PaidDate).HasColumnType("date");
+                e.Property(x => x.Note).HasMaxLength(500);
+                e.Property(x => x.CreatedBy).HasMaxLength(256);
+                e.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId);
+                e.HasIndex(x => new { x.Year, x.Month }).IsUnique();
             });
 
             builder.Entity<Repair>(e =>

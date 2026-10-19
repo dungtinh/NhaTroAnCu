@@ -34,10 +34,11 @@
 
     <h5 id="thu"><span class="badge bg-primary">2</span> Thu tiền tháng (mỗi tháng, quanh ngày @billingDay)</h5>
     <ol>
-        <li>Bấm <strong>Thu tiền tháng</strong>. Danh sách mọi phòng có khách, <strong>chưa thu xếp trước, đã thu xếp sau</strong>, rồi theo dãy A → B, tầng, số phòng. Mỗi phòng chỉ cần ghi <strong>số điện đã dùng</strong> (kWh) trong kỳ. Số người lấy theo danh sách người ở, sửa nếu khác.</li>
-        <li>Bấm <strong>Lập phiếu</strong> ở từng phòng, hoặc ghi hết rồi bấm <strong>Lưu tất cả</strong>. Tiền phòng, điện, nước tự tính theo Cấu hình.</li>
-        <li>Khách đưa tiền thì bấm <strong>Thu tiền</strong>, chụp ảnh chuyển khoản nếu có (số tiền tự đọc). Thu thiếu thì phòng hiện màu cam cho tới khi đủ.</li>
-        <li>Bấm <i class="fas fa-print"></i> để in phiếu thu cho khách.</li>
+        <li>Bấm <strong>Ghi số điện</strong>. Bảng liệt kê mọi phòng cần thu kỳ này theo dãy, tầng. Gõ <strong>số điện đã dùng</strong> từng phòng, bấm Enter để xuống phòng sau.
+            Hoặc bấm <strong>Tải file mẫu</strong>, điền cột "Số điện (kWh)" trong Excel rồi bấm <strong>Nhập từ Excel</strong>.</li>
+        <li>Bấm <strong>Lưu số điện và lập phiếu</strong>. Tiền phòng, điện, nước tự tính theo Cấu hình.</li>
+        <li>Khi có hóa đơn điện lực, nước sạch của cả dãy trọ, ghi <strong>tiền điện, nước tổng</strong> ngay trên trang Ghi số điện; phần mềm ghi khoản chi và so sánh với số thu của khách.</li>
+        <li>Sang <strong>Thu tiền tháng</strong>: phòng chưa thu xếp trên. Khách đưa tiền thì bấm <strong>Thu tiền</strong>, chụp ảnh chuyển khoản nếu có. Bấm <i class="fas fa-print"></i> để in phiếu thu, <i class="fas fa-pen"></i> để sửa phiếu.</li>
     </ol>
     <p class="small text-muted">Phòng mới vào trong tháng chưa đến kỳ chốt đầu (đã đóng 1 tháng khi vào) nên không hiện; kỳ chốt đầu của phòng đó là ngày @billingDay tháng sau, tiền phòng chỉ tính đoạn từ ngày vào đến ngày chốt.</p>
 

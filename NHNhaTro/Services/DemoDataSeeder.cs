@@ -213,8 +213,14 @@ public static class DemoDataSeeder
             await accounts.AddManualAsync(f, [await Img("chung-tu", "Receipts", gray)], User);
         }
         await Manual(s.BusinessAccountId, new DateTime(2026, 10, 10), true, 300_000, TxCategory.OtherIncome, "Phí gửi xe tháng 10");
-        await Manual(s.BusinessAccountId, new DateTime(2026, 10, 8), false, 4_200_000, TxCategory.Electricity, "Nộp tiền điện EVN tháng 9");
-        await Manual(s.BusinessAccountId, new DateTime(2026, 10, 9), false, 900_000, TxCategory.Water, "Nộp tiền nước sạch tháng 9");
+        // Tiền điện, nước tổng của cả nhà trọ (trả điện lực, công ty nước)
+        var utility = sp.GetRequiredService<UtilityService>();
+        foreach (var (m, kwh, el, m3, wa, paid) in new[] { (9, 1150, 3_680_000m, 52, 780_000m, new DateTime(2026, 9, 12)), (10, 1310, 4_200_000m, 60, 900_000m, new DateTime(2026, 10, 9)) })
+        {
+            var uf = new UtilityBillForm { Month = m, Year = 2026, ElectricityKwh = kwh, ElectricityAmount = el, WaterM3 = m3, WaterAmount = wa, PaidDate = paid, AccountId = s.BusinessAccountId, Note = "Hóa đơn EVN và nước sạch" };
+            uf.Receipts.Add(await Img($"hoa-don-dien-nuoc-{m}", "Receipts", gray));
+            await utility.SaveAsync(uf, User);
+        }
         await accounts.TransferAsync(s.BusinessAccountId, s.PersonalAccountId, 5_000_000, new DateTime(2026, 10, 15), "Rút tiền phòng về TK cá nhân", [], User);
 
         // ---------- Ảnh quảng cáo ----------
@@ -240,6 +246,7 @@ public static class DemoDataSeeder
         int n = 0;
         n += await db.Attachments.Where(a => a.EntityType != AttachmentOwner.Site).ExecuteDeleteAsync();
         n += await db.Transactions.ExecuteDeleteAsync();
+        n += await db.UtilityBills.ExecuteDeleteAsync();
         n += await db.Repairs.ExecuteDeleteAsync();
         n += await db.Purchases.ExecuteDeleteAsync();
         n += await db.LeasePenalties.ExecuteDeleteAsync();

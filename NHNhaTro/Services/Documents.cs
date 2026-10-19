@@ -399,6 +399,93 @@ public class Documents(IDbContextFactory<ApplicationDbContext> dbFactory, IWebHo
         return Save(wb);
     }
 
+    // ============================ SỐ ĐIỆN (EXCEL) ============================
+
+    private const string MeterRoomHeader = "Phòng";
+    private const string MeterKwhHeader = "Số điện (kWh)";
+
+    /// <summary>File mẫu ghi số điện: mỗi phòng đang có khách một dòng, điền cột "Số điện (kWh)" rồi nhập lại.</summary>
+    public static byte[] MeterTemplate(BillingSheet sheet)
+    {
+        using var wb = new XLWorkbook();
+        var ws = wb.Worksheets.Add("Số điện");
+        ws.Cell(1, 1).Value = $"SỐ ĐIỆN ĐÃ DÙNG KỲ CHỐT {sheet.DueDate:dd/MM/yyyy}";
+        ws.Cell(1, 1).Style.Font.Bold = true; ws.Cell(1, 1).Style.Font.FontSize = 14;
+        ws.Cell(2, 1).Value = "Chỉ điền cột Số điện (kWh). Không đổi tên cột, không sửa mã phòng.";
+        ws.Cell(2, 1).Style.Font.Italic = true;
+        string[] headers = ["STT", MeterRoomHeader, "Người thuê", "Số người", MeterKwhHeader];
+        for (int i = 0; i < headers.Length; i++) ws.Cell(4, i + 1).Value = headers[i];
+        var head = ws.Range(4, 1, 4, headers.Length);
+        head.Style.Font.Bold = true; head.Style.Fill.BackgroundColor = XLColor.FromHtml("#DBEAFE");
+        int r = 5, n = 1;
+        foreach (var x in sheet.Rows.Where(x => !x.SkipThisMonth).OrderBy(x => x.BlockCode).ThenBy(x => x.Floor).ThenBy(x => x.Number))
+        {
+            ws.Cell(r, 1).Value = n++;
+            ws.Cell(r, 2).Value = x.RoomCode;
+            ws.Cell(r, 3).Value = x.Representative;
+            ws.Cell(r, 4).Value = x.PersonCount;
+            if (x.Kwh is int k) ws.Cell(r, 5).Value = k;
+            ws.Cell(r, 5).Style.Fill.BackgroundColor = XLColor.FromHtml("#FEF9C3");
+            r++;
+        }
+        ws.Range(4, 1, Math.Max(4, r - 1), headers.Length).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+        ws.Range(4, 1, Math.Max(4, r - 1), headers.Length).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        ws.Column(1).Width = 6; ws.Column(2).Width = 10; ws.Column(3).Width = 28; ws.Column(4).Width = 10; ws.Column(5).Width = 16;
+        ws.SheetView.FreezeRows(4);
+        return Save(wb);
+    }
+
+    /// <summary>
+    /// Đọc file Excel số điện: tìm dòng tiêu đề có cột "Phòng" và cột số điện ("Số điện"/"kWh"), trả về số điện theo mã phòng.
+    /// Không có tiêu đề thì lấy cột A là mã phòng, cột số cuối cùng là số điện.
+    /// </summary>
+    public static (Dictionary<string, int> Values, List<string> Errors) ParseMeterSheet(Stream stream)
+    {
+        var values = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var errors = new List<string>();
+        XLWorkbook wb;
+        try { wb = new XLWorkbook(stream); }
+        catch (Exception) { throw new InvalidOperationException("Không đọc được file. Hãy dùng file Excel .xlsx (tải file mẫu để điền)."); }
+        using (wb)
+        {
+            var ws = wb.Worksheets.First();
+            var used = ws.RangeUsed();
+            if (used == null) throw new InvalidOperationException("File trống.");
+            int lastRow = used.LastRow().RowNumber(), lastCol = used.LastColumn().ColumnNumber();
+
+            static string Norm(string s) => s.Trim().ToLowerInvariant();
+            int headerRow = 0, roomCol = 1, kwhCol = 0;
+            for (int r = 1; r <= Math.Min(lastRow, 15) && headerRow == 0; r++)
+                for (int c = 1; c <= lastCol; c++)
+                {
+                    var t = Norm(ws.Cell(r, c).GetString());
+                    if (t is "phòng" or "phong" or "mã phòng" or "ma phong") { headerRow = r; roomCol = c; }
+                }
+            if (headerRow > 0)
+                for (int c = 1; c <= lastCol; c++)
+                {
+                    var t = Norm(ws.Cell(headerRow, c).GetString());
+                    if (t.Contains("kwh") || t.Contains("số điện") || t.Contains("so dien")) kwhCol = c;
+                }
+            if (kwhCol == 0) kwhCol = lastCol;
+
+            for (int r = headerRow + 1; r <= lastRow; r++)
+            {
+                var code = ws.Cell(r, roomCol).GetString().Trim().ToUpperInvariant().Replace(" ", "");
+                if (code.Length == 0) continue;
+                var cell = ws.Cell(r, kwhCol);
+                if (cell.IsEmpty()) continue;
+                if (cell.TryGetValue<double>(out var d) && d >= 0 && d < 1_000_000 && Math.Abs(d - Math.Round(d)) < 0.001)
+                    values[code] = (int)Math.Round(d);
+                else if (int.TryParse(new string(cell.GetString().Where(char.IsDigit).ToArray()), out var k) && cell.GetString().Trim().Length > 0)
+                    values[code] = k;
+                else
+                    errors.Add($"Dòng {r} ({code}): số điện \"{cell.GetString()}\" không hợp lệ.");
+            }
+        }
+        return (values, errors);
+    }
+
     private static byte[] Save(XLWorkbook wb)
     {
         using var ms = new MemoryStream();

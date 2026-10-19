@@ -6,8 +6,11 @@
 - **Nhận phòng**: chọn phòng trống, thu đủ 1 tháng tiền phòng (trả trước) vào tài khoản hộ kinh doanh và tiền cọc
   (mặc định 1.000.000đ) vào tài khoản cá nhân, không cần số điện, quét CCCD nhiều người,
   in hợp đồng Word rồi tải bản đã ký lên.
-- **Thu tiền tháng** (ngày chốt mồng 10): danh sách phòng có khách, chưa thu xếp trước; chỉ nhập số điện đã dùng (kWh),
-  tiền phòng, điện, nước tự tính; kỳ chốt đầu tính tiền phòng từ ngày vào đến ngày chốt; thu một phần hoặc đủ, đính chứng từ, in phiếu thu PDF.
+- **Ghi số điện**: bảng các phòng cần thu kỳ này, gõ số điện đã dùng (kWh) hoặc nhập từ Excel (có file mẫu), lưu là lập phiếu;
+  nhập tiền điện, nước tổng của cả dãy trọ (ghi khoản chi), so sánh với số thu của khách.
+- **Thu tiền tháng** (ngày chốt mồng 10): bảng phòng có khách, chưa thu xếp trước; tiền phòng, điện, nước tự tính;
+  kỳ chốt đầu tính tiền phòng từ ngày vào đến ngày chốt; thu một phần hoặc đủ, đính chứng từ, in phiếu thu PDF.
+- **Báo cáo** thu chi theo tháng, quý, năm.
 - **Trả phòng**: nhập số điện đã dùng, kiểm đồ đạc, phạt hư hỏng, ảnh hiện trạng; kỳ chưa lập phiếu tính đủ tháng; quyết toán trừ vào cọc, in biên bản.
 - **Sửa chữa**: theo phòng hoặc khu vực chung, bắt buộc ảnh và chứng từ, trừ thẳng vào tài khoản cá nhân, cảnh báo sửa lặp lại.
 - **Mua sắm** và **chi phí quảng cáo**: bắt buộc ảnh hóa đơn.

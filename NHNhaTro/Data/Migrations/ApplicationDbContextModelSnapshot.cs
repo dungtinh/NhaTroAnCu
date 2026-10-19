@@ -838,6 +838,9 @@ namespace NHNhaTro.Migrations
                     b.Property<Guid?>("TransferGroup")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int?>("UtilityBillId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("BillId");
@@ -849,6 +852,8 @@ namespace NHNhaTro.Migrations
                     b.HasIndex("RepairId");
 
                     b.HasIndex("RoomId");
+
+                    b.HasIndex("UtilityBillId");
 
                     b.HasIndex("AccountId", "Date");
 
@@ -1090,6 +1095,61 @@ namespace NHNhaTro.Migrations
                     b.ToTable("Tenants");
                 });
 
+            modelBuilder.Entity("NHNhaTro.Data.Entities.UtilityBill", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<decimal>("ElectricityAmount")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<int?>("ElectricityKwh")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Month")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("PaidDate")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("WaterAmount")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<int?>("WaterM3")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("Year", "Month")
+                        .IsUnique();
+
+                    b.ToTable("UtilityBills");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -1306,6 +1366,11 @@ namespace NHNhaTro.Migrations
                         .HasForeignKey("RoomId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("NHNhaTro.Data.Entities.UtilityBill", null)
+                        .WithMany()
+                        .HasForeignKey("UtilityBillId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Account");
 
                     b.Navigation("Bill");
@@ -1390,6 +1455,17 @@ namespace NHNhaTro.Migrations
                     b.Navigation("FurnitureItem");
 
                     b.Navigation("Room");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.UtilityBill", b =>
+                {
+                    b.HasOne("NHNhaTro.Data.Entities.MoneyAccount", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Account");
                 });
 
             modelBuilder.Entity("NHNhaTro.Data.Entities.Bill", b =>
