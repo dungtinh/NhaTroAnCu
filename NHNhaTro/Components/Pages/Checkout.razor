@@ -35,6 +35,18 @@ else
                     <div class="col-6 col-md-4"><label class="form-label">Số điện đã dùng (kWh) <span class="text-danger">*</span></label>
                         <input type="number" inputmode="numeric" min="0" class="form-control nh-meter" @bind="form.Kwh" @bind:after="RefreshAsync" /></div>
                     <div class="col-md-4 small text-muted pt-md-4">Từ kỳ chốt trước đến ngày trả.<br />@preview?.UsedKwh số × @Fmt.Money(electricityPrice)đ = @Fmt.Money(preview?.Electricity ?? 0)đ</div>
+                    <div class="col-6 col-md-4"><label class="form-label">Số ngày xin ở thêm</label>
+                        <input type="number" inputmode="numeric" min="0" max="60" class="form-control" @bind="form.ExtraDays" @bind:after="RefreshAsync" /></div>
+                    <div class="col-6 col-md-8 small text-muted pt-md-4">
+                        @if (preview?.ExtraDays > 0)
+                        {
+                            <span>Khách ở thêm đến <strong>@Fmt.Date(form.EndDate.AddDays(preview.ExtraDays))</strong> để thu xếp:<br />@preview.ExtraDays ngày × @Fmt.Money(lease.MonthlyRent) ÷ 30 = <strong>@Fmt.Vnd(preview.ExtraStay)</strong></span>
+                        }
+                        else
+                        {
+                            <span>Khách xin ở lại vài hôm để thu xếp thì nhập số ngày; tính @Fmt.Money(preview?.ExtraDayRate ?? 0)đ/ngày (giá tháng ÷ 30).</span>
+                        }
+                    </div>
                 </div>
             </div>
 
@@ -140,6 +152,10 @@ else
                         {
                             <tr><td>− Tiền phòng kỳ @m.Month.ToString("00")/@m.Year (đủ tháng) <span class="small text-muted d-block">@Fmt.Date(m.From) → @Fmt.Date(m.To)</span></td><td class="text-end">@Fmt.Money(m.Rent)</td></tr>
                             <tr><td>− Tiền nước kỳ @m.Month.ToString("00")/@m.Year (@m.PersonCount người)</td><td class="text-end">@Fmt.Money(m.Water)</td></tr>
+                        }
+                        @if (preview.ExtraStay > 0)
+                        {
+                            <tr><td>− Ở thêm @preview.ExtraDays ngày <span class="small text-muted d-block">@preview.ExtraDays × @Fmt.Money(lease.MonthlyRent) ÷ 30</span></td><td class="text-end">@Fmt.Money(preview.ExtraStay)</td></tr>
                         }
                         <tr><td>− Phạt hư hỏng@(form.Penalties.Count(p => p.Amount > 0) is int n && n > 0 ? $" ({n} khoản)" : "")</td><td class="text-end">@Fmt.Money(preview.Penalties)</td></tr>
                         @if (preview.Other != 0) { <tr><td>− Khoản khác</td><td class="text-end">@Fmt.Money(preview.Other)</td></tr> }

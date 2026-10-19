@@ -67,6 +67,8 @@ Những chỗ yêu cầu chưa nói rõ được ghi là **Giả định**; đ�
 - **Tiền phòng và tiền nước tính đủ tháng**: kỳ chốt nào đã tới ngày thu mà chưa lập phiếu thì tính **trọn tháng** tiền phòng
   và tiền nước vào phiếu trả phòng (không chia ngày); kỳ đã lập phiếu thì chỉ lấy phần còn nợ. Không hoàn tiền phòng đã đóng
   trước cho những ngày chưa ở (muốn hoàn thì nhập âm ở "khoản khác").
+- **Ở thêm vài ngày** (19/10/2026): khách xin ở lại thu xếp thì nhập số ngày ở thêm; tiền = giá tháng × số ngày ÷ 30, làm tròn nghìn,
+  cộng vào phiếu trả phòng (tiền phòng) và quyết toán. Ngày trả phòng vẫn là ngày quyết toán.
 - **Chỉ trả lại cọc khi khách ở đủ 3 tháng trở lên** (Cấu hình "Ở đủ mấy tháng mới trả lại cọc", mặc định 3; cập nhật 19/10/2026).
   Ở ít hơn thì **cọc không hoàn trả**: ghi là doanh thu hộ kinh doanh (chuyển nội bộ từ TK cá nhân), các khoản điện, phạt, nợ khách vẫn
   phải nộp thêm. Chủ nhà vẫn sửa tay được số trả cọc nếu muốn châm chước.
