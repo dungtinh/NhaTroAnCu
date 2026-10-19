@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using NHNhaTro.Data;
 using NHNhaTro.Data.Entities;
 
@@ -12,9 +12,9 @@ public record PendingFile(string Path, string FileName, string Kind)
 
 public class AttachmentService(IDbContextFactory<ApplicationDbContext> dbFactory, FileStorage files)
 {
-    public async Task<PendingFile> UploadAsync(Stream content, string fileName, string kind, bool isPublic = false)
+    public async Task<PendingFile> UploadAsync(Stream content, string fileName, string kind, bool isPublic = false, string[]? allowed = null)
     {
-        var path = await files.SaveAsync(content, fileName, kind, isPublic);
+        var path = await files.SaveAsync(content, fileName, kind, isPublic, allowed);
         return new PendingFile(path, fileName, kind);
     }
 

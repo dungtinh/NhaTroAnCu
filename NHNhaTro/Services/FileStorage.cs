@@ -1,4 +1,4 @@
-namespace NHNhaTro.Services;
+﻿namespace NHNhaTro.Services;
 
 /// <summary>
 /// Lưu file tải lên (ảnh CCCD, chứng từ, ảnh hiện trạng, ảnh sửa chữa...) vào thư mục Uploads, trả về đường dẫn web "/Uploads/...".
@@ -12,6 +12,8 @@ public class FileStorage(IConfiguration config, IWebHostEnvironment env)
 
     public static readonly string[] ImageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".heic"];
     public static readonly string[] DocumentExtensions = [.. ImageExtensions, ".pdf"];
+    /// <summary>Chat nội bộ: thêm file văn phòng, văn bản, nén.</summary>
+    public static readonly string[] ChatExtensions = [.. DocumentExtensions, ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".zip", ".rar"];
 
     /// <summary>Thư mục vật lý chứa Uploads. Cấu hình "Storage:UploadsPath", mặc định &lt;ContentRoot&gt;/Uploads.</summary>
     public string RootPath

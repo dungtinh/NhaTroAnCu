@@ -1,4 +1,4 @@
-@page "/chat"
+﻿@page "/chat"
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inherits NhPage
@@ -11,74 +11,86 @@
 
 <div class="nh-chat">
     <div class="nh-chat-head">
-        <div>
-            <strong><i class="fas fa-comments"></i> Chat nội bộ</strong>
-            <div class="small text-muted">Mọi người dùng phần mềm đều thấy. Gõ <code>@@ai</code> đầu câu để hỏi trợ lý@(aiReady ? "" : " (chưa bật AI)").</div>
+        <span class="ic"><i class="fas fa-comments"></i></span>
+        <div class="min-w-0 flex-grow-1">
+            <div class="ttl">Chat nội bộ</div>
+            <div class="sub">Mọi người dùng phần mềm đều thấy · <code>@@ai</code> đầu câu để hỏi trợ lý@(aiReady ? "" : " (chưa bật)")</div>
         </div>
         @if (!loadedAll)
         {
-            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="LoadOlderAsync">Tin cũ hơn</button>
+            <button type="button" class="btn btn-sm btn-light" @onclick="LoadOlderAsync"><i class="fas fa-history"></i> Tin cũ</button>
         }
     </div>
 
     <div class="nh-chat-body" id="chatBody">
-        @{ DateTime? lastDay = null; }
+        @{ DateTime? lastDay = null; string? lastSender = null; }
         @foreach (var m in messages)
         {
             if (lastDay != m.SentAt.Date)
             {
                 lastDay = m.SentAt.Date;
+                lastSender = null;
                 <div class="nh-chat-day">@(m.SentAt.Date == DateTime.Today ? "Hôm nay" : m.SentAt.Date == DateTime.Today.AddDays(-1) ? "Hôm qua" : Fmt.Date(m.SentAt))</div>
             }
             bool mine = m.Sender == me;
+            bool showWho = !mine && lastSender != m.Sender;
+            lastSender = m.Sender;
+            var pics = m.Attachments.Where(x => x.IsImage).ToList();
+            var docs = m.Attachments.Where(x => !x.IsImage).ToList();
+            bool onlyPics = pics.Count > 0 && docs.Count == 0 && (string.IsNullOrEmpty(m.Text) || m.Text == "(ảnh)");
             <div class="nh-msg @(mine ? "mine" : "") @(m.IsAssistant ? "ai" : "")" @key="m.Id">
-                @if (!mine) { <div class="who"><i class="fas @(m.IsAssistant ? "fa-robot" : "fa-user-circle")"></i> @m.DisplayName</div> }
-                <div class="bubble">
+                @if (showWho) { <div class="who"><i class="fas @(m.IsAssistant ? "fa-robot" : "fa-user-circle")"></i> @m.DisplayName</div> }
+                <div class="bubble @(onlyPics ? "pics-only" : "")">
                     @if (m.RoomCode != null) { <a class="room" href="@($"phong/{m.RoomCode}")"><i class="fas fa-door-closed"></i> @m.RoomCode</a> }
-                    <span class="text">@m.Text</span>
-                    @if (m.Attachments.Count > 0)
+                    @if (pics.Count > 0)
                     {
-                        <div class="pics">
-                            @foreach (var a in m.Attachments)
-                            {
-                                @if (a.IsImage) { <a href="@a.Path" target="_blank"><img src="@a.Path" alt="" loading="lazy" /></a> }
-                                else { <a href="@a.Path" target="_blank" class="file"><i class="fas fa-file"></i> @a.FileName</a> }
-                            }
+                        <div class="pics n@(Math.Min(pics.Count, 3))">
+                            @foreach (var a in pics) { <a href="@a.Path" target="_blank"><img src="@a.Path" alt="" loading="lazy" /></a> }
                         </div>
                     }
+                    @foreach (var a in docs)
+                    {
+                        <a class="doc" href="@a.Path" download="@a.FileName"><i class="fas @DocIcon(a.FileName)"></i><span>@a.FileName</span><i class="fas fa-download dl"></i></a>
+                    }
+                    @if (!onlyPics && !string.IsNullOrEmpty(m.Text) && m.Text != "(ảnh)") { <span class="text">@m.Text</span> }
                     <div class="time">@m.SentAt.ToString("HH:mm")
-                        @if (isAdmin || mine) { <button type="button" class="btn btn-link btn-sm p-0 ms-2 text-danger" title="Xóa" @onclick="() => DeleteAsync(m)"><i class="fas fa-trash-alt"></i></button> }
+                        @if (isAdmin || mine) { <button type="button" class="del" title="Xóa" @onclick="() => DeleteAsync(m)"><i class="fas fa-trash-alt"></i></button> }
                     </div>
                 </div>
             </div>
         }
-        @if (messages.Count == 0) { <div class="text-center text-muted py-4">Chưa có tin nhắn. Hãy chào mọi người!</div> }
+        @if (messages.Count == 0) { <div class="nh-empty-hint"><i class="fas fa-comments"></i>Chưa có tin nhắn. Hãy chào mọi người!</div> }
         @if (aiThinking) { <div class="nh-msg ai"><div class="who"><i class="fas fa-robot"></i> Trợ lý AI</div><div class="bubble"><i class="fas fa-ellipsis-h fa-fade"></i> đang trả lời...</div></div> }
     </div>
 
     <div class="nh-chat-input">
-        @if (roomId != null)
+        @if (files.Count > 0)
         {
-            <div class="mb-2"><span class="badge bg-primary fs-6 fw-normal"><i class="fas fa-door-closed"></i> @roomCode <button type="button" class="btn-close btn-close-white btn-sm ms-1" @onclick="() => { roomId = null; roomCode = null; }"></button></span></div>
+            <div class="pending">
+                @foreach (var f in files)
+                {
+                    <div class="pf" @key="f.Path">
+                        @if (f.IsImage) { <img src="@f.Path" alt="" /> }
+                        else { <span class="pf-doc"><i class="fas @DocIcon(f.FileName)"></i> @f.FileName</span> }
+                        <button type="button" title="Bỏ" @onclick="() => RemoveFile(f)">×</button>
+                    </div>
+                }
+            </div>
         }
-        @if (pickRoom)
-        {
-            <div class="nh-card mb-2"><RoomPicker Mode="RoomPicker.PickMode.All" Label="Nói về phòng" Picked="OnRoomPicked" /></div>
-        }
-        <div class="d-flex gap-2 align-items-end">
-            <button type="button" class="btn btn-light" title="Gắn phòng đang nói tới" @onclick="() => pickRoom = !pickRoom"><i class="fas fa-door-closed"></i></button>
-            <FileUpload Kind="Chat" Files="files" FilesChanged="f => files = f" ButtonText="" Camera="true" />
-            <textarea class="form-control" rows="1" placeholder="Nhắn cho mọi người... (@@ai để hỏi trợ lý)" @bind="text" @bind:event="oninput" @onkeydown="OnKey" @ref="input"></textarea>
-            <button type="button" class="btn btn-primary" disabled="@(Busy || (string.IsNullOrWhiteSpace(text) && files.Count == 0))" @onclick="SendAsync"><i class="fas fa-paper-plane"></i></button>
+        <div class="bar">
+            <FileUpload Kind="Chat" Files="files" FilesChanged="f => files = f" ButtonText="" Camera="true" HideThumbs="true"
+                        PickButtonText=" " PickIcon="fa-paperclip" Accept="@ChatAccept" AllowedExtensions="FileStorage.ChatExtensions" Class="nh-chat-up" />
+            <textarea class="form-control" rows="1" placeholder="Nhắn cho mọi người..." @bind="text" @bind:event="oninput" @onkeydown="OnKey" @ref="input"></textarea>
+            <button type="button" class="send" title="Gửi" disabled="@(Busy || (string.IsNullOrWhiteSpace(text) && files.Count == 0))" @onclick="SendAsync"><i class="fas fa-paper-plane"></i></button>
         </div>
     </div>
 </div>
 
 @code {
     private List<ChatMessageView> messages = [];
-    private string? me, text, roomCode;
-    private int? roomId;
-    private bool isAdmin, aiReady, aiThinking, pickRoom, loadedAll;
+    private const string ChatAccept = "image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar";
+    private string? me, text;
+    private bool isAdmin, aiReady, aiThinking, loadedAll;
     private List<PendingFile> files = [];
     private IDisposable? sub;
     private ElementReference input;
@@ -124,13 +136,11 @@
         var t = (text ?? "").Trim();
         if (t.Length == 0 && files.Count == 0) return;
         var sendFiles = files.ToList();
-        var rid = roomId;
         bool ask = t.StartsWith("@ai", StringComparison.OrdinalIgnoreCase) || t.StartsWith("/ai", StringComparison.OrdinalIgnoreCase) || t.StartsWith("@trợ lý", StringComparison.OrdinalIgnoreCase);
-        if (await RunAsync(() => Chats.SendAsync(me ?? "?", t, rid, sendFiles)))
+        if (await RunAsync(() => Chats.SendAsync(me ?? "?", t, null, sendFiles)))
         {
             text = null;
             files = [];
-            roomId = null; roomCode = null; pickRoom = false;
             if (ask && aiReady) aiThinking = true;
             try { await JS.InvokeVoidAsync("nhChat.clear", input); } catch (Exception) { }
             await ScrollAsync();
@@ -145,12 +155,18 @@
         messages.InsertRange(0, older);
     }
 
-    private void OnRoomPicked(RoomCard? r)
+    private void RemoveFile(PendingFile f) => files = files.Where(x => x != f).ToList();
+
+    private static string DocIcon(string? name) => Path.GetExtension(name ?? "").ToLowerInvariant() switch
     {
-        roomId = r?.Id;
-        roomCode = r?.Code;
-        pickRoom = false;
-    }
+        ".pdf" => "fa-file-pdf",
+        ".doc" or ".docx" => "fa-file-word",
+        ".xls" or ".xlsx" or ".csv" => "fa-file-excel",
+        ".ppt" or ".pptx" => "fa-file-powerpoint",
+        ".zip" or ".rar" => "fa-file-archive",
+        ".txt" => "fa-file-alt",
+        _ => "fa-file"
+    };
 
     private async Task DeleteAsync(ChatMessageView m)
     {

@@ -373,7 +373,7 @@ body:has(.nh-bottomnav) .nh-callbar { display: none !important; }
 button.nh-step { border: 0; }
 button.nh-step:disabled { opacity: .55; }
 .nh-steps-lg { margin-bottom: 14px; }
-.nh-steps-lg .nh-step { font-size: .9rem; padding: 9px 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; }
+.nh-steps-lg .nh-step { white-space: nowrap; min-width: 0; font-size: .9rem; padding: 9px 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; }
 .nh-steps-lg .nh-step span { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,.35); font-size: .78rem; }
 .nh-steps-lg .nh-step:not(.on):not(.done) span { background: #fff; }
 .nh-fur-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -388,13 +388,13 @@ button.nh-step:disabled { opacity: .55; }
 .nh-fur .qty input { width: 52px; padding: 4px; min-height: 36px; font-size: 1rem; }
 .nh-fur .qty .btn { width: 36px; min-height: 36px; padding: 0; border: 1px solid var(--nh-border); display: inline-flex; align-items: center; justify-content: center; }
 .nh-pick-grid { display: grid; gap: 8px; }
-.nh-pick-grid.two { grid-template-columns: repeat(2, 1fr); }
-.nh-pick-grid.four { grid-template-columns: repeat(4, 1fr); }
-.nh-pick { border: 1px solid var(--nh-border); border-radius: 14px; background: #fff; padding: 14px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--nh-ink); min-height: 72px; }
+.nh-pick-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.nh-pick-grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.nh-pick { min-width: 0; overflow: hidden; border: 1px solid var(--nh-border); border-radius: 14px; background: #fff; padding: 14px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--nh-ink); min-height: 72px; }
 .nh-pick:active { transform: scale(.97); }
 .nh-pick .big { font-weight: 800; font-size: 1.15rem; }
 .nh-pick .sub { font-size: .72rem; opacity: .9; line-height: 1.2; }
-.nh-pick .sub.name { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nh-pick .sub.name { max-width: 100%; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; text-align: center; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .nh-pick.room { color: #fff; border: 0; padding: 10px 4px; min-height: 84px; }
 .nh-pick.room.empty { background: linear-gradient(135deg, #94a3b8, #64748b); }
 .nh-pick.room.nobill { background: linear-gradient(135deg, #3b82f6, #2563eb); }
@@ -404,7 +404,7 @@ button.nh-step:disabled { opacity: .55; }
 .nh-pick.room.off { opacity: .45; }
 .nh-picked { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 2px solid #86efac; background: #f0fdf4; border-radius: 14px; padding: 10px 12px; }
 .nh-picked .code { font-weight: 800; font-size: 1.25rem; color: #14532d; }
-@media (min-width: 768px) { .nh-pick-grid.four { grid-template-columns: repeat(8, 1fr); } .nh-pick-grid.two { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 768px) { .nh-pick-grid.four { grid-template-columns: repeat(8, minmax(0, 1fr)); } .nh-pick-grid.two { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
 /* ---------- Trang chính: 5 nghiệp vụ ---------- */
 .nh-ops { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
@@ -435,36 +435,68 @@ button.nh-step:disabled { opacity: .55; }
 .nh-chatbtn { position: relative; color: #fff; font-size: 1.25rem; padding: 6px 10px; border-radius: 10px; text-decoration: none; display: inline-flex; }
 .nh-chatbtn:hover { background: rgba(255,255,255,.16); color: #fff; }
 .nh-chatbtn .n { position: absolute; top: 0; right: 0; background: #ef4444; color: #fff; font-size: .62rem; font-weight: 700; min-width: 18px; height: 18px; border-radius: 9px; display: grid; place-items: center; padding: 0 4px; border: 2px solid var(--nh-primary); }
-.nh-chat { display: flex; flex-direction: column; background: #fff; border: 1px solid var(--nh-border); border-radius: 14px; height: calc(100dvh - 140px); min-height: 420px; overflow: hidden; }
-.nh-chat-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--nh-border); }
-.nh-chat-body { flex: 1; overflow-y: auto; padding: 12px; background: #f1f4f9; display: flex; flex-direction: column; gap: 8px; }
-.nh-chat-day { align-self: center; font-size: .72rem; color: #64748b; background: #e2e8f0; border-radius: 999px; padding: 2px 10px; margin: 6px 0; }
-.nh-msg { max-width: 82%; align-self: flex-start; }
+/* ---------- Chat nội bộ: toàn màn hình giữa thanh trên và thanh dưới ---------- */
+body:has(.nh-chat) { height: 100vh; height: 100dvh; overflow: hidden; }
+body:has(.nh-chat) .nh-footer { display: none !important; }
+body:has(.nh-chat) .nh-main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 !important; }
+@media (max-width: 991.98px) {
+  body:has(.nh-chat):has(.nh-bottomnav) .nh-main { padding-bottom: calc(var(--nh-nav-h) + var(--nh-safe-b)) !important; }
+  body:has(.nh-bottomnav) .nh-chat-input { padding-bottom: 18px; } /* chừa chỗ nút tròn Nhận phòng nhô lên */
+}
+.nh-chat { flex: 1; min-height: 0; display: flex; flex-direction: column; background: #e9eef5; overflow: hidden; }
+@media (min-width: 992px) { .nh-chat { margin: 14px auto; width: 100%; max-width: 980px; border: 1px solid var(--nh-border); border-radius: 18px; box-shadow: var(--nh-shadow-2); } }
+.nh-chat-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #fff; border-bottom: 1px solid var(--nh-border); }
+.nh-chat-head .ic { width: 38px; height: 38px; flex: 0 0 auto; border-radius: 12px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, var(--nh-primary), var(--nh-primary-2)); }
+.nh-chat-head .ttl { font-weight: 800; color: #0f172a; }
+.nh-chat-head .sub { font-size: .74rem; color: var(--nh-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nh-chat-head .sub code { font-size: .74rem; }
+.nh-chat-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 10px; display: flex; flex-direction: column; gap: 4px; }
+.nh-chat-day { align-self: center; font-size: .72rem; color: #475569; background: rgba(255,255,255,.8); border-radius: 999px; padding: 2px 12px; margin: 10px 0 6px; }
+.nh-msg { max-width: 80%; align-self: flex-start; margin-top: 2px; }
 .nh-msg.mine { align-self: flex-end; }
-.nh-msg .who { font-size: .72rem; color: #64748b; margin: 0 0 2px 6px; }
-.nh-msg .bubble { background: #fff; border-radius: 16px 16px 16px 4px; padding: 8px 12px; box-shadow: 0 1px 2px rgba(15,23,42,.08); white-space: pre-wrap; word-break: break-word; }
-.nh-msg.mine .bubble { background: var(--nh-primary); color: #fff; border-radius: 16px 16px 4px 16px; }
+.nh-msg .who { font-size: .72rem; font-weight: 600; color: #475569; margin: 6px 0 2px 10px; }
+.nh-msg .bubble { background: #fff; border-radius: 18px 18px 18px 6px; padding: 7px 12px 5px; box-shadow: 0 1px 1px rgba(15,23,42,.08); white-space: pre-wrap; word-break: break-word; }
+.nh-msg.mine .bubble { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; border-radius: 18px 18px 6px 18px; }
 .nh-msg.ai .bubble { background: #ecfdf5; border: 1px solid #a7f3d0; }
-.nh-msg .time { font-size: .66rem; opacity: .7; text-align: right; margin-top: 2px; }
+.nh-msg .bubble.pics-only { padding: 4px; background: transparent; box-shadow: none; }
+.nh-msg .text { display: block; }
+.nh-msg .time { font-size: .64rem; opacity: .7; text-align: right; margin-top: 2px; display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+.nh-msg .bubble.pics-only .time { color: #475569; padding-right: 4px; }
+.nh-msg .del { border: 0; background: none; padding: 0; color: inherit; opacity: .7; font-size: .7rem; }
 .nh-msg .room { display: inline-block; font-size: .72rem; font-weight: 700; background: rgba(26,84,144,.1); color: var(--nh-primary); border-radius: 6px; padding: 0 6px; margin-bottom: 3px; text-decoration: none; }
 .nh-msg.mine .room { background: rgba(255,255,255,.2); color: #fff; }
-.nh-msg .pics { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
-.nh-msg .pics img { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; }
-.nh-msg .pics .file { font-size: .8rem; }
-.nh-msg.mine .btn-link { color: #fecaca !important; }
-.nh-chat-input { padding: 10px 12px; border-top: 1px solid var(--nh-border); background: #fff; }
-.nh-chat-input textarea { resize: none; max-height: 120px; }
-.nh-chat-input .nh-upload-btn { width: auto; height: auto; padding: 4px 10px; flex-direction: row; gap: 6px; border-style: solid; }
-.nh-chat-input .nh-thumb { width: 64px; height: 52px; }
-@media (max-width: 767.98px) { .nh-chat { height: calc(100dvh - var(--nh-nav-h) - var(--nh-safe-b) - 118px); border-radius: 12px; } .nh-msg { max-width: 90%; } }
+.nh-msg .pics { display: grid; gap: 3px; margin-bottom: 4px; border-radius: 14px; overflow: hidden; }
+.nh-msg .pics.n1 { grid-template-columns: 1fr; } .nh-msg .pics.n2 { grid-template-columns: 1fr 1fr; } .nh-msg .pics.n3 { grid-template-columns: 1fr 1fr 1fr; }
+.nh-msg .pics img { width: 100%; height: 100%; max-height: 260px; aspect-ratio: 4 / 3; object-fit: cover; display: block; }
+.nh-msg .pics.n1 img { aspect-ratio: auto; max-width: 260px; }
+.nh-msg .doc { display: flex; align-items: center; gap: 8px; background: rgba(15,23,42,.05); border-radius: 12px; padding: 8px 10px; margin-bottom: 4px; text-decoration: none; color: inherit; min-width: 0; }
+.nh-msg.mine .doc { background: rgba(255,255,255,.16); color: #fff; }
+.nh-msg .doc > i:first-child { font-size: 1.4rem; color: #2563eb; }
+.nh-msg.mine .doc > i:first-child { color: #fff; }
+.nh-msg .doc span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; font-weight: 600; }
+.nh-msg .doc .dl { opacity: .7; }
+.nh-chat-input { background: #fff; border-top: 1px solid var(--nh-border); padding: 8px 10px; }
+.nh-chat-input .pending { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; }
+.nh-chat-input .pf { position: relative; flex: 0 0 auto; height: 56px; border-radius: 10px; overflow: hidden; border: 1px solid var(--nh-border); background: #f8fafc; }
+.nh-chat-input .pf img { height: 100%; width: 56px; object-fit: cover; }
+.nh-chat-input .pf-doc { display: flex; align-items: center; gap: 6px; height: 100%; padding: 0 28px 0 10px; font-size: .78rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nh-chat-input .pf-doc i { color: #2563eb; font-size: 1.1rem; }
+.nh-chat-input .pf button { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border-radius: 50%; border: 0; background: rgba(220,38,38,.92); color: #fff; font-size: .8rem; line-height: 1; padding: 0; }
+.nh-chat-input .bar { display: flex; align-items: flex-end; gap: 6px; }
+.nh-chat-input textarea { resize: none; max-height: 120px; border-radius: 22px; padding: 9px 14px; background: #f1f5f9; border-color: transparent; }
+.nh-chat-input textarea:focus { background: #fff; }
+.nh-chat-up .nh-upload-btn { width: 40px !important; height: 40px !important; min-height: 40px !important; border-radius: 50% !important; border: 0 !important; background: #f1f5f9; color: #475569; padding: 0 !important; flex-direction: row; }
+.nh-chat-up .nh-upload-btn i { font-size: 1.05rem; }
+.nh-chat-up .nh-upload-btn span { display: none; }
+.nh-chat-up > .d-flex { gap: 4px !important; flex-wrap: nowrap !important; }
+.nh-chat-input .send { width: 42px; height: 42px; flex: 0 0 auto; border-radius: 50%; border: 0; color: #fff; background: linear-gradient(135deg, #2563eb, #1d4ed8); display: grid; place-items: center; box-shadow: 0 4px 10px rgba(37,99,235,.35); }
+.nh-chat-input .send:disabled { opacity: .45; box-shadow: none; }
+@media (max-width: 767.98px) { .nh-msg { max-width: 86%; } }
 
 /* ---------- Trang cài ứng dụng ---------- */
 .nh-install-hero { text-align: center; padding: 28px 16px; }
 .nh-install-hero .icon { width: 96px; height: 96px; border-radius: 24px; background: linear-gradient(135deg, var(--nh-primary), var(--nh-primary-2)); color: #fff; display: grid; place-items: center; font-size: 2.6rem; margin: 0 auto 14px; box-shadow: 0 10px 30px rgba(26,84,144,.35); }
 .nh-install-steps li { margin-bottom: 8px; }
-.nh-chat-input .nh-upload { display: flex; align-items: center; }
-.nh-chat-input .nh-upload-btn { min-height: 42px; width: 44px; padding: 0; }
-.nh-chat-input .nh-upload-btn span:empty { display: none; }
 
 /* ---------- Báo cáo: chọn Tháng/Quý/Năm, biểu đồ cột ---------- */
 .nh-seg { display: inline-flex; background: #e2e8f0; border-radius: 999px; padding: 3px; gap: 2px; }

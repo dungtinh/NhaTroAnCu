@@ -9,7 +9,7 @@
         <label class="form-label mb-1">@Label @if (Required) {<span class="text-danger">*</span>}</label>
     }
     <div class="d-flex flex-wrap gap-2 align-items-start">
-        @foreach (var f in Files)
+        @foreach (var f in HideThumbs ? [] : Files)
         {
             <div class="nh-thumb" @key="f.Path">
                 @if (f.IsImage)
@@ -32,8 +32,8 @@
         {
             @* Nút thứ hai không ép mở máy ảnh: chọn ảnh có sẵn trong máy / thư viện *@
             <label class="nh-upload-btn alt @(uploading ? "disabled" : "")">
-                <i class="fas fa-images"></i>
-                <span>@PickButtonText</span>
+                <i class="fas @PickIcon"></i>
+                @if (!string.IsNullOrWhiteSpace(PickButtonText)) { <span>@PickButtonText</span> }
                 <InputFile class="d-none" accept="@Accept" multiple="@Multiple" OnChange="OnSelected" disabled="@uploading" />
             </label>
         }
@@ -55,6 +55,11 @@
     /// <summary>Có đặt (và Camera=true) thì thêm nút chọn ảnh có sẵn, không ép mở máy ảnh.</summary>
     [Parameter] public string? PickButtonText { get; set; }
     [Parameter] public string? Class { get; set; }
+    [Parameter] public string PickIcon { get; set; } = "fa-images";
+    /// <summary>Không vẽ ảnh thu nhỏ (trang tự vẽ danh sách file chờ).</summary>
+    [Parameter] public bool HideThumbs { get; set; }
+    /// <summary>Đuôi file được phép (mặc định ảnh + PDF).</summary>
+    [Parameter] public string[]? AllowedExtensions { get; set; }
     [Parameter] public bool Required { get; set; }
     [Parameter] public bool IsPublic { get; set; }
     [Parameter] public EventCallback<PendingFile> Uploaded { get; set; }
@@ -100,7 +105,7 @@
                     using var buffer = new MemoryStream();
                     await stream.CopyToAsync(buffer);
                     buffer.Position = 0;
-                    var saved = await Attachments.UploadAsync(buffer, name, Kind, IsPublic);
+                    var saved = await Attachments.UploadAsync(buffer, name, Kind, IsPublic, AllowedExtensions);
                     if (!Multiple) Files.Clear();
                     Files.Add(saved);
                     batch.Add(saved);

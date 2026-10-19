@@ -27,7 +27,7 @@ else
     <div class="nh-steps nh-steps-lg">
         <button type="button" class="nh-step @(step == 1 ? "on" : room != null ? "done" : "")" @onclick="() => Go(1)"><span>1</span> Phòng@(room != null ? " " + room.Code : "")</button>
         <button type="button" class="nh-step @(step == 2 ? "on" : step > 2 ? "done" : "")" disabled="@(room == null)" @onclick="() => Go(2)"><span>2</span> Khách@(people.Count > 0 ? $" ({people.Count})" : "")</button>
-        <button type="button" class="nh-step @(step == 3 ? "on" : "")" disabled="@(room == null)" @onclick="() => Go(3)"><span>3</span> Tiền &amp; xác nhận</button>
+        <button type="button" class="nh-step @(step == 3 ? "on" : "")" disabled="@(room == null)" @onclick="() => Go(3)"><span>3</span> Thu tiền</button>
     </div>
 
     @if (step == 1)
