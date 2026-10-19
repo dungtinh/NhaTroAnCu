@@ -84,12 +84,19 @@ public class CheckoutForm
 public record MissingPeriod(int Month, int Year, DateTime From, DateTime To, decimal Rent, decimal Water, int PersonCount);
 
 public record CheckoutPreview(decimal Deposit, int UsedKwh, decimal Electricity, decimal Penalties, decimal Other,
-    decimal UnpaidBills, List<(Bill Bill, decimal Due)> UnpaidList, List<string> FurnitureWarnings, List<MissingPeriod> Missing)
+    decimal UnpaidBills, List<(Bill Bill, decimal Due)> UnpaidList, List<string> FurnitureWarnings, List<MissingPeriod> Missing,
+    bool DepositRefundable, int MinStayMonths, DateTime RefundEligibleFrom, int StayDays)
 {
     public decimal MissingRent => Missing.Sum(m => m.Rent);
     public decimal MissingWater => Missing.Sum(m => m.Water);
+    /// <summary>Tổng các khoản khách phải trả khi ra: điện kỳ cuối, phạt, khoản khác, nợ cũ, tiền phòng/nước kỳ chưa lập.</summary>
+    public decimal Deductions => Electricity + Penalties + Other + UnpaidBills + MissingRent + MissingWater;
+    /// <summary>Cọc được tính vào quyết toán: ở chưa đủ số tháng tối thiểu thì cọc không hoàn trả (0).</summary>
+    public decimal RefundableDeposit => DepositRefundable ? Deposit : 0;
+    /// <summary>Phần cọc không hoàn trả do ở chưa đủ tháng tối thiểu.</summary>
+    public decimal Forfeited => Deposit - RefundableDeposit;
     /// <summary>Dương = trả lại khách, âm = khách phải nộp thêm.</summary>
-    public decimal Balance => Deposit - Electricity - Penalties - Other - UnpaidBills - MissingRent - MissingWater;
+    public decimal Balance => RefundableDeposit - Deductions;
 }
 
 public record CardScanResult(string? Id, string? Name, DateTime? BirthDate, string? Gender, string? Address, string? Ethnicity, string? Nationality);
@@ -441,8 +448,14 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
             missing.Add(new MissingPeriod(d.Month, d.Year, from, to, rent, persons * settings.WaterPricePerPerson, persons));
         }
 
+        // Chỉ trả lại cọc khi khách ở đủ số tháng tối thiểu (Cấu hình, mặc định 3 tháng); ở ít hơn thì cọc không hoàn trả.
+        int minMonths = Math.Max(0, settings.MinStayMonthsForDepositRefund);
+        var eligibleFrom = lease.StartDate.AddMonths(minMonths);
+        bool refundable = minMonths == 0 || form.EndDate.Date >= eligibleFrom;
+        int stayDays = Math.Max(0, (form.EndDate.Date - lease.StartDate).Days);
+
         return new CheckoutPreview(Math.Max(0, held), used, used * settings.ElectricityPrice, form.Penalties.Sum(p => p.Amount), form.OtherAmount,
-            unpaid.Sum(u => u.Item2), unpaid, warnings, missing);
+            unpaid.Sum(u => u.Item2), unpaid, warnings, missing, refundable, minMonths, eligibleFrom, stayDays);
     }
 
     public async Task CheckoutAsync(CheckoutForm form, string? user)
@@ -494,8 +507,9 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         var dues = preview.UnpaidList.Select(u => (u.Bill.Id, u.Due)).ToList();
         if (moveOut != null && moveOut.TotalAmount > 0) dues.Add((moveOut.Id, moveOut.TotalAmount));
 
-        // 1) Khấu trừ cọc: chuyển từ TK cá nhân sang TK hộ kinh doanh, ghi là tiền thu của từng phiếu
-        decimal applied = Math.Min(preview.Deposit - form.DepositRefund, dues.Sum(d => d.Due));
+        // 1) Khấu trừ cọc: chuyển từ TK cá nhân sang TK hộ kinh doanh, ghi là tiền thu của từng phiếu.
+        //    Ở chưa đủ tháng tối thiểu thì cọc không hoàn trả và cũng không trừ vào các khoản: khách nộp riêng, cọc là doanh thu (1b).
+        decimal applied = preview.DepositRefundable ? Math.Min(preview.Deposit - form.DepositRefund, dues.Sum(d => d.Due)) : 0;
         var room = lease.Room;
         if (applied > 0)
         {
@@ -517,6 +531,25 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
                 dues[i] = (dues[i].Id, dues[i].Due - part);
                 left -= part;
             }
+        }
+
+        // 1b) Phần cọc giữ lại ngoài khấu trừ (ở chưa đủ tháng tối thiểu nên không hoàn trả, hoặc chủ nhà quyết định giữ):
+        //     là doanh thu hộ kinh doanh, chuyển nội bộ từ TK cá nhân sang TK hộ kinh doanh.
+        decimal forfeited = preview.Deposit - form.DepositRefund - applied;
+        if (forfeited > 0)
+        {
+            var group = Guid.NewGuid();
+            var why = preview.DepositRefundable ? "" : $" (ở {preview.StayDays} ngày, chưa đủ {preview.MinStayMonths} tháng)";
+            db.Transactions.Add(new MoneyTransaction
+            {
+                AccountId = settings.PersonalAccountId, Date = date, Amount = -forfeited, Category = TxCategory.Transfer, TransferGroup = group,
+                Description = $"Cọc không hoàn trả phòng {room.Code}{why}", RoomId = room.Id, LeaseId = lease.Id, CreatedAt = DateTime.Now, CreatedBy = user
+            });
+            db.Transactions.Add(new MoneyTransaction
+            {
+                AccountId = settings.BusinessAccountId, Date = date, Amount = forfeited, Category = TxCategory.OtherIncome, TransferGroup = group,
+                Description = $"Cọc không hoàn trả phòng {room.Code}{why}", RoomId = room.Id, LeaseId = lease.Id, CreatedAt = DateTime.Now, CreatedBy = user
+            });
         }
 
         // 2) Tiền khách nộp thêm (vào TK hộ kinh doanh)

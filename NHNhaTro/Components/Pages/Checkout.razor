@@ -1,4 +1,4 @@
-@page "/tra-phong/{LeaseId:int}"
+﻿@page "/tra-phong/{LeaseId:int}"
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inherits NhPage
@@ -114,11 +114,26 @@ else
                             tiền phòng và nước kỳ đó được <strong>tính đủ tháng</strong> vào quyết toán.
                         </div>
                     }
+                    @if (!preview.DepositRefundable)
+                    {
+                        <div class="alert alert-danger small py-2">
+                            <i class="fas fa-ban"></i> Khách ở <strong>@preview.StayDays ngày</strong> (từ @Fmt.Date(lease.StartDate)), chưa đủ <strong>@preview.MinStayMonths tháng</strong>
+                            (đủ từ @Fmt.Date(preview.RefundEligibleFrom)): <strong>không trả lại cọc</strong>. Các khoản điện, phạt, nợ khách vẫn phải nộp.
+                        </div>
+                    }
+                    else if (preview.MinStayMonths > 0)
+                    {
+                        <div class="small text-success mb-2"><i class="fas fa-check-circle"></i> Ở @preview.StayDays ngày, đủ @preview.MinStayMonths tháng: được trả lại cọc sau khi trừ các khoản.</div>
+                    }
                     <table class="nh-table mb-2">
                         <tr><td>Tiền cọc đã thu, đang giữ</td><td class="text-end fw-bold">@Fmt.Money(preview.Deposit)</td></tr>
                         @if (preview.Deposit < lease.Deposit)
                         {
                             <tr><td colspan="2" class="small text-danger">Hợp đồng ghi cọc @Fmt.Vnd(lease.Deposit) nhưng mới thu @Fmt.Vnd(preview.Deposit).</td></tr>
+                        }
+                        @if (preview.Forfeited > 0)
+                        {
+                            <tr class="table-danger"><td>− Cọc không hoàn trả (ở chưa đủ @preview.MinStayMonths tháng)</td><td class="text-end">@Fmt.Money(preview.Forfeited)</td></tr>
                         }
                         <tr><td>− Tiền điện kỳ cuối (@preview.UsedKwh số)</td><td class="text-end">@Fmt.Money(preview.Electricity)</td></tr>
                         @foreach (var m in preview.Missing)
@@ -126,7 +141,7 @@ else
                             <tr><td>− Tiền phòng kỳ @m.Month.ToString("00")/@m.Year (đủ tháng) <span class="small text-muted d-block">@Fmt.Date(m.From) → @Fmt.Date(m.To)</span></td><td class="text-end">@Fmt.Money(m.Rent)</td></tr>
                             <tr><td>− Tiền nước kỳ @m.Month.ToString("00")/@m.Year (@m.PersonCount người)</td><td class="text-end">@Fmt.Money(m.Water)</td></tr>
                         }
-                        <tr><td>− Phạt hư hỏng</td><td class="text-end">@Fmt.Money(preview.Penalties)</td></tr>
+                        <tr><td>− Phạt hư hỏng@(form.Penalties.Count(p => p.Amount > 0) is int n && n > 0 ? $" ({n} khoản)" : "")</td><td class="text-end">@Fmt.Money(preview.Penalties)</td></tr>
                         @if (preview.Other != 0) { <tr><td>− Khoản khác</td><td class="text-end">@Fmt.Money(preview.Other)</td></tr> }
                         @foreach (var u in preview.UnpaidList)
                         {
@@ -139,15 +154,29 @@ else
                     </table>
 
                     <label class="form-label">Trả lại cọc cho khách (chi từ TK cá nhân)</label>
-                    <MoneyInput @bind-Value="form.DepositRefund" />
+                    <MoneyInput Value="form.DepositRefund" ValueChanged="v => { form.DepositRefund = v; amountsTouched = true; }" />
                     <div class="my-2"><FileUpload Kind="Receipts" ButtonText="Chứng từ trả cọc" @bind-Files="form.RefundReceipts" Scanned="r => { if (r.Amount is decimal a) form.DepositRefund = a; }" /></div>
 
                     <label class="form-label">Khách nộp thêm (vào TK hộ kinh doanh)</label>
-                    <MoneyInput @bind-Value="form.Collected" />
-                    <button type="button" class="btn btn-sm btn-link px-0" @onclick="FillSuggested">Điền theo quyết toán</button>
+                    <MoneyInput Value="form.Collected" ValueChanged="v => { form.Collected = v; amountsTouched = true; }" />
+                    @if (amountsTouched)
+                    {
+                        <button type="button" class="btn btn-sm btn-link px-0" @onclick="() => { amountsTouched = false; FillSuggested(); }">Điền lại theo quyết toán</button>
+                    }
+                    else
+                    {
+                        <div class="small text-muted">Hai ô trên tự điền theo quyết toán; sửa tay nếu thực tế khác.</div>
+                    }
 
                     <div class="small text-muted">
-                        Phần cọc giữ lại (@Fmt.Money(Math.Max(0, preview.Deposit - form.DepositRefund))đ) được chuyển từ TK cá nhân sang TK hộ kinh doanh để trừ các khoản trên.
+                        @if (preview.DepositRefundable)
+                        {
+                            <text>Phần cọc giữ lại (@Fmt.Money(Math.Max(0, preview.Deposit - form.DepositRefund))đ) được chuyển từ TK cá nhân sang TK hộ kinh doanh để trừ các khoản trên; dư ra thì ghi là doanh thu.</text>
+                        }
+                        else
+                        {
+                            <text>Cọc giữ lại (@Fmt.Money(Math.Max(0, preview.Deposit - form.DepositRefund))đ) ghi là doanh thu hộ kinh doanh, không trừ vào các khoản trên; khách nộp riêng @Fmt.Vnd(Math.Max(0, -preview.Balance)).</text>
+                        }
                     </div>
                     @if (Mismatch != 0)
                     {
@@ -178,6 +207,8 @@ else
     private CheckoutPreview? preview;
     private List<FurnitureLine> furniture = [];
     private decimal electricityPrice;
+    /// <summary>Người dùng đã sửa tay ô trả cọc/thu thêm: không tự điền lại khi quyết toán đổi.</summary>
+    private bool amountsTouched;
 
     /// <summary>Chênh lệch giữa số tiền nhập và quyết toán (dương = thu/giữ thiếu so với số phải thu).</summary>
     private decimal Mismatch => preview == null ? 0 : (preview.Deposit - form.DepositRefund + form.Collected) - (preview.Deposit - preview.Balance);
@@ -198,7 +229,12 @@ else
 
     private async Task RefreshAsync()
     {
-        try { preview = await Leases.PreviewCheckoutAsync(form); }
+        try
+        {
+            preview = await Leases.PreviewCheckoutAsync(form);
+            // Phạt, điện, ngày trả... đổi thì số trả cọc / thu thêm đổi theo (trừ khi đã sửa tay).
+            if (!amountsTouched) FillSuggested();
+        }
         catch (Exception ex) { Toast.Error(ex.Message); }
     }
 

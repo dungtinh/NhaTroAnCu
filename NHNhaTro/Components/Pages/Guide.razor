@@ -47,7 +47,8 @@
         <li>Bấm <strong>Trả phòng</strong>, chọn phòng khách đang ở. Kỳ nào đã đến ngày thu mà chưa lập phiếu, phần mềm tự tính <strong>đủ tháng</strong> tiền phòng và nước vào quyết toán.</li>
         <li>Ghi <strong>số điện đã dùng</strong> từ kỳ chốt trước. Kiểm tra đồ đạc, thiếu hay hỏng thì mở mục đồ đạc và sửa số thực tế.</li>
         <li>Có hư hỏng thì bấm nhanh "Tường bẩn", "Vỡ kính"... và ghi tiền phạt. Chụp vài ảnh hiện trạng.</li>
-        <li>Phần mềm tự quyết toán: cọc trừ điện, trừ phạt, trừ tiền phòng/nước kỳ chưa lập, trừ nợ cũ. Số dương là <strong>trả lại khách</strong>, số âm là <strong>khách nộp thêm</strong>. Bấm <strong>Hoàn tất trả phòng</strong>, phòng về trạng thái trống.</li>
+        <li>Phần mềm tự quyết toán: cọc trừ điện, trừ phạt, trừ tiền phòng/nước kỳ chưa lập, trừ nợ cũ. Số dương là <strong>trả lại khách</strong>, số âm là <strong>khách nộp thêm</strong>; hai ô "Trả lại cọc" và "Khách nộp thêm" tự điền theo, thêm phạt là đổi ngay. Bấm <strong>Hoàn tất trả phòng</strong>, phòng về trạng thái trống.</li>
+        <li><strong>Chỉ trả lại cọc khi khách ở đủ @(s?.MinStayMonthsForDepositRefund ?? 3) tháng</strong> (đổi ở Cấu hình). Ở ít hơn, phần mềm báo đỏ và để "Trả lại cọc" = 0; cọc giữ lại ghi là doanh thu, khách vẫn nộp điện, phạt, nợ.</li>
     </ol>
 
     <h5 id="sua"><span class="badge bg-warning text-dark">4</span> Sửa chữa</h5>

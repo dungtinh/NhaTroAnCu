@@ -1,4 +1,4 @@
-@page "/cau-hinh"
+﻿@page "/cau-hinh"
 @attribute [Authorize(Roles = Roles.Admin)]
 @rendermode InteractiveServer
 @inherits NhPage
@@ -28,6 +28,8 @@
                     <div class="col-md-4"><label class="form-label">Nước (đ/người/tháng)</label><MoneyInput @bind-Value="s.WaterPricePerPerson" /></div>
                     <div class="col-md-4"><label class="form-label">Ngày thu hằng tháng</label><input type="number" min="1" max="28" class="form-control" @bind="s.BillingDay" /></div>
                     <div class="col-md-4"><label class="form-label">Tiền cọc mặc định (mọi khách)</label><MoneyInput @bind-Value="s.DefaultDeposit" /></div>
+                    <div class="col-md-4"><label class="form-label">Ở đủ mấy tháng mới trả lại cọc</label><input type="number" min="0" max="36" class="form-control" @bind="s.MinStayMonthsForDepositRefund" />
+                        <div class="form-text">Ở ít hơn thì cọc không hoàn trả, tính là doanh thu. 0 = luôn trả.</div></div>
                     <div class="col-md-6"><label class="form-label">TK nhận cọc</label>
                         <select class="form-select" @bind="s.PersonalAccountId">@foreach (var a in accounts) {<option value="@a.Id">@a.Name</option>}</select></div>
                     <div class="col-md-6"><label class="form-label">TK nhận tiền phòng</label>

@@ -14,6 +14,8 @@ public class AppSetting
     public int BillingDay { get; set; } = 10;
     /// <summary>Tiền cọc mặc định cho mọi khách (sửa được từng hợp đồng).</summary>
     public decimal DefaultDeposit { get; set; } = 1_000_000;
+    /// <summary>Khách ở đủ số tháng này trở lên mới được trả lại cọc; ở ít hơn thì cọc không hoàn trả (0 = luôn trả).</summary>
+    public int MinStayMonthsForDepositRefund { get; set; } = 3;
     public int PersonalAccountId { get; set; }
     public int BusinessAccountId { get; set; }
 

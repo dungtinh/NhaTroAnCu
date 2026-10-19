@@ -1,4 +1,4 @@
-// Trên điện thoại, bảng có tiêu đề cột (thead) được xếp thành thẻ: mỗi ô hiện kèm tên cột.
+﻿// Trên điện thoại, bảng có tiêu đề cột (thead) được xếp thành thẻ: mỗi ô hiện kèm tên cột.
 // Gắn data-label cho từng ô theo tiêu đề cột; chạy lại mỗi khi Blazor vẽ lại trang.
 (function () {
     function label(table) {
@@ -61,3 +61,61 @@ document.addEventListener('keydown', function (e) {
     var next = all[all.indexOf(e.target) + (e.shiftKey ? -1 : 1)];
     if (next) { next.focus(); next.select(); }
 });
+
+// Xem ảnh và phiếu PDF ngay trong khung trên trang. Link mở tab mới (target=_blank) trên app cài ở màn hình chính iPhone
+// không có nút quay lại nên người dùng bị kẹt; ở đây chặn các link ảnh/PDF và hiện lớp phủ có nút đóng, nút quay lại cũng đóng được.
+(function () {
+    var box, opened = false;
+    function ensure() {
+        if (box) return;
+        box = document.createElement('div');
+        box.className = 'nh-lightbox';
+        box.setAttribute('role', 'dialog');
+        box.innerHTML = '<div class="nh-lb-bar"><span class="nh-lb-title"></span><a class="nh-lb-dl btn btn-sm btn-outline-light" download><i class="fas fa-download"></i> Tải về</a><button type="button" class="nh-lb-close" aria-label="Đóng">×</button></div><div class="nh-lb-body"></div>';
+        document.body.appendChild(box);
+        box.addEventListener('click', function (e) {
+            if (e.target === box || e.target.classList.contains('nh-lb-body') || e.target.closest('.nh-lb-close')) close();
+        });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && opened) close(); });
+        window.addEventListener('popstate', function () { if (opened) hide(); });
+    }
+    function open(href, title, isPdf) {
+        ensure();
+        var body = box.querySelector('.nh-lb-body');
+        body.innerHTML = '';
+        var el = document.createElement(isPdf ? 'iframe' : 'img');
+        el.src = href;
+        if (isPdf) el.title = title || 'PDF'; else el.alt = title || '';
+        body.appendChild(el);
+        box.querySelector('.nh-lb-title').textContent = title || '';
+        var dl = box.querySelector('.nh-lb-dl');
+        dl.href = href;
+        dl.style.display = isPdf ? '' : 'none';
+        box.classList.add('show');
+        document.body.classList.add('nh-lb-open');
+        opened = true;
+        try { history.pushState({ nhLightbox: true }, ''); } catch (err) { }
+    }
+    function hide() {
+        if (!box) return;
+        box.classList.remove('show');
+        document.body.classList.remove('nh-lb-open');
+        box.querySelector('.nh-lb-body').innerHTML = '';
+        opened = false;
+    }
+    function close() {
+        if (history.state && history.state.nhLightbox) history.back(); else hide();
+    }
+    document.addEventListener('click', function (e) {
+        var a = e.target.closest && e.target.closest('a[href]');
+        if (!a || a.closest('.nh-lightbox') || e.ctrlKey || e.metaKey || e.shiftKey) return;
+        var href = a.getAttribute('href') || '';
+        var isImg = /\.(png|jpe?g|gif|webp|bmp)(\?|$)/i.test(href) || (a.target === '_blank' && !!a.querySelector('img'));
+        var isPdf = /\.pdf(\?|$)/i.test(href) || /^\/?files\/(bills|checkout)\//i.test(href);
+        if (!isImg && !isPdf) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var img = a.querySelector('img');
+        open(a.href, a.getAttribute('title') || (img && img.alt) || '', isPdf && !isImg);
+    }, true);
+})();
