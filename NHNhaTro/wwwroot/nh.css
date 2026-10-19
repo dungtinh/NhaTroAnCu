@@ -79,9 +79,9 @@ body:has(.nh-bottomnav) .nh-main { padding-bottom: calc(var(--nh-nav-h) + var(--
 }
 
 /* ---------- Sơ đồ phòng ---------- */
-.nh-floor { display: grid; grid-template-columns: 60px repeat(8, minmax(84px, 1fr)); gap: 8px; align-items: stretch; margin-bottom: 8px; }
+.nh-floor { display: grid; grid-template-columns: 60px repeat(8, minmax(0, 1fr)); gap: 8px; align-items: stretch; margin-bottom: 8px; }
 .nh-floor-label { display: flex; align-items: center; justify-content: center; font-weight: 700; color: #64748b; font-size: .85rem; }
-.nh-room { border-radius: 12px; padding: 8px 8px 6px; color: #fff; text-decoration: none; display: flex; flex-direction: column; min-height: 86px; position: relative;
+.nh-room { min-width: 0; overflow: hidden; border-radius: 12px; padding: 8px 8px 6px; color: #fff; text-decoration: none; display: flex; flex-direction: column; min-height: 86px; position: relative;
   box-shadow: 0 2px 6px rgba(0,0,0,.08); transition: transform .12s ease, box-shadow .12s ease; }
 .nh-room:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,.15); color: #fff; }
 .nh-room:active { transform: scale(.97); }
@@ -327,11 +327,12 @@ a.nh-list-item:hover { box-shadow: var(--nh-shadow-2); transform: translateY(-1p
   .nh-table:not([data-stack]) td, .nh-table:not([data-stack]) th { padding: .45rem .4rem; }
 
   /* Sơ đồ: mỗi tầng 4 phòng một hàng, nhãn tầng nằm trên */
-  .nh-floor { grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+  .nh-floor { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
   .nh-floor-label { grid-column: 1 / -1; justify-content: flex-start; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; padding: 2px 2px 0; }
   .nh-room { min-height: 70px; padding: 6px 7px 5px; border-radius: 10px; }
   .nh-room .code { font-size: .98rem; }
-  .nh-room .who { font-size: .7rem; }
+  /* Tên khách dài: xuống tối đa 2 dòng thay vì làm ô phình ra */
+  .nh-room .who { font-size: .7rem; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 2.4em; }
   .nh-room .meta { font-size: .66rem; }
   .nh-legend span { font-size: .74rem; }
 
