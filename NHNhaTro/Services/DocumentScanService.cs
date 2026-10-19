@@ -14,7 +14,7 @@ public static class ScanProvider
     public const string None = "";
     public const string Gemini = "Gemini";
     public const string Claude = "Claude";
-    public const string DefaultGeminiModel = "gemini-2.5-flash";
+    public const string DefaultGeminiModel = "gemini-3.8-flash";
     public const string DefaultClaudeModel = "claude-haiku-5-5";
 }
 
