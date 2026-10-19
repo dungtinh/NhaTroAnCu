@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using NHNhaTro.Data;
 using NHNhaTro.Data.Entities;
 
@@ -31,6 +31,8 @@ public class BillingRow
     public DateTime PeriodFrom { get; set; }
     public DateTime PeriodTo { get; set; }
     public decimal PreviousDebt { get; set; }
+    /// <summary>Diễn giải tiền phòng: số ngày × giá ÷ 30 (kỳ đầu) hay tròn tháng.</summary>
+    public string RentDetail { get; set; } = "";
 
     public decimal Electricity(decimal price) => Math.Max(0, Kwh ?? 0) * price;
     public decimal Water(decimal perPerson) => PersonCount * perPerson;
@@ -72,7 +74,7 @@ public class BillingService(IDbContextFactory<ApplicationDbContext> dbFactory)
             var current = lb.FirstOrDefault(b => b.Bill.Kind == BillKind.Monthly && b.Bill.Month == month && b.Bill.Year == year);
             var earlier = lb.Where(b => b.Bill.Id != current?.Bill.Id && (b.Bill.Year < year || (b.Bill.Year == year && b.Bill.Month <= month))).ToList();
             var active = l.Tenants.Where(t => t.MoveOutDate == null).ToList();
-            bool first = RoomService.IsFirstBillingMonth(l.StartDate, month, year);
+            bool first = RoomService.IsFirstBillingMonth(l.StartDate, month, year, s.BillingDay);
             var (from, to, rent) = DefaultPeriod(l, first, due, s.BillingDay);
             return new BillingRow
             {
@@ -83,8 +85,11 @@ public class BillingService(IDbContextFactory<ApplicationDbContext> dbFactory)
                 Kwh = current?.Bill.ElectricityKwh,
                 OtherAmount = current?.Bill.OtherAmount ?? 0, Discount = current?.Bill.Discount ?? 0, Note = current?.Bill.Note,
                 BillId = current?.Bill.Id, Paid = current?.Paid ?? 0,
-                SkipThisMonth = !RoomService.NeedsMonthlyBill(l, month, year), IsFirstMonth = first,
+                SkipThisMonth = !RoomService.NeedsMonthlyBill(l, month, year, s.BillingDay), IsFirstMonth = first,
                 PeriodFrom = current?.Bill.PeriodFrom ?? from, PeriodTo = current?.Bill.PeriodTo ?? to,
+                RentDetail = RoomService.NeedsMonthlyBill(l, month, year, s.BillingDay)
+                    ? LeaseService.RentDetail(current?.Bill.PeriodFrom ?? from, current?.Bill.PeriodTo ?? to, l.StartDate, l.MonthlyRent, s.BillingDay)
+                    : $"Vào {l.StartDate:dd/MM}: đã thu 1 tháng khi vào, kỳ chốt đầu {LeaseService.CalculateStubPeriod(0, l.StartDate, s.BillingDay).To:dd/MM}",
                 PreviousDebt = earlier.Sum(b => Math.Max(0, b.Bill.TotalAmount - b.Paid))
             };
         }).ToList();
@@ -122,7 +127,9 @@ public class BillingService(IDbContextFactory<ApplicationDbContext> dbFactory)
             db.Bills.Add(bill);
         }
         var due = RoomService.BillingDate(month, year, s.BillingDay);
-        var (from, to, _) = DefaultPeriod(lease, RoomService.IsFirstBillingMonth(lease.StartDate, month, year), due, s.BillingDay);
+        if (!RoomService.NeedsMonthlyBill(lease, month, year, s.BillingDay))
+            throw new InvalidOperationException($"Phòng {row.RoomCode}: nhận phòng {lease.StartDate:dd/MM/yyyy}, chưa đến kỳ chốt {due:dd/MM/yyyy} (đã thu 1 tháng khi vào).");
+        var (from, to, _) = DefaultPeriod(lease, RoomService.IsFirstBillingMonth(lease.StartDate, month, year, s.BillingDay), due, s.BillingDay);
         bill.PeriodFrom = from;
         bill.PeriodTo = to;
         bill.RentAmount = row.Rent;

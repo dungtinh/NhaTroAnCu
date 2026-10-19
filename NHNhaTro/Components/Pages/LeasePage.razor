@@ -1,8 +1,9 @@
-@page "/hop-dong/{Id:int}"
+﻿@page "/hop-dong/{Id:int}"
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inherits NhPage
 @inject LeaseService Leases
+@inject SetupService Setup
 @inject BillingService Billing
 @inject AccountService Accounts
 
@@ -103,6 +104,7 @@ else
                             <div>
                                 <strong>@BillKind.Display(b.Kind) @b.Month.ToString("00")/@b.Year</strong>
                                 <span class="text-muted small ms-2">@Fmt.Date(b.PeriodFrom) → @Fmt.Date(b.PeriodTo)</span>
+                                <div class="small text-muted">@RentDetail(b)</div>
                                 <div class="small">Phòng @Fmt.Money(b.RentAmount) · Điện @Fmt.Money(b.ElectricityAmount)@(b.ElectricityKwh > 0 ? $" ({b.ElectricityKwh} số)" : "") · Nước @Fmt.Money(b.WaterAmount) (@b.PersonCount người)@(b.OtherAmount - b.Discount != 0 ? $" · Khác {Fmt.Money(b.OtherAmount - b.Discount)}" : "")</div>
                                 @if (!string.IsNullOrEmpty(b.Note)) { <div class="small text-muted">@b.Note</div> }
                             </div>
@@ -159,6 +161,8 @@ else
 @code {
     [Parameter] public int Id { get; set; }
     private Lease? lease;
+    private int billingDay = 10;
+    private string RentDetail(Bill b) => lease == null ? "" : LeaseService.RentDetail(b, lease, billingDay);
     private bool notFound, isAdmin;
     private decimal rent, deposit;
     private string? note;
@@ -182,6 +186,7 @@ else
     private async Task LoadAsync()
     {
         lease = await Leases.GetLeaseAsync(Id);
+        billingDay = (await Setup.GetSettingsAsync()).BillingDay;
         notFound = lease == null;
         if (lease == null) return;
         rent = lease.MonthlyRent;

@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using NHNhaTro.Data;
 using NHNhaTro.Data.Entities;
 
@@ -51,14 +51,14 @@ public class RoomService(IDbContextFactory<ApplicationDbContext> dbFactory)
     /// <summary>Ngày thu (mồng 10) của tháng M/Y.</summary>
     public static DateTime BillingDate(int month, int year, int billingDay) => new(year, month, Math.Min(billingDay, DateTime.DaysInMonth(year, month)));
 
-    /// <summary>Lượt thuê cần phiếu tháng M nếu nhận phòng trước ngày 1 của tháng M: kỳ chốt đầu là mồng 10 của tháng sau tháng nhận phòng.</summary>
-    public static bool NeedsMonthlyBill(Lease lease, int month, int year) => lease.StartDate < new DateTime(year, month, 1);
+    /// <summary>Lượt thuê cần phiếu tháng M nếu ngày chốt của tháng M sau ngày vào (vào 01/09 → cần phiếu 09; vào 20/09 hoặc đúng 10/09 → từ phiếu 10).</summary>
+    public static bool NeedsMonthlyBill(Lease lease, int month, int year, int billingDay) => BillingDate(month, year, billingDay) > lease.StartDate.Date;
 
-    /// <summary>Tháng M/Y là kỳ chốt đầu của lượt thuê (tháng sau tháng nhận phòng): tiền phòng chỉ tính đoạn lẻ từ ngày vào đến ngày chốt.</summary>
-    public static bool IsFirstBillingMonth(DateTime startDate, int month, int year)
+    /// <summary>Tháng M/Y là kỳ chốt đầu của lượt thuê: tiền phòng chỉ tính đoạn lẻ từ ngày vào đến ngày chốt (mồng 10 gần nhất sau ngày vào).</summary>
+    public static bool IsFirstBillingMonth(DateTime startDate, int month, int year, int billingDay)
     {
-        var first = new DateTime(startDate.Year, startDate.Month, 1).AddMonths(1);
-        return first.Month == month && first.Year == year;
+        var stub = LeaseService.CalculateStubPeriod(0, startDate, billingDay);
+        return stub.Days > 0 && stub.To == BillingDate(month, year, billingDay);
     }
 
     public async Task<RoomMap> GetMapAsync()
@@ -88,7 +88,7 @@ public class RoomService(IDbContextFactory<ApplicationDbContext> dbFactory)
 
             var lb = bills.Where(b => b.LeaseId == lease.Id).ToList();
             decimal outstanding = lb.Sum(b => Math.Max(0, b.TotalAmount - b.Paid));
-            bool hasCurrent = !NeedsMonthlyBill(lease, bm, by) || lb.Any(b => b.Kind == BillKind.Monthly && b.Month == bm && b.Year == by);
+            bool hasCurrent = !NeedsMonthlyBill(lease, bm, by, settings.BillingDay) || lb.Any(b => b.Kind == BillKind.Monthly && b.Month == bm && b.Year == by);
             var color = outstanding > 0 ? RoomColor.Unpaid : hasCurrent ? RoomColor.Paid : RoomColor.NoBill;
             var active = lease.Tenants.Where(t => t.MoveOutDate == null).ToList();
             var rep = active.FirstOrDefault(t => t.IsRepresentative) ?? active.FirstOrDefault();

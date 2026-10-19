@@ -1,8 +1,9 @@
-@page "/phong/{Code}"
+﻿@page "/phong/{Code}"
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inherits NhPage
 @inject RoomService Rooms
+@inject SetupService Setup
 
 <PageTitle>Phòng @Code</PageTitle>
 
@@ -108,9 +109,9 @@ else
                                     <tr>
                                         <td>@b.Month.ToString("00")/@b.Year</td>
                                         <td>@BillKind.Display(b.Kind)</td>
-                                        <td class="text-end">@Fmt.Money(b.RentAmount)</td>
+                                        <td class="text-end">@Fmt.Money(b.RentAmount)<div class="small text-muted text-nowrap">@RentDetail(b)</div></td>
                                         <td class="text-end">@Fmt.Money(b.ElectricityAmount)@if (b.ElectricityKwh > 0) {<div class="small text-muted">@b.ElectricityKwh số</div>}</td>
-                                        <td class="text-end">@Fmt.Money(b.WaterAmount)</td>
+                                        <td class="text-end">@Fmt.Money(b.WaterAmount)@if (b.WaterAmount > 0) {<div class="small text-muted">@b.PersonCount người</div>}</td>
                                         <td class="text-end">@Fmt.Money(b.OtherAmount - b.Discount)</td>
                                         <td class="text-end fw-bold">@Fmt.Money(b.TotalAmount)</td>
                                         <td class="text-end @(paid >= b.TotalAmount ? "text-success" : "text-danger")">@Fmt.Money(paid)</td>
@@ -188,7 +189,9 @@ else
 @code {
     [Parameter] public string Code { get; set; } = "";
     private RoomDetails? d;
+    private int billingDay = 10;
     private bool notFound;
+    private string RentDetail(Bill b) => d?.CurrentLease == null ? "" : LeaseService.RentDetail(b, d.CurrentLease, billingDay);
     private decimal rent;
     private int maxOcc;
     private string? note;
@@ -210,6 +213,7 @@ else
     private async Task LoadAsync()
     {
         d = await Rooms.GetDetailsAsync(Code);
+        billingDay = (await Setup.GetSettingsAsync()).BillingDay;
         notFound = d == null;
         if (d == null) return;
         rent = d.Room.Rent;

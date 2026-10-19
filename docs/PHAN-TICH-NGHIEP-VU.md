@@ -1,4 +1,4 @@
-# Phân tích nghiệp vụ Nhà trọ An Cư (bản 2)
+﻿# Phân tích nghiệp vụ Nhà trọ An Cư (bản 2)
 
 Bản MVC cũ chỉ là nháp. Bản này thiết kế lại dữ liệu và màn hình theo yêu cầu ngày 17/10/2026.
 Những chỗ yêu cầu chưa nói rõ được ghi là **Giả định**; đổi được trong phần Cấu hình hoặc sửa code nếu khác ý.
@@ -29,15 +29,20 @@ Những chỗ yêu cầu chưa nói rõ được ghi là **Giả định**; đ�
 - Mỗi lần thu tiền có thể tải **chứng từ** (ảnh chuyển khoản, phiếu thu), không bắt buộc.
 
 ### Thu tiền hằng tháng (ngày chốt mồng 10)
-- **Kỳ chốt đầu** của một khách là mồng 10 của **tháng sau tháng nhận phòng** (vào 20/10 → chốt đầu 10/11; vào 5/10 → cũng 10/11).
+- **Kỳ chốt đầu** của một khách là **mồng 10 gần nhất sau ngày vào** (cập nhật 19/10/2026 theo yêu cầu):
+  vào trước mồng 10 → chốt ngay mồng 10 tháng đó (vào 01/09 → chốt 10/09); vào sau mồng 10 → mồng 10 tháng sau (vào 20/09 → chốt 10/10).
   Phiếu kỳ chốt đầu gồm:
-  - **Tiền phòng từ ngày vào đến ngày chốt** (đoạn lẻ, vì tháng trả trước lúc vào đã bao kỳ 10/11 → 10/12).
-    Tính theo tháng 30 ngày: số ngày = 30 + (ngày thu − ngày vào); tiền = giá tháng × số ngày / 30, làm tròn nghìn.
-    Vào 20/10, giá 2.000.000: 20 ngày → 1.333.000đ. Vào 5/10: 35 ngày → 2.333.000đ. Vào đúng mồng 10: tròn 1 tháng.
+  - **Tiền phòng từ ngày vào đến ngày chốt** (đoạn lẻ; tháng trả trước lúc vào bao kỳ tròn tháng ngay sau ngày chốt đầu).
+    Tính theo tháng 30 ngày: vào trước mồng 10 số ngày = 10 − ngày vào; vào sau mồng 10 số ngày = 30 + 10 − ngày vào;
+    tiền = giá tháng × số ngày / 30, làm tròn nghìn. Phiếu và màn hình ghi rõ **số ngày × giá ÷ 30**.
+    Giá 2.000.000: vào 01/09 → 9 ngày → 600.000đ, thu ngày 10/09. Vào 20/09 → 20 ngày → 1.333.000đ, thu ngày 10/10.
+    Vào đúng mồng 10: không có đoạn lẻ, tháng trả trước tính từ ngày vào, kỳ thu đầu là mồng 10 tháng sau với đủ tháng.
   - **Tiền điện** = số điện đã dùng (nhập) × 3.500.
-  - **Tiền nước** = số người × 80.000 (cố định, không theo ngày).
-- **Các kỳ sau** (từ 10/12): tiền phòng **đủ tháng** (2.000.000) + điện theo số đã dùng + nước cố định ± khoản khác.
+  - **Tiền nước** = số người × 80.000 (đủ tháng, không chia ngày).
+- **Các kỳ sau**: tiền phòng **đủ tháng** (2.000.000) + điện theo số đã dùng + nước cố định ± khoản khác.
   Phiếu kỳ 10/M tính tiền phòng cho 10/M → 10/(M+1), tức khách luôn **đóng trước một tháng**.
+  Ví dụ vào 01/09: nộp 3.000.000 khi vào (2.000.000 cho 10/09 → 10/10 + cọc); 10/09 nộp 600.000 + điện + nước; 10/10 nộp 2.000.000 + điện + nước.
+  Vào 20/09: nộp 3.000.000 khi vào (2.000.000 cho 10/10 → 10/11 + cọc); 10/10 nộp 1.333.000 + điện + nước; 10/11 nộp 2.000.000 + điện + nước.
 - Màn hình **Thu tiền tháng** liệt kê **tất cả phòng đang có khách**, thứ tự: **chưa thu trước, đã thu sau**; trong mỗi nhóm
   theo **dãy A → B, tầng thấp → cao, số phòng bé → to**. Mỗi dòng chỉ cần **nhập số điện đã dùng**; tiền phòng, nước, điện tự tính
   theo cấu hình. Có nút **Lập phiếu / Lưu**, **Thu tiền** (kèm chứng từ), **In phiếu thu**; trạng thái **Đã thu / Chưa thu**.

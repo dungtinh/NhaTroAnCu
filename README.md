@@ -1,4 +1,4 @@
-# Nhà trọ An Cư (NHNhaTro)
+﻿# Nhà trọ An Cư (NHNhaTro)
 
 Ứng dụng quản lý nhà trọ 2 dãy A, B, mỗi dãy 4 tầng × 8 phòng (64 phòng, mã `A0.1` … `B3.8`).
 
@@ -9,7 +9,8 @@
 - **Ghi số điện**: bảng các phòng cần thu kỳ này, gõ số điện đã dùng (kWh) hoặc nhập từ Excel (có file mẫu), lưu là lập phiếu;
   nhập tiền điện, nước tổng của cả dãy trọ (ghi khoản chi), so sánh với số thu của khách.
 - **Thu tiền tháng** (ngày chốt mồng 10): bảng phòng có khách, chưa thu xếp trước; tiền phòng, điện, nước tự tính;
-  kỳ chốt đầu tính tiền phòng từ ngày vào đến ngày chốt; thu một phần hoặc đủ, đính chứng từ, in phiếu thu PDF.
+  kỳ chốt đầu (mồng 10 gần nhất sau ngày vào) tính tiền phòng từ ngày vào đến ngày chốt, ghi rõ số ngày × giá ÷ 30;
+  thu một phần hoặc đủ, đính chứng từ, in phiếu thu PDF.
 - **Báo cáo** thu chi theo tháng, quý, năm.
 - **Trả phòng**: nhập số điện đã dùng, kiểm đồ đạc, phạt hư hỏng, ảnh hiện trạng; kỳ chưa lập phiếu tính đủ tháng; quyết toán trừ vào cọc, in biên bản.
 - **Sửa chữa**: theo phòng hoặc khu vực chung, bắt buộc ảnh và chứng từ, trừ thẳng vào tài khoản cá nhân, cảnh báo sửa lặp lại.

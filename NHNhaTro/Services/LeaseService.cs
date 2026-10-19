@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -115,15 +115,49 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
     public static decimal RoundMoney(decimal v) => Math.Round(v / 1000m, MidpointRounding.AwayFromZero) * 1000m;
 
     /// <summary>
-    /// Đoạn lẻ đầu: từ ngày vào đến ngày chốt đầu (mồng 10 tháng sau tháng nhận phòng), tính theo tháng 30 ngày:
-    /// số ngày = 30 + (ngày thu − ngày vào); tiền = giá tháng × số ngày / 30, làm tròn nghìn đồng.
-    /// Vào 20/10 → 20 ngày; vào 5/10 → 35 ngày; vào đúng mồng 10 → tròn 1 tháng.
+    /// Đoạn lẻ đầu: từ ngày vào đến ngày chốt đầu, là mồng 10 gần nhất sau ngày vào (vào trước mồng 10 → mồng 10 ngay tháng đó;
+    /// vào sau mồng 10 → mồng 10 tháng sau). Tính theo tháng 30 ngày, tiền = giá tháng × số ngày / 30, làm tròn nghìn đồng.
+    /// Vào 01/09 → chốt 10/09, 9 ngày; vào 20/09 → chốt 10/10, 20 ngày; vào đúng mồng 10 → không có đoạn lẻ (0 ngày),
+    /// tháng trả trước tính từ ngày vào, kỳ thu đầu là mồng 10 tháng sau với đủ tháng.
     /// </summary>
     public static StubPeriod CalculateStubPeriod(decimal rent, DateTime moveIn, int billingDay)
     {
-        var to = RoomService.BillingDate(moveIn.AddMonths(1).Month, moveIn.AddMonths(1).Year, billingDay);
-        int days = Math.Max(0, 30 + billingDay - moveIn.Day);
-        return new StubPeriod(moveIn.Date, to, RoundMoney(rent * days / 30m), days);
+        moveIn = moveIn.Date;
+        var sameMonth = RoomService.BillingDate(moveIn.Month, moveIn.Year, billingDay);
+        if (moveIn.Day <= billingDay)
+        {
+            int d = billingDay - moveIn.Day;
+            return new StubPeriod(moveIn, moveIn.Day == billingDay ? moveIn : sameMonth, RoundMoney(rent * d / 30m), d);
+        }
+        var next = moveIn.AddMonths(1);
+        int days = 30 + billingDay - moveIn.Day;
+        return new StubPeriod(moveIn, RoomService.BillingDate(next.Month, next.Year, billingDay), RoundMoney(rent * days / 30m), days);
+    }
+
+    /// <summary>Phiếu này có phải phiếu kỳ chốt đầu (tiền phòng đoạn lẻ từ ngày vào) không: khoảng tính tiền đúng bằng đoạn lẻ.</summary>
+    public static bool IsStubBill(DateTime periodFrom, DateTime periodTo, DateTime startDate, int billingDay)
+    {
+        var stub = CalculateStubPeriod(0, startDate, billingDay);
+        return stub.Days > 0 && periodFrom.Date == stub.From && periodTo.Date == stub.To;
+    }
+
+    /// <summary>Diễn giải tiền phòng của một phiếu theo loại phiếu (trả trước khi vào, hằng tháng, trả phòng).</summary>
+    public static string RentDetail(Bill bill, Lease lease, int billingDay) => bill.Kind switch
+    {
+        BillKind.MoveIn => $"1 tháng trả trước khi vào, tính cho {bill.PeriodFrom:dd/MM} → {bill.PeriodTo:dd/MM}",
+        BillKind.MoveOut => $"Kỳ chưa lập phiếu, tính đủ tháng {bill.PeriodFrom:dd/MM} → {bill.PeriodTo:dd/MM}",
+        _ => RentDetail(bill.PeriodFrom, bill.PeriodTo, lease.StartDate, lease.MonthlyRent, billingDay)
+    };
+
+    /// <summary>Diễn giải cách tính tiền phòng của một kỳ: "Kỳ đầu: 20 ngày (20/09 → 10/10) × 2.000.000 ÷ 30" hay "Tròn tháng 10/10 → 10/11".</summary>
+    public static string RentDetail(DateTime periodFrom, DateTime periodTo, DateTime startDate, decimal monthlyRent, int billingDay)
+    {
+        if (IsStubBill(periodFrom, periodTo, startDate, billingDay))
+        {
+            var stub = CalculateStubPeriod(monthlyRent, startDate, billingDay);
+            return $"Kỳ đầu: {stub.Days} ngày ({periodFrom:dd/MM} → {periodTo:dd/MM}) × {Fmt.Money(monthlyRent)} ÷ 30";
+        }
+        return $"Tròn tháng {periodFrom:dd/MM} → {periodTo:dd/MM}";
     }
 
     public async Task<TenantInput?> FindTenantAsync(string identityCard)
@@ -224,7 +258,9 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         {
             Lease = lease, Kind = BillKind.MoveIn, Month = lease.StartDate.Month, Year = lease.StartDate.Year,
             PeriodFrom = stub.To, PeriodTo = stub.To.AddMonths(1), RentAmount = form.MonthlyRent, PersonCount = tenants.Count, TotalAmount = form.MonthlyRent,
-            Note = $"1 tháng tiền phòng trả trước khi nhận phòng {lease.StartDate:dd/MM/yyyy}. Tiền phòng {stub.From:dd/MM} - {stub.To:dd/MM/yyyy} ({stub.Days} ngày), điện, nước thu ở kỳ {stub.To:dd/MM/yyyy}.",
+            Note = stub.Days > 0
+                ? $"1 tháng tiền phòng trả trước khi nhận phòng {lease.StartDate:dd/MM/yyyy}, tính cho {stub.To:dd/MM} - {stub.To.AddMonths(1):dd/MM/yyyy}. Tiền phòng {stub.From:dd/MM} - {stub.To:dd/MM/yyyy} ({stub.Days} ngày × {Fmt.Money(form.MonthlyRent)} ÷ 30 = {Fmt.Vnd(stub.Rent)}), điện, nước thu ở kỳ chốt {stub.To:dd/MM/yyyy}."
+                : $"1 tháng tiền phòng trả trước khi nhận phòng đúng ngày chốt {lease.StartDate:dd/MM/yyyy}, tính cho {stub.To:dd/MM} - {stub.To.AddMonths(1):dd/MM/yyyy}. Từ kỳ chốt {stub.To.AddMonths(1):dd/MM/yyyy} thu đủ tháng + điện + nước.",
             CreatedAt = DateTime.Now, CreatedBy = user
         };
         db.Bills.Add(bill);
@@ -394,9 +430,9 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         for (var d = new DateTime(lease.StartDate.Year, lease.StartDate.Month, 1); d <= form.EndDate.Date; d = d.AddMonths(1))
         {
             var due = RoomService.BillingDate(d.Month, d.Year, settings.BillingDay);
-            if (due > form.EndDate.Date || !RoomService.NeedsMonthlyBill(lease, d.Month, d.Year)) continue;
+            if (due > form.EndDate.Date || !RoomService.NeedsMonthlyBill(lease, d.Month, d.Year, settings.BillingDay)) continue;
             if (bills.Any(b => b.Bill.Kind == BillKind.Monthly && b.Bill.Month == d.Month && b.Bill.Year == d.Year)) continue;
-            var (from, to, rent) = RoomService.IsFirstBillingMonth(lease.StartDate, d.Month, d.Year)
+            var (from, to, rent) = RoomService.IsFirstBillingMonth(lease.StartDate, d.Month, d.Year, settings.BillingDay)
                 ? (lease.StartDate, due, CalculateStubPeriod(lease.MonthlyRent, lease.StartDate, settings.BillingDay).Rent)
                 : (due, due.AddMonths(1), lease.MonthlyRent);
             missing.Add(new MissingPeriod(d.Month, d.Year, from, to, rent, persons * settings.WaterPricePerPerson, persons));

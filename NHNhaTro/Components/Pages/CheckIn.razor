@@ -1,4 +1,4 @@
-@page "/nhan-phong"
+﻿@page "/nhan-phong"
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inherits NhPage
@@ -62,8 +62,19 @@ else
                         <tr class="table-light"><td class="fw-bold">Khách phải nộp</td><td class="text-end fw-bold fs-5 text-primary">@Fmt.Vnd(total)</td></tr>
                     </table>
                     <div class="small text-muted mb-2">
-                        Kỳ chốt đầu <strong>@Fmt.Date(stub.To)</strong>: thu tiền phòng @Fmt.Date(stub.From) → @Fmt.Date(stub.To) (@stub.Days ngày, @Fmt.Vnd(stub.Rent))
-                        + tiền điện theo số đã dùng + tiền nước. Từ kỳ sau thu đủ tháng.
+                        @if (stub.Days > 0)
+                        {
+                            <div>Tháng trả trước tính cho <strong>@Fmt.Date(stub.To) → @Fmt.Date(stub.To.AddMonths(1))</strong>.</div>
+                            <div>Kỳ chốt đầu <strong>@Fmt.Date(stub.To)</strong> thu: tiền phòng @Fmt.Date(stub.From) → @Fmt.Date(stub.To)
+                                = <strong>@stub.Days ngày × @Fmt.Money(form.MonthlyRent) ÷ 30 = @Fmt.Vnd(stub.Rent)</strong>
+                                + điện (số đã dùng × @Fmt.Money(settings.ElectricityPrice)đ) + nước (@Fmt.Money(settings.WaterPricePerPerson)đ/người, không chia ngày).</div>
+                            <div>Từ kỳ <strong>@Fmt.Date(stub.To.AddMonths(1))</strong> thu đủ tháng @Fmt.Vnd(form.MonthlyRent) + điện + nước.</div>
+                        }
+                        else
+                        {
+                            <div>Vào đúng ngày chốt: tháng trả trước tính cho <strong>@Fmt.Date(stub.From) → @Fmt.Date(stub.From.AddMonths(1))</strong>.
+                                Từ kỳ <strong>@Fmt.Date(stub.From.AddMonths(1))</strong> thu đủ tháng @Fmt.Vnd(form.MonthlyRent) + điện + nước.</div>
+                        }
                     </div>
 
                     <div class="form-check form-switch fs-6 mb-2">

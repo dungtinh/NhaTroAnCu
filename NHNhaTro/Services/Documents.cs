@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using ClosedXML.Excel;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
@@ -40,7 +40,9 @@ public class Documents(IDbContextFactory<ApplicationDbContext> dbFactory, IWebHo
             {
                 BillKind.MoveIn => $"1 tháng trả trước, kỳ {bill.PeriodFrom:dd/MM/yyyy} - {bill.PeriodTo:dd/MM/yyyy}",
                 BillKind.MoveOut => $"Kỳ chưa lập phiếu, tính đủ tháng ({bill.PeriodFrom:dd/MM/yyyy} - {bill.PeriodTo:dd/MM/yyyy})",
-                _ => $"{bill.PeriodFrom:dd/MM/yyyy} - {bill.PeriodTo:dd/MM/yyyy}"
+                _ => LeaseService.IsStubBill(bill.PeriodFrom, bill.PeriodTo, bill.Lease.StartDate, s.BillingDay)
+                    ? $"Kỳ đầu từ ngày vào {bill.PeriodFrom:dd/MM/yyyy} đến ngày chốt {bill.PeriodTo:dd/MM/yyyy}: {LeaseService.CalculateStubPeriod(0, bill.Lease.StartDate, s.BillingDay).Days} ngày × {Fmt.Money(bill.Lease.MonthlyRent)}đ ÷ 30"
+                    : $"Tròn tháng {bill.PeriodFrom:dd/MM/yyyy} - {bill.PeriodTo:dd/MM/yyyy}"
             }, bill.RentAmount));
         if (bill.ElectricityKwh != 0 || bill.ElectricityAmount != 0)
             lines.Add(("Tiền điện", $"{bill.ElectricityKwh} số × {Fmt.Money(s.ElectricityPrice)}đ", bill.ElectricityAmount));

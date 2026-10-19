@@ -1,4 +1,4 @@
-@page "/thu-tien"
+﻿@page "/thu-tien"
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inherits NhPage
@@ -80,6 +80,7 @@ else
             <div class="nh-modal" style="max-width: 460px" @onclick:stopPropagation="true">
                 <div class="nh-modal-header"><h5><i class="fas fa-pen"></i> Sửa phiếu phòng @edit.RoomCode</h5><button type="button" class="btn-close btn-close-white" @onclick="CancelEditAsync"></button></div>
                 <div class="nh-modal-body">
+                    <div class="small text-muted mb-2"><i class="fas fa-calculator"></i> Tiền phòng: @edit.RentDetail · điện @Fmt.Money(ep)đ/số · nước @Fmt.Money(wp)đ/người</div>
                     <div class="nh-form-grid">
                         <label class="nh-field"><span>Tiền phòng kỳ này</span><MoneyInput @bind-Value="edit.Rent" /></label>
                         <label class="nh-field"><span>Số người</span><input type="number" min="0" class="form-control" @bind="edit.PersonCount" /></label>
@@ -120,13 +121,13 @@ else
             <div class="c-room"><a href="@($"phong/{r.RoomCode}")" class="room">@r.RoomCode</a></div>
             <div class="c-name">
                 <div class="name">@r.Representative</div>
-                <div class="sub">@(r.SkipThisMonth ? "Đã thu 1 tháng khi vào" : $"{(r.IsFirstMonth ? "Kỳ đầu " : "")}{Fmt.Date(r.PeriodFrom)} → {Fmt.Date(r.PeriodTo)}")
+                <div class="sub" title="@r.RentDetail">@r.RentDetail
                     @if (r.PreviousDebt > 0) { <span class="debt"> · nợ cũ @Fmt.Money(r.PreviousDebt)</span> }</div>
             </div>
             <div class="c-kwh n" data-l="Số điện">@(r.Kwh is int k ? k.ToString() : "-")</div>
             <div class="c-rent n" data-l="Phòng">@Fmt.Money(r.Rent)</div>
-            <div class="c-el n" data-l="Điện">@Fmt.Money(r.Electricity(ep))</div>
-            <div class="c-wa n" data-l="Nước">@Fmt.Money(r.Water(wp))</div>
+            <div class="c-el n" data-l="Điện">@Fmt.Money(r.Electricity(ep))@if (r.Kwh is int kw) { <div class="sub">@kw số × @Fmt.Money(ep)</div> }</div>
+            <div class="c-wa n" data-l="Nước">@Fmt.Money(r.Water(wp))<div class="sub">@r.PersonCount người × @Fmt.Money(wp)</div></div>
             <div class="c-total n">@(r.BillId != null || r.SkipThisMonth ? Fmt.Money(t) : "-")</div>
             <div class="c-paid n" data-l="Đã thu">@Fmt.Money(r.Paid)</div>
             <div class="c-state">

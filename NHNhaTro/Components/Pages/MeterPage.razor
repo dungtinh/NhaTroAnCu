@@ -1,4 +1,4 @@
-@page "/so-dien"
+﻿@page "/so-dien"
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inherits NhPage
@@ -52,7 +52,7 @@ else
                     <div class="gr @(changed ? "changed" : "") @(imported.Contains(r.LeaseId) ? "imported" : "")" @key="r.LeaseId">
                         <div class="c-room"><a href="@($"phong/{r.RoomCode}")" class="room">@r.RoomCode</a></div>
                         <div class="c-name"><div class="name">@r.Representative</div>
-                            @if (r.IsFirstMonth) { <div class="sub">Kỳ đầu từ @Fmt.Date(r.PeriodFrom)</div> }</div>
+                            @if (r.IsFirstMonth) { <div class="sub" title="@r.RentDetail">@r.RentDetail</div> }</div>
                         <div class="c-ppl n">@r.PersonCount</div>
                         <div class="c-kwh n"><input type="number" min="0" inputmode="numeric" placeholder="-" class="form-control nh-kwh @(r.Kwh < 0 ? "is-invalid" : "")" @bind="r.Kwh" @bind:event="oninput" /></div>
                         <div class="c-money n">@(r.Kwh is int ? Fmt.Money(r.Electricity(ep)) : "")</div>
