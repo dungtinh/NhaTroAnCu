@@ -51,7 +51,7 @@ else
     <div class="row g-3">
         @foreach (var block in map.Rooms.Where(r => blockFilter == "" || r.BlockCode == blockFilter).GroupBy(r => r.BlockCode))
         {
-            <div class="@(blockFilter == "" ? "col-xl-6" : "col-12")">
+            <div class="col-12">
                 <div class="nh-card">
                     <h5><i class="fas fa-building"></i> Dãy @block.Key
                         <small class="text-muted fw-normal ms-2">@block.Count(r => r.LeaseId != null)/@block.Count() phòng đang thuê</small>

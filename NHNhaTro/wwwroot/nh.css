@@ -86,7 +86,7 @@ body:has(.nh-bottomnav) .nh-main { padding-bottom: calc(var(--nh-nav-h) + var(--
 .nh-room:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,.15); color: #fff; }
 .nh-room:active { transform: scale(.97); }
 .nh-room .code { font-weight: 800; font-size: 1.05rem; }
-.nh-room .who { font-size: .78rem; opacity: .95; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nh-room .who { font-size: .78rem; opacity: .95; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.4em; }
 .nh-room .meta { font-size: .72rem; opacity: .92; margin-top: auto; display: flex; justify-content: space-between; gap: 4px; }
 .nh-room .warn { position: absolute; top: 6px; right: 7px; font-size: .75rem; }
 .nh-room.empty { background: linear-gradient(135deg, #94a3b8, #64748b); }
