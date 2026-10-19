@@ -82,6 +82,7 @@ public class SetupService(IDbContextFactory<ApplicationDbContext> dbFactory)
     {
         if (input.ElectricityPrice < 0 || input.WaterPricePerPerson < 0) throw new InvalidOperationException("Giá điện, nước không được âm.");
         if (input.BillingDay is < 1 or > 28) throw new InvalidOperationException("Ngày thu tiền phải từ 1 đến 28.");
+        if (input.DefaultDeposit < 0) throw new InvalidOperationException("Tiền cọc mặc định không được âm.");
         await using var db = await dbFactory.CreateDbContextAsync();
         var s = await db.Settings.FirstAsync();
         var (provider, gk, gm, ck, cm) = (s.ScanProvider, s.GeminiApiKey, s.GeminiModel, s.ClaudeApiKey, s.ClaudeModel);

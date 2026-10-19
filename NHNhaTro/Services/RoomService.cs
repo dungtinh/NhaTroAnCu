@@ -48,8 +48,18 @@ public class RoomService(IDbContextFactory<ApplicationDbContext> dbFactory)
         return (m.Month, m.Year);
     }
 
-    /// <summary>Lượt thuê cần phiếu tháng M nếu nhận phòng trước ngày 1 của tháng M (kỳ đầu đã thu tới ngày thu tháng sau).</summary>
+    /// <summary>Ngày thu (mồng 10) của tháng M/Y.</summary>
+    public static DateTime BillingDate(int month, int year, int billingDay) => new(year, month, Math.Min(billingDay, DateTime.DaysInMonth(year, month)));
+
+    /// <summary>Lượt thuê cần phiếu tháng M nếu nhận phòng trước ngày 1 của tháng M: kỳ chốt đầu là mồng 10 của tháng sau tháng nhận phòng.</summary>
     public static bool NeedsMonthlyBill(Lease lease, int month, int year) => lease.StartDate < new DateTime(year, month, 1);
+
+    /// <summary>Tháng M/Y là kỳ chốt đầu của lượt thuê (tháng sau tháng nhận phòng): tiền phòng chỉ tính đoạn lẻ từ ngày vào đến ngày chốt.</summary>
+    public static bool IsFirstBillingMonth(DateTime startDate, int month, int year)
+    {
+        var first = new DateTime(startDate.Year, startDate.Month, 1).AddMonths(1);
+        return first.Month == month && first.Year == year;
+    }
 
     public async Task<RoomMap> GetMapAsync()
     {
@@ -149,13 +159,12 @@ public class RoomService(IDbContextFactory<ApplicationDbContext> dbFactory)
         return await q.OrderBy(r => r.Block.Code).ThenBy(r => r.Floor).ThenBy(r => r.Number).ToListAsync();
     }
 
-    public async Task UpdateRoomAsync(int roomId, decimal rent, int meterReading, int maxOccupants, string? note, bool maintenance, Dictionary<int, int> furniture)
+    public async Task UpdateRoomAsync(int roomId, decimal rent, int maxOccupants, string? note, bool maintenance, Dictionary<int, int> furniture)
     {
-        if (rent < 0 || meterReading < 0) throw new InvalidOperationException("Giá thuê và số điện không được âm.");
+        if (rent < 0) throw new InvalidOperationException("Giá thuê không được âm.");
         await using var db = await dbFactory.CreateDbContextAsync();
         var room = await db.Rooms.Include(r => r.Furniture).FirstAsync(r => r.Id == roomId);
         room.Rent = rent;
-        room.MeterReading = meterReading;
         room.MaxOccupants = Math.Clamp(maxOccupants, 1, 20);
         room.Note = note;
         if (room.Status != RoomStatus.Occupied) room.Status = maintenance ? RoomStatus.Maintenance : RoomStatus.Empty;

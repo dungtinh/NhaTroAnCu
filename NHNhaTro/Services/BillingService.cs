@@ -10,23 +10,33 @@ public class BillingRow
     public int LeaseId { get; set; }
     public int RoomId { get; set; }
     public string RoomCode { get; set; } = "";
+    public string BlockCode { get; set; } = "";
+    public int Floor { get; set; }
+    public int Number { get; set; }
     public string? Representative { get; set; }
     public int PersonCount { get; set; }
     public decimal Rent { get; set; }
-    public int MeterStart { get; set; }
-    public int? MeterEnd { get; set; }
+    /// <summary>Số điện đã dùng trong kỳ (kWh); null = chưa nhập.</summary>
+    public int? Kwh { get; set; }
     public decimal OtherAmount { get; set; }
     public decimal Discount { get; set; }
     public string? Note { get; set; }
     public int? BillId { get; set; }
     public decimal Paid { get; set; }
-    /// <summary>Nhận phòng trong tháng này: kỳ đầu đã thu tới ngày thu tháng sau, không lập phiếu tháng.</summary>
+    /// <summary>Nhận phòng trong tháng này: chưa đến kỳ chốt đầu (đã thu 1 tháng khi vào), không lập phiếu tháng.</summary>
     public bool SkipThisMonth { get; set; }
+    /// <summary>Kỳ chốt đầu: tiền phòng chỉ tính đoạn lẻ từ ngày vào đến ngày chốt.</summary>
+    public bool IsFirstMonth { get; set; }
+    /// <summary>Khoảng tính tiền phòng của phiếu.</summary>
+    public DateTime PeriodFrom { get; set; }
+    public DateTime PeriodTo { get; set; }
     public decimal PreviousDebt { get; set; }
 
-    public decimal Electricity(decimal price) => MeterEnd is int end && end >= MeterStart ? (end - MeterStart) * price : 0;
+    public decimal Electricity(decimal price) => Math.Max(0, Kwh ?? 0) * price;
     public decimal Water(decimal perPerson) => PersonCount * perPerson;
     public decimal Total(decimal price, decimal perPerson) => Math.Max(0, Rent + Electricity(price) + Water(perPerson) + OtherAmount - Discount);
+    /// <summary>Đã lập phiếu và thu đủ.</summary>
+    public bool IsPaid(decimal price, decimal perPerson) => BillId != null && Paid >= Total(price, perPerson);
 }
 
 public record BillingSheet(int Month, int Year, DateTime DueDate, decimal ElectricityPrice, decimal WaterPerPerson, List<BillingRow> Rows);
@@ -47,7 +57,7 @@ public class BillingService(IDbContextFactory<ApplicationDbContext> dbFactory)
     {
         await using var db = await dbFactory.CreateDbContextAsync();
         var s = await db.Settings.AsNoTracking().FirstAsync();
-        var due = new DateTime(year, month, Math.Min(s.BillingDay, DateTime.DaysInMonth(year, month)));
+        var due = RoomService.BillingDate(month, year, s.BillingDay);
 
         var leases = await db.Leases.AsNoTracking().Where(l => l.Status == LeaseStatus.Active)
             .Include(l => l.Room).ThenInclude(r => r.Block).Include(l => l.Tenants).ThenInclude(t => t.Tenant)
@@ -61,21 +71,20 @@ public class BillingService(IDbContextFactory<ApplicationDbContext> dbFactory)
             var lb = bills.Where(b => b.Bill.LeaseId == l.Id).ToList();
             var current = lb.FirstOrDefault(b => b.Bill.Kind == BillKind.Monthly && b.Bill.Month == month && b.Bill.Year == year);
             var earlier = lb.Where(b => b.Bill.Id != current?.Bill.Id && (b.Bill.Year < year || (b.Bill.Year == year && b.Bill.Month <= month))).ToList();
-            int meterStart = current?.Bill.MeterStart
-                ?? earlier.Where(b => b.Bill.MeterEnd != null).OrderByDescending(b => b.Bill.Year).ThenByDescending(b => b.Bill.Month).ThenByDescending(b => b.Bill.Id)
-                    .Select(b => b.Bill.MeterEnd).FirstOrDefault()
-                ?? l.StartMeterReading;
             var active = l.Tenants.Where(t => t.MoveOutDate == null).ToList();
+            bool first = RoomService.IsFirstBillingMonth(l.StartDate, month, year);
+            var (from, to, rent) = DefaultPeriod(l, first, due, s.BillingDay);
             return new BillingRow
             {
-                LeaseId = l.Id, RoomId = l.RoomId, RoomCode = l.Room.Code,
+                LeaseId = l.Id, RoomId = l.RoomId, RoomCode = l.Room.Code, BlockCode = l.Room.Block.Code, Floor = l.Room.Floor, Number = l.Room.Number,
                 Representative = (active.FirstOrDefault(t => t.IsRepresentative) ?? active.FirstOrDefault())?.Tenant.FullName,
                 PersonCount = current?.Bill.PersonCount ?? active.Count,
-                Rent = current?.Bill.RentAmount ?? l.MonthlyRent,
-                MeterStart = meterStart, MeterEnd = current?.Bill.MeterEnd,
+                Rent = current?.Bill.RentAmount ?? rent,
+                Kwh = current?.Bill.ElectricityKwh,
                 OtherAmount = current?.Bill.OtherAmount ?? 0, Discount = current?.Bill.Discount ?? 0, Note = current?.Bill.Note,
                 BillId = current?.Bill.Id, Paid = current?.Paid ?? 0,
-                SkipThisMonth = !RoomService.NeedsMonthlyBill(l, month, year),
+                SkipThisMonth = !RoomService.NeedsMonthlyBill(l, month, year), IsFirstMonth = first,
+                PeriodFrom = current?.Bill.PeriodFrom ?? from, PeriodTo = current?.Bill.PeriodTo ?? to,
                 PreviousDebt = earlier.Sum(b => Math.Max(0, b.Bill.TotalAmount - b.Paid))
             };
         }).ToList();
@@ -83,11 +92,22 @@ public class BillingService(IDbContextFactory<ApplicationDbContext> dbFactory)
         return new BillingSheet(month, year, due, s.ElectricityPrice, s.WaterPricePerPerson, rows);
     }
 
+    /// <summary>
+    /// Khoảng tính tiền phòng và tiền phòng mặc định của phiếu tháng: kỳ chốt đầu là đoạn lẻ [ngày vào, ngày chốt) tính theo tháng 30 ngày
+    /// (tháng trả trước lúc vào đã bao kỳ tròn tháng kế tiếp); các kỳ sau là tròn tháng [ngày chốt, ngày chốt tháng sau).
+    /// </summary>
+    private static (DateTime From, DateTime To, decimal Rent) DefaultPeriod(Lease l, bool firstMonth, DateTime due, int billingDay)
+    {
+        if (!firstMonth) return (due, due.AddMonths(1), l.MonthlyRent);
+        var stub = LeaseService.CalculateStubPeriod(l.MonthlyRent, l.StartDate, billingDay);
+        return (stub.From, stub.To, stub.Rent);
+    }
+
     /// <summary>Lập hoặc cập nhật phiếu tháng cho một phòng. Trả về Id phiếu.</summary>
     public async Task<int> SaveBillAsync(int month, int year, BillingRow row, string? user)
     {
-        if (row.MeterEnd is not int end) throw new InvalidOperationException($"Phòng {row.RoomCode}: nhập số điện mới.");
-        if (end < row.MeterStart) throw new InvalidOperationException($"Phòng {row.RoomCode}: số điện mới ({end}) nhỏ hơn số cũ ({row.MeterStart}).");
+        if (row.Kwh is not int kwh) throw new InvalidOperationException($"Phòng {row.RoomCode}: nhập số điện đã dùng (kWh).");
+        if (kwh < 0) throw new InvalidOperationException($"Phòng {row.RoomCode}: số điện không được âm.");
         if (row.Rent < 0 || row.OtherAmount < 0 || row.Discount < 0) throw new InvalidOperationException($"Phòng {row.RoomCode}: số tiền không được âm.");
 
         await using var db = await dbFactory.CreateDbContextAsync();
@@ -101,12 +121,12 @@ public class BillingService(IDbContextFactory<ApplicationDbContext> dbFactory)
             bill = new Bill { LeaseId = lease.Id, Kind = BillKind.Monthly, Month = month, Year = year, CreatedAt = DateTime.Now, CreatedBy = user };
             db.Bills.Add(bill);
         }
-        var from = new DateTime(year, month, Math.Min(s.BillingDay, DateTime.DaysInMonth(year, month)));
+        var due = RoomService.BillingDate(month, year, s.BillingDay);
+        var (from, to, _) = DefaultPeriod(lease, RoomService.IsFirstBillingMonth(lease.StartDate, month, year), due, s.BillingDay);
         bill.PeriodFrom = from;
-        bill.PeriodTo = from.AddMonths(1);
+        bill.PeriodTo = to;
         bill.RentAmount = row.Rent;
-        bill.MeterStart = row.MeterStart;
-        bill.MeterEnd = end;
+        bill.ElectricityKwh = kwh;
         bill.ElectricityAmount = row.Electricity(s.ElectricityPrice);
         bill.PersonCount = row.PersonCount;
         bill.WaterAmount = row.Water(s.WaterPricePerPerson);
@@ -114,12 +134,6 @@ public class BillingService(IDbContextFactory<ApplicationDbContext> dbFactory)
         bill.Discount = row.Discount;
         bill.TotalAmount = row.Total(s.ElectricityPrice, s.WaterPricePerPerson);
         bill.Note = row.Note;
-
-        // Số điện hiện tại của phòng = số mới nhất đã chốt
-        var latestOther = await db.Bills.Where(b => b.LeaseId == lease.Id && b.Id != bill.Id && b.MeterEnd != null)
-            .OrderByDescending(b => b.Year).ThenByDescending(b => b.Month).Select(b => new { b.Year, b.Month, b.MeterEnd }).FirstOrDefaultAsync();
-        if (latestOther == null || latestOther.Year < year || (latestOther.Year == year && latestOther.Month <= month)) lease.Room.MeterReading = end;
-
         await db.SaveChangesAsync();
         return bill.Id;
     }

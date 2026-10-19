@@ -68,24 +68,18 @@ public static class DemoDataSeeder
         var all = await rooms.ListRoomsAsync();
         Room R(string code) => all.First(r => r.Code == code);
 
-        // Số điện hiện tại các phòng sẽ cho thuê; A3.1 đang sửa
-        foreach (var (code, meter) in new[] { ("A0.1", 1000), ("A0.2", 2000), ("A0.3", 800), ("A0.5", 300), ("A1.3", 1500), ("A2.4", 640), ("B0.1", 500), ("B1.2", 1200), ("B3.8", 90) })
-        {
-            var r = R(code);
-            var fur = (await rooms.GetDetailsAsync(code))!.Furniture.Where(f => f.Quantity > 0).ToDictionary(f => f.ItemId, f => f.Quantity);
-            await rooms.UpdateRoomAsync(r.Id, r.Rent, meter, r.MaxOccupants, null, false, fur);
-        }
+        // A3.1 đang sửa
         {
             var r = R("A3.1");
             var fur = (await rooms.GetDetailsAsync("A3.1"))!.Furniture.Where(f => f.Quantity > 0).ToDictionary(f => f.ItemId, f => f.Quantity);
-            await rooms.UpdateRoomAsync(r.Id, r.Rent, 0, r.MaxOccupants, "Đang sơn lại, chống thấm trần", true, fur);
+            await rooms.UpdateRoomAsync(r.Id, r.Rent, r.MaxOccupants, "Đang sơn lại, chống thấm trần", true, fur);
         }
         // A0.5 có thêm 1 quạt so với mặc định (để thấy cảnh báo đồ đạc khác mặc định)
         {
             var r = R("A0.5");
             var fur = (await rooms.GetDetailsAsync("A0.5"))!.Furniture.Where(f => f.Quantity > 0).ToDictionary(f => f.ItemId, f => f.Quantity);
             fur[Item("Quạt")] = 2;
-            await rooms.UpdateRoomAsync(r.Id, r.Rent, 300, r.MaxOccupants, null, false, fur);
+            await rooms.UpdateRoomAsync(r.Id, r.Rent, r.MaxOccupants, null, false, fur);
         }
 
         // ---------- Nhận phòng ----------
@@ -101,12 +95,12 @@ public static class DemoDataSeeder
                 p.Photos.Add((await Img("cccd-" + p.IdentityCard + "-truoc", "TenantPhotos", (40, 90, 190))).Path);
                 p.Photos.Add((await Img("cccd-" + p.IdentityCard + "-sau", "TenantPhotos", (60, 150, 90))).Path);
             }
-            var first = LeaseService.CalculateFirstPeriod(room.Rent, date, s.BillingDay, s.WaterPricePerPerson, people.Count);
+            // Khi vào: thu đủ 1 tháng tiền phòng + cọc mặc định (1.000.000đ)
             var form = new CheckInForm
             {
-                RoomId = room.Id, MoveInDate = date, MonthlyRent = room.Rent, Deposit = room.Rent, StartMeterReading = room.MeterReading, Note = Mark,
+                RoomId = room.Id, MoveInDate = date, MonthlyRent = room.Rent, Deposit = s.DefaultDeposit, Note = Mark,
                 Tenants = people, PaymentDate = date,
-                DepositPaid = depositPaid ?? (payDeposit ? room.Rent : 0), FirstPaymentPaid = payFirst ? first.Total : 0
+                DepositPaid = depositPaid ?? (payDeposit ? s.DefaultDeposit : 0), FirstPaymentPaid = payFirst ? room.Rent : 0
             };
             if (form.DepositPaid > 0) form.DepositReceipts.Add(await Img("ck-coc-" + code, "Receipts", gray));
             if (form.FirstPaymentPaid > 0) form.PaymentReceipts.Add(await Img("ck-ky-dau-" + code, "Receipts", gray));
@@ -123,7 +117,7 @@ public static class DemoDataSeeder
             T("Bùi Văn Bắc", "034098000502", "0905000502", "Nam", 1998, "Vũ Thư, Thái Bình"), T("Ngô Thị Thu", "034000000503", "0905000503", "Nữ", 2000, "Kiến Xương, Thái Bình")]);
         var l13 = await CheckIn("A1.3", new DateTime(2026, 10, 3), [T("Phạm Quốc Cường", "031094001301", "0913001301", "Nam", 1994, "Lê Chân, Hải Phòng")]);
         var l24 = await CheckIn("A2.4", new DateTime(2026, 10, 15), [T("Zhang Wei", "E12345678", "0977002401", "Nam", 1990, "Quảng Tây, Trung Quốc", "Trung Quốc", "Hán"),
-            T("Li Na", "E87654321", "0977002402", "Nữ", 1992, "Quảng Tây, Trung Quốc", "Trung Quốc", "Hán")], payFirst: false, depositPaid: 1_000_000);
+            T("Li Na", "E87654321", "0977002402", "Nữ", 1992, "Quảng Tây, Trung Quốc", "Trung Quốc", "Hán")], payFirst: false, depositPaid: 500_000);
         var lB01 = await CheckIn("B0.1", new DateTime(2026, 9, 5), [T("Hoàng Minh Đức", "031088100101", "0912100101", "Nam", 1988, "Hồng Bàng, Hải Phòng"),
             T("Nguyễn Thị Hoa", "031090100102", null, "Nữ", 1990, "Hồng Bàng, Hải Phòng"), T("Hoàng Minh Khôi", "031012100103", null, "Nam", 2012, "Hồng Bàng, Hải Phòng")]);
         var lB12 = await CheckIn("B1.2", new DateTime(2026, 9, 25), [T("Đặng Thu Trang", "031001101201", "0931101201", "Nữ", 2001, "An Lão, Hải Phòng"),
@@ -137,12 +131,12 @@ public static class DemoDataSeeder
             await leases.SaveTenantsAsync(lB01, keep, new DateTime(2026, 10, 1));
         }
 
-        // ---------- Phiếu tháng và thu tiền ----------
-        async Task Bill(int month, int year, string code, int meterEnd, decimal other, string? note, decimal? pay, DateTime payDate)
+        // ---------- Phiếu tháng và thu tiền (số điện = kWh đã dùng trong kỳ) ----------
+        async Task Bill(int month, int year, string code, int kwh, decimal other, string? note, decimal? pay, DateTime payDate)
         {
             var sheet = await billing.GetSheetAsync(month, year);
             var row = sheet.Rows.First(r => r.RoomCode == code);
-            row.MeterEnd = meterEnd;
+            row.Kwh = kwh;
             row.OtherAmount = other;
             row.Note = note;
             var billId = await billing.SaveBillAsync(month, year, row, User);
@@ -155,11 +149,11 @@ public static class DemoDataSeeder
             }
         }
         const decimal Full = decimal.MaxValue;
-        await Bill(9, 2026, "A0.3", 905, 0, null, Full, new DateTime(2026, 9, 11));
-        await Bill(10, 2026, "A0.1", 1135, 50_000, "Phí rác", Full, new DateTime(2026, 10, 11));
-        await Bill(10, 2026, "A0.2", 2180, 0, null, 1_500_000, new DateTime(2026, 10, 12));
-        await Bill(10, 2026, "B0.1", 620, 50_000, "Phí rác", Full, new DateTime(2026, 10, 10));
-        await Bill(10, 2026, "B1.2", 1260, 0, null, null, DateTime.Today);
+        await Bill(9, 2026, "A0.3", 105, 0, null, Full, new DateTime(2026, 9, 11));      // kỳ chốt đầu: tiền phòng 15/8 → 10/9
+        await Bill(10, 2026, "A0.1", 135, 50_000, "Phí rác", Full, new DateTime(2026, 10, 11));
+        await Bill(10, 2026, "A0.2", 180, 0, null, 1_500_000, new DateTime(2026, 10, 12));
+        await Bill(10, 2026, "B0.1", 120, 50_000, "Phí rác", Full, new DateTime(2026, 10, 10));
+        await Bill(10, 2026, "B1.2", 60, 0, null, null, DateTime.Today);
         // A0.5 chưa lập phiếu tháng 10 (hiện màu xanh trên sơ đồ)
 
         // ---------- Trả phòng A0.3 ----------
@@ -167,7 +161,7 @@ public static class DemoDataSeeder
             var details = (await rooms.GetDetailsAsync("A0.3"))!;
             var form = new CheckoutForm
             {
-                LeaseId = l03, EndDate = new DateTime(2026, 10, 12), EndMeterReading = 1010,
+                LeaseId = l03, EndDate = new DateTime(2026, 10, 12), Kwh = 98, // kỳ 10/2026 chưa lập phiếu: tính đủ tháng phòng + nước
                 Penalties = [new() { Description = "Tường bẩn", Amount = 300_000 }, new() { Description = "Vỡ kính cửa sổ", Amount = 150_000 }],
                 FurnitureActual = details.Furniture.ToDictionary(f => f.ItemId, f => f.Quantity),
                 Note = "Tường bẩn gần giường, kính cửa sổ nứt. Các đồ đạc khác đủ."
@@ -253,10 +247,10 @@ public static class DemoDataSeeder
         n += await db.LeaseTenants.ExecuteDeleteAsync();
         n += await db.Leases.ExecuteDeleteAsync();
         n += await db.Tenants.ExecuteDeleteAsync();
-        await db.Rooms.ExecuteUpdateAsync(r => r.SetProperty(x => x.Status, RoomStatus.Empty).SetProperty(x => x.MeterReading, 0).SetProperty(x => x.Note, (string?)null));
+        await db.Rooms.ExecuteUpdateAsync(r => r.SetProperty(x => x.Status, RoomStatus.Empty).SetProperty(x => x.Note, (string?)null));
         await tx.CommitAsync();
         foreach (var p in paths.Distinct()) files.Delete(p);
-        return $"Đã xóa {n} dòng dữ liệu nghiệp vụ và {paths.Distinct().Count()} file. Phòng về trạng thái trống, số điện 0. Cấu hình, tài khoản tiền, ảnh quảng cáo và người dùng được giữ.";
+        return $"Đã xóa {n} dòng dữ liệu nghiệp vụ và {paths.Distinct().Count()} file. Phòng về trạng thái trống. Cấu hình, tài khoản tiền, ảnh quảng cáo và người dùng được giữ.";
     }
 
     /// <summary>Tạo ảnh PNG một màu (ảnh minh họa cho dữ liệu thử).</summary>

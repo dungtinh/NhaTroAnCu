@@ -37,7 +37,6 @@ else
                 <h5><i class="fas fa-sliders-h"></i> Cấu hình phòng</h5>
                 <div class="row g-2">
                     <div class="col-6"><label class="form-label">Giá thuê/tháng</label><MoneyInput @bind-Value="rent" /></div>
-                    <div class="col-6"><label class="form-label">Số điện hiện tại</label><input type="number" min="0" class="form-control" @bind="meter" /></div>
                     <div class="col-6"><label class="form-label">Tối đa số người</label><input type="number" min="1" max="20" class="form-control" @bind="maxOcc" /></div>
                     <div class="col-6 d-flex align-items-end">
                         @if (lease == null)
@@ -110,7 +109,7 @@ else
                                         <td>@b.Month.ToString("00")/@b.Year</td>
                                         <td>@BillKind.Display(b.Kind)</td>
                                         <td class="text-end">@Fmt.Money(b.RentAmount)</td>
-                                        <td class="text-end">@Fmt.Money(b.ElectricityAmount)@if (b.MeterEnd != null) {<div class="small text-muted">@b.MeterStart→@b.MeterEnd</div>}</td>
+                                        <td class="text-end">@Fmt.Money(b.ElectricityAmount)@if (b.ElectricityKwh > 0) {<div class="small text-muted">@b.ElectricityKwh số</div>}</td>
                                         <td class="text-end">@Fmt.Money(b.WaterAmount)</td>
                                         <td class="text-end">@Fmt.Money(b.OtherAmount - b.Discount)</td>
                                         <td class="text-end fw-bold">@Fmt.Money(b.TotalAmount)</td>
@@ -133,7 +132,7 @@ else
             {
                 <div class="nh-card text-center py-4">
                     <i class="fas fa-door-open fa-3x text-muted mb-2"></i>
-                    <p class="mb-2">Phòng đang @RoomStatus.Display(d.Room.Status).ToLower(). Số điện hiện tại: <strong>@d.Room.MeterReading</strong></p>
+                    <p class="mb-2">Phòng đang @RoomStatus.Display(d.Room.Status).ToLower().</p>
                     @if (d.Room.Status != RoomStatus.Maintenance) { <a class="btn btn-primary" href="@($"nhan-phong?phong={d.Room.Code}")"><i class="fas fa-door-open"></i> Nhận phòng cho khách</a> }
                 </div>
             }
@@ -191,7 +190,7 @@ else
     private RoomDetails? d;
     private bool notFound;
     private decimal rent;
-    private int meter, maxOcc;
+    private int maxOcc;
     private string? note;
     private bool maintenance;
     private List<FurnitureEdit> furniture = [];
@@ -214,7 +213,6 @@ else
         notFound = d == null;
         if (d == null) return;
         rent = d.Room.Rent;
-        meter = d.Room.MeterReading;
         maxOcc = d.Room.MaxOccupants;
         note = d.Room.Note;
         maintenance = d.Room.Status == RoomStatus.Maintenance;
@@ -224,7 +222,7 @@ else
     private async Task SaveAsync()
     {
         if (d == null) return;
-        if (await RunAsync(() => Rooms.UpdateRoomAsync(d.Room.Id, rent, meter, maxOcc, note, maintenance, furniture.ToDictionary(f => f.ItemId, f => f.Quantity)),
+        if (await RunAsync(() => Rooms.UpdateRoomAsync(d.Room.Id, rent, maxOcc, note, maintenance, furniture.ToDictionary(f => f.ItemId, f => f.Quantity)),
                 $"Đã lưu cấu hình phòng {d.Room.Code}."))
             await LoadAsync();
     }

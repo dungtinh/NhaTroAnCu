@@ -12,6 +12,8 @@ public class AppSetting
     public decimal WaterPricePerPerson { get; set; } = 80000;
     /// <summary>Ngày thu tiền hằng tháng.</summary>
     public int BillingDay { get; set; } = 10;
+    /// <summary>Tiền cọc mặc định cho mọi khách (sửa được từng hợp đồng).</summary>
+    public decimal DefaultDeposit { get; set; } = 1_000_000;
     public int PersonalAccountId { get; set; }
     public int BusinessAccountId { get; set; }
 
@@ -97,8 +99,6 @@ public class Room
     /// <summary>A0.1, B3.8...</summary>
     public string Code { get; set; } = "";
     public decimal Rent { get; set; }
-    /// <summary>Chỉ số công tơ điện hiện tại (số chốt gần nhất).</summary>
-    public int MeterReading { get; set; }
     public string Status { get; set; } = RoomStatus.Empty;
     public int MaxOccupants { get; set; } = 4;
     public string? Note { get; set; }
@@ -136,8 +136,6 @@ public class Lease
     public DateTime? EndDate { get; set; }
     public decimal MonthlyRent { get; set; }
     public decimal Deposit { get; set; }
-    public int StartMeterReading { get; set; }
-    public int? EndMeterReading { get; set; }
     public string Status { get; set; } = LeaseStatus.Active;
     public string? ContractScanPath { get; set; }
     public string? Note { get; set; }
@@ -209,7 +207,7 @@ public class LeasePenalty
 
 public static class BillKind
 {
-    /// <summary>Kỳ đầu khi nhận phòng.</summary>
+    /// <summary>Tháng tiền phòng trả trước khi nhận phòng.</summary>
     public const string MoveIn = "MoveIn";
     /// <summary>Thu tiền hằng tháng.</summary>
     public const string Monthly = "Monthly";
@@ -218,7 +216,7 @@ public static class BillKind
 
     public static string Display(string? k) => k switch
     {
-        MoveIn => "Kỳ đầu",
+        MoveIn => "Tháng đầu (trả trước)",
         MoveOut => "Trả phòng",
         _ => "Hằng tháng"
     };
@@ -236,8 +234,8 @@ public class Bill
     public DateTime PeriodFrom { get; set; }
     public DateTime PeriodTo { get; set; }
     public decimal RentAmount { get; set; }
-    public int? MeterStart { get; set; }
-    public int? MeterEnd { get; set; }
+    /// <summary>Số điện đã dùng trong kỳ (kWh), do quản lý đọc từ công tơ tập trung.</summary>
+    public int ElectricityKwh { get; set; }
     public decimal ElectricityAmount { get; set; }
     public int PersonCount { get; set; }
     public decimal WaterAmount { get; set; }

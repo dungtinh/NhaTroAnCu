@@ -22,11 +22,15 @@
 }
 else
 {
-    var rows = sheet.Rows.Where(r => showAll || !r.SkipThisMonth).ToList();
-    decimal total = rows.Where(r => r.BillId != null).Sum(r => r.Total(sheet.ElectricityPrice, sheet.WaterPerPerson));
+    decimal ep = sheet.ElectricityPrice, wp = sheet.WaterPerPerson;
+    // Chưa thu xếp trước, đã thu xếp sau; trong mỗi nhóm theo dãy A → B, tầng thấp → cao, số phòng bé → to.
+    var rows = sheet.Rows.Where(r => showAll || !r.SkipThisMonth)
+        .OrderBy(r => r.IsPaid(ep, wp) ? 1 : 0).ThenBy(r => r.BlockCode).ThenBy(r => r.Floor).ThenBy(r => r.Number).ToList();
+    decimal total = rows.Where(r => r.BillId != null).Sum(r => r.Total(ep, wp));
     decimal paid = rows.Sum(r => r.Paid);
+    int needed = rows.Count(r => !r.SkipThisMonth), paidCount = rows.Count(r => r.IsPaid(ep, wp));
     <div class="row g-2 mb-3">
-        <div class="col-6 col-md-3"><div class="nh-stat"><div class="v">@rows.Count(r => r.BillId != null)/@rows.Count(r => !r.SkipThisMonth)</div><div class="l">Phiếu đã lập</div></div></div>
+        <div class="col-6 col-md-3"><div class="nh-stat"><div class="v">@paidCount/@needed</div><div class="l">Phòng đã thu</div></div></div>
         <div class="col-6 col-md-3"><div class="nh-stat"><div class="v">@Fmt.Money(total)</div><div class="l">Tổng phải thu</div></div></div>
         <div class="col-6 col-md-3"><div class="nh-stat"><div class="v text-success">@Fmt.Money(paid)</div><div class="l">Đã thu</div></div></div>
         <div class="col-6 col-md-3"><div class="nh-stat"><div class="v text-danger">@Fmt.Money(Math.Max(0, total - paid))</div><div class="l">Còn lại</div></div></div>
@@ -35,13 +39,13 @@ else
     <div class="nh-card">
         <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
             <div class="small text-muted">
-                Kỳ thu ngày @Fmt.Date(sheet.DueDate). Điện @Fmt.Money(sheet.ElectricityPrice)đ/số, nước @Fmt.Money(sheet.WaterPerPerson)đ/người.
-                Phòng mới vào trong tháng trước đã thu kỳ đầu nên không cần lập phiếu.
+                Kỳ chốt ngày @Fmt.Date(sheet.DueDate). Điện @Fmt.Money(ep)đ/số, nước @Fmt.Money(wp)đ/người.
+                Chỉ cần ghi <strong>số điện đã dùng</strong>; tiền phòng, điện, nước tự tính. Chưa thu xếp trước, đã thu xếp sau.
             </div>
             <div class="d-flex gap-2 align-items-center">
                 <div class="form-check mb-0">
                     <input class="form-check-input" type="checkbox" id="showAll" @bind="showAll" />
-                    <label class="form-check-label small" for="showAll">Hiện cả phòng không cần lập</label>
+                    <label class="form-check-label small" for="showAll">Hiện cả phòng mới vào tháng này</label>
                 </div>
                 <button type="button" class="btn btn-primary d-none d-md-inline-flex" disabled="@Busy" @onclick="SaveAllAsync"><i class="fas fa-save"></i> Lưu tất cả phiếu đã nhập số điện</button>
             </div>
@@ -51,8 +55,8 @@ else
         <div class="d-md-none">
             @foreach (var r in rows)
             {
-                var t = r.Total(sheet.ElectricityPrice, sheet.WaterPerPerson);
-                bool done = r.BillId != null && r.Paid >= t;
+                var t = r.Total(ep, wp);
+                bool done = r.IsPaid(ep, wp);
                 <div class="nh-list-item @(done ? "done" : "")" @key="r.LeaseId">
                     <div class="top">
                         <div class="text-truncate">
@@ -61,40 +65,43 @@ else
                         </div>
                         <div class="text-end">
                             <div class="fw-bold">@Fmt.Vnd(t)</div>
-                            @if (r.BillId != null) { <div class="small @(done ? "text-success" : "text-danger")">Đã thu @Fmt.Money(r.Paid)</div> }
-                            else if (r.SkipThisMonth) { <div class="small text-muted">Đã thu kỳ đầu</div> }
-                            else { <div class="small text-primary">Chưa lập phiếu</div> }
+                            @if (done) { <span class="badge bg-success">Đã thu</span> }
+                            else if (r.BillId != null) { <span class="badge bg-danger">Chưa thu @(r.Paid > 0 ? $"(còn {Fmt.Money(t - r.Paid)})" : "")</span> }
+                            else if (r.SkipThisMonth) { <span class="badge bg-secondary">Đã thu 1 tháng khi vào</span> }
+                            else { <span class="badge bg-primary">Chưa lập phiếu</span> }
                         </div>
                     </div>
                     @if (r.PreviousDebt > 0) { <div class="small text-danger">Nợ kỳ trước @Fmt.Vnd(r.PreviousDebt)</div> }
                     <div class="row g-2 align-items-end mt-1">
-                        <div class="col-4"><label class="form-label small mb-0">Số cũ</label><div class="form-control bg-light nh-meter">@r.MeterStart</div></div>
-                        <div class="col-5"><label class="form-label small mb-0">Số mới</label>
-                            <input type="number" inputmode="numeric" min="@r.MeterStart" class="form-control nh-meter @(r.MeterEnd < r.MeterStart ? "is-invalid" : "")" @bind="r.MeterEnd" /></div>
-                        <div class="col-3"><label class="form-label small mb-0">Người</label><input type="number" inputmode="numeric" min="0" class="form-control text-center" @bind="r.PersonCount" /></div>
+                        <div class="col-7"><label class="form-label small mb-0">Số điện đã dùng (kWh)</label>
+                            <input type="number" inputmode="numeric" min="0" class="form-control nh-meter @(r.Kwh < 0 ? "is-invalid" : "")" @bind="r.Kwh" disabled="@done" /></div>
+                        <div class="col-5"><label class="form-label small mb-0">Người</label><input type="number" inputmode="numeric" min="0" class="form-control text-center" @bind="r.PersonCount" disabled="@done" /></div>
                     </div>
                     <div class="small text-muted mt-2">
-                        Phòng @Fmt.Money(r.Rent) · Điện @Fmt.Money(r.Electricity(sheet.ElectricityPrice))@(r.MeterEnd >= r.MeterStart ? $" ({r.MeterEnd - r.MeterStart} số)" : "") · Nước @Fmt.Money(r.Water(sheet.WaterPerPerson))
+                        Phòng @Fmt.Money(r.Rent)@(r.IsFirstMonth ? $" ({Fmt.Date(r.PeriodFrom)} → {Fmt.Date(r.PeriodTo)})" : "") · Điện @Fmt.Money(r.Electricity(ep))@(r.Kwh > 0 ? $" ({r.Kwh} số)" : "") · Nước @Fmt.Money(r.Water(wp))
                         @if (r.OtherAmount != 0 || r.Discount != 0) { <span> · Khác @Fmt.Money(r.OtherAmount - r.Discount)</span> }
                     </div>
-                    <details class="mt-1">
-                        <summary class="small text-primary">Sửa tiền phòng, khoản khác, giảm trừ</summary>
-                        <div class="row g-2 mt-1">
-                            <div class="col-12"><label class="form-label small mb-0">Tiền phòng</label><MoneyInput @bind-Value="r.Rent" /></div>
-                            <div class="col-6"><label class="form-label small mb-0">Khác (rác, xe...)</label><MoneyInput @bind-Value="r.OtherAmount" /></div>
-                            <div class="col-6"><label class="form-label small mb-0">Giảm trừ</label><MoneyInput @bind-Value="r.Discount" /></div>
-                            <div class="col-12"><label class="form-label small mb-0">Ghi chú</label><input class="form-control" @bind="r.Note" /></div>
-                        </div>
-                    </details>
+                    @if (!done)
+                    {
+                        <details class="mt-1">
+                            <summary class="small text-primary">Sửa tiền phòng, khoản khác, giảm trừ</summary>
+                            <div class="row g-2 mt-1">
+                                <div class="col-12"><label class="form-label small mb-0">Tiền phòng</label><MoneyInput @bind-Value="r.Rent" /></div>
+                                <div class="col-6"><label class="form-label small mb-0">Khác (rác, xe...)</label><MoneyInput @bind-Value="r.OtherAmount" /></div>
+                                <div class="col-6"><label class="form-label small mb-0">Giảm trừ</label><MoneyInput @bind-Value="r.Discount" /></div>
+                                <div class="col-12"><label class="form-label small mb-0">Ghi chú</label><input class="form-control" @bind="r.Note" /></div>
+                            </div>
+                        </details>
+                    }
                     <div class="d-flex gap-2 mt-2">
-                        <button type="button" class="btn btn-primary flex-fill" disabled="@Busy" @onclick="() => SaveRowAsync(r)"><i class="fas fa-save"></i> @(r.BillId == null ? "Lập phiếu" : "Lưu")</button>
-                        @if (r.BillId != null && r.Paid < t) { <button type="button" class="btn btn-success flex-fill" @onclick="() => OpenPayAsync(r)"><i class="fas fa-hand-holding-usd"></i> Thu tiền</button> }
-                        @if (r.BillId != null) { <a class="btn btn-outline-secondary" title="In phiếu" href="@($"files/bills/{r.BillId}")" target="_blank"><i class="fas fa-print"></i></a> }
+                        @if (!done) { <button type="button" class="btn btn-primary flex-fill" disabled="@Busy" @onclick="() => SaveRowAsync(r)"><i class="fas fa-save"></i> @(r.BillId == null ? "Lập phiếu" : "Lưu")</button> }
+                        @if (r.BillId != null && !done) { <button type="button" class="btn btn-success flex-fill" @onclick="() => OpenPayAsync(r)"><i class="fas fa-hand-holding-usd"></i> Thu tiền</button> }
+                        @if (r.BillId != null) { <a class="btn btn-outline-secondary @(done ? "flex-fill" : "")" title="In phiếu thu" href="@($"files/bills/{r.BillId}")" target="_blank"><i class="fas fa-print"></i> @(done ? "In phiếu thu" : "")</a> }
                     </div>
                 </div>
             }
-            @if (rows.Count == 0) { <div class="text-center text-muted py-3">Không có phòng nào cần lập phiếu tháng này.</div> }
-            @if (rows.Any(r => r.MeterEnd != null && r.BillId == null))
+            @if (rows.Count == 0) { <div class="text-center text-muted py-3">Không có phòng nào cần thu tiền tháng này.</div> }
+            @if (rows.Any(r => r.Kwh != null && r.BillId == null && !r.SkipThisMonth))
             {
                 <div class="nh-action-bar"><button type="button" class="btn btn-primary btn-lg" disabled="@Busy" @onclick="SaveAllAsync"><i class="fas fa-save"></i> Lưu tất cả phiếu đã nhập</button></div>
             }
@@ -104,42 +111,49 @@ else
             <table class="nh-table nh-billing">
                 <thead>
                     <tr>
-                        <th>Phòng</th><th>Người thuê</th><th style="width:110px">Tiền phòng</th><th>Số cũ</th><th style="width:100px">Số mới</th><th class="text-end">Điện</th>
+                        <th>Phòng</th><th>Người thuê</th><th style="width:110px">Tiền phòng</th><th style="width:100px">Số điện</th><th class="text-end">Điện</th>
                         <th style="width:70px">Người</th><th class="text-end">Nước</th><th style="width:110px">Khác</th><th style="width:110px">Giảm</th>
-                        <th class="text-end">Tổng</th><th class="text-end">Đã thu</th><th></th>
+                        <th class="text-end">Tổng</th><th class="text-end">Đã thu</th><th>Tình trạng</th><th></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var r in rows)
                     {
-                        var t = r.Total(sheet.ElectricityPrice, sheet.WaterPerPerson);
-                        <tr @key="r.LeaseId" class="@(r.SkipThisMonth ? "text-muted" : "") @(r.BillId != null && r.Paid >= t ? "table-success" : "")">
+                        var t = r.Total(ep, wp);
+                        bool done = r.IsPaid(ep, wp);
+                        <tr @key="r.LeaseId" class="@(r.SkipThisMonth ? "text-muted" : "") @(done ? "table-success" : "")">
                             <td><a href="@($"phong/{r.RoomCode}")" class="fw-bold">@r.RoomCode</a></td>
                             <td>@r.Representative
                                 @if (r.PreviousDebt > 0) { <div class="small text-danger">Nợ cũ @Fmt.Money(r.PreviousDebt)</div> }
-                                @if (r.SkipThisMonth) { <div class="small">Đã thu kỳ đầu</div> }
+                                @if (r.SkipThisMonth) { <div class="small">Đã thu 1 tháng khi vào</div> }
+                                else if (r.IsFirstMonth) { <div class="small text-muted">Kỳ đầu @Fmt.Date(r.PeriodFrom) → @Fmt.Date(r.PeriodTo)</div> }
                             </td>
-                            <td><MoneyInput @bind-Value="r.Rent" CssClass="form-control form-control-sm money" /></td>
-                            <td>@r.MeterStart</td>
-                            <td><input type="number" min="@r.MeterStart" class="form-control form-control-sm @(r.MeterEnd < r.MeterStart ? "is-invalid" : "")" @bind="r.MeterEnd" /></td>
-                            <td class="text-end">@Fmt.Money(r.Electricity(sheet.ElectricityPrice))</td>
-                            <td><input type="number" min="0" class="form-control form-control-sm" @bind="r.PersonCount" /></td>
-                            <td class="text-end">@Fmt.Money(r.Water(sheet.WaterPerPerson))</td>
-                            <td><MoneyInput @bind-Value="r.OtherAmount" CssClass="form-control form-control-sm money" /></td>
-                            <td><MoneyInput @bind-Value="r.Discount" CssClass="form-control form-control-sm money" /></td>
+                            <td><MoneyInput @bind-Value="r.Rent" CssClass="form-control form-control-sm money" disabled="@done" /></td>
+                            <td><input type="number" min="0" class="form-control form-control-sm @(r.Kwh < 0 ? "is-invalid" : "")" placeholder="kWh" @bind="r.Kwh" disabled="@done" /></td>
+                            <td class="text-end">@Fmt.Money(r.Electricity(ep))</td>
+                            <td><input type="number" min="0" class="form-control form-control-sm" @bind="r.PersonCount" disabled="@done" /></td>
+                            <td class="text-end">@Fmt.Money(r.Water(wp))</td>
+                            <td><MoneyInput @bind-Value="r.OtherAmount" CssClass="form-control form-control-sm money" disabled="@done" /></td>
+                            <td><MoneyInput @bind-Value="r.Discount" CssClass="form-control form-control-sm money" disabled="@done" /></td>
                             <td class="text-end fw-bold">@Fmt.Money(t)</td>
-                            <td class="text-end @(r.Paid >= t && r.BillId != null ? "text-success" : "")">@Fmt.Money(r.Paid)</td>
+                            <td class="text-end @(done ? "text-success" : "")">@Fmt.Money(r.Paid)</td>
+                            <td>
+                                @if (done) { <span class="badge bg-success">Đã thu</span> }
+                                else if (r.BillId != null) { <span class="badge bg-danger">Chưa thu</span> }
+                                else if (r.SkipThisMonth) { <span class="badge bg-secondary">Không cần</span> }
+                                else { <span class="badge bg-primary">Chưa lập</span> }
+                            </td>
                             <td class="text-nowrap">
-                                <button type="button" class="btn btn-sm btn-primary" title="Lưu phiếu" disabled="@Busy" @onclick="() => SaveRowAsync(r)"><i class="fas fa-save"></i></button>
+                                @if (!done) { <button type="button" class="btn btn-sm btn-primary" title="Lưu phiếu" disabled="@Busy" @onclick="() => SaveRowAsync(r)"><i class="fas fa-save"></i></button> }
                                 @if (r.BillId != null)
                                 {
-                                    @if (r.Paid < t) { <button type="button" class="btn btn-sm btn-success" title="Thu tiền" @onclick="() => OpenPayAsync(r)"><i class="fas fa-hand-holding-usd"></i></button> }
-                                    <a class="btn btn-sm btn-outline-secondary" title="In phiếu" href="@($"files/bills/{r.BillId}")" target="_blank"><i class="fas fa-print"></i></a>
+                                    @if (!done) { <button type="button" class="btn btn-sm btn-success" title="Thu tiền, nhập chứng từ" @onclick="() => OpenPayAsync(r)"><i class="fas fa-hand-holding-usd"></i></button> }
+                                    <a class="btn btn-sm btn-outline-secondary" title="In phiếu thu" href="@($"files/bills/{r.BillId}")" target="_blank"><i class="fas fa-print"></i></a>
                                 }
                             </td>
                         </tr>
                     }
-                    @if (rows.Count == 0) { <tr><td colspan="13" class="text-center text-muted py-3">Không có phòng nào cần lập phiếu tháng này.</td></tr> }
+                    @if (rows.Count == 0) { <tr><td colspan="13" class="text-center text-muted py-3">Không có phòng nào cần thu tiền tháng này.</td></tr> }
                 </tbody>
             </table>
         </div>
@@ -190,8 +204,8 @@ else
     private async Task SaveAllAsync()
     {
         var user = await GetUserNameAsync();
-        var todo = sheet!.Rows.Where(r => r.MeterEnd != null && (!r.SkipThisMonth || r.BillId != null)).ToList();
-        if (todo.Count == 0) { Toast.Error("Chưa nhập số điện mới cho phòng nào."); return; }
+        var todo = sheet!.Rows.Where(r => r.Kwh != null && (!r.SkipThisMonth || r.BillId != null) && !r.IsPaid(sheet.ElectricityPrice, sheet.WaterPerPerson)).ToList();
+        if (todo.Count == 0) { Toast.Error("Chưa nhập số điện đã dùng cho phòng nào."); return; }
         int ok = 0;
         var errors = new List<string>();
         Busy = true;

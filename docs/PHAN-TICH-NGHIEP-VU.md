@@ -9,39 +9,52 @@ Những chỗ yêu cầu chưa nói rõ được ghi là **Giả định**; đ�
 - Mã phòng `{Dãy}{Tầng}.{Số}`: A0.1 … A0.8 (tầng trệt), A1.1 … A1.8, A2.1 … A2.8, A3.1 … A3.8; dãy B tương tự.
 - Danh mục đồ đạc: Tủ, Giường, Điều hòa, Quạt, Bàn ghế, Đệm (thêm/bớt được).
 - Mỗi dãy có **cấu hình đồ đạc mặc định** (loại và số lượng). Phòng mới lấy theo mặc định của dãy, sau đó chỉnh riêng từng phòng.
-- Mỗi phòng có **giá thuê tháng** và **chỉ số công tơ điện hiện tại** (số tháng trước).
-  **Giả định**: giá mặc định của mỗi dãy là 2.500.000đ, chỉnh trong Cấu hình.
-- Cấu hình chung: giá điện **3.500đ/số**, nước **80.000đ/người/tháng**, ngày thu tiền **mồng 10**.
+- Mỗi phòng có **giá thuê tháng**. **Giả định**: giá mặc định của mỗi dãy là 2.500.000đ, chỉnh trong Cấu hình.
+- **Điện**: công tơ điện tử do chủ nhà quản lý tập trung, không gắn công tơ từng phòng cho khách xem. Phần mềm **không lưu
+  chỉ số đầu/cuối kỳ**, mỗi kỳ chỉ nhập **số điện đã dùng (kWh)** của từng phòng; khách đồng ý không cần xem công tơ.
+- Cấu hình chung: giá điện **3.500đ/số**, nước **80.000đ/người/tháng** (cố định, không theo ngày), ngày thu tiền **mồng 10**,
+  **tiền cọc mặc định 1.000.000đ** cho mọi khách (sửa được từng hợp đồng).
 
 ## 2. Khách thuê
 
 ### Nhận phòng (khách vào)
-- Chọn phòng đang trống, nhập ngày vào, giá thuê (lấy từ phòng, sửa được), tiền cọc (mặc định = 1 tháng tiền phòng),
-  số điện đầu (mặc định = số điện khi khách trước trả phòng), danh sách người ở (quét CCCD, nhiều người/phòng).
+- Chọn phòng đang trống, nhập ngày vào, giá thuê (lấy từ phòng, sửa được), tiền cọc (mặc định 1.000.000đ theo Cấu hình),
+  danh sách người ở (quét CCCD, nhiều người/phòng). **Không nhập số điện.**
 - **Tiền thu khi vào** gồm 2 khoản tách riêng:
-  - **Tiền cọc** → ghi vào **tài khoản cá nhân**.
-  - **Tiền phòng kỳ đầu + tiền nước kỳ đầu** → ghi vào **tài khoản hộ kinh doanh**.
-- **Cách tính kỳ đầu** (theo "+/− số tiền còn phải đóng trong tháng"): kỳ đầu tính từ ngày vào đến mồng 10 tháng sau.
-  Tiền phòng kỳ đầu = giá tháng + (10 − ngày vào) × giá tháng / 30. Vào trước mồng 10 thì cộng thêm, vào sau thì trừ bớt.
-  Ví dụ giá 2.500.000đ, vào ngày 17: 2.500.000 − 7 × 83.333 = 1.916.667đ, đóng đến mồng 10 tháng sau.
-  Tiền nước kỳ đầu tính theo cùng tỷ lệ. Tiền điện tính ở kỳ thu tiếp theo theo số công tơ.
+  - **Tiền cọc** 1.000.000đ → ghi vào **tài khoản cá nhân**.
+  - **Đủ 1 tháng tiền phòng** (trả trước) → ghi vào **tài khoản hộ kinh doanh**. Không thu nước, điện lúc vào.
+  - Ví dụ giá 2.000.000đ: khách nộp 2.000.000 + 1.000.000 = **3.000.000đ**.
+- Tháng tiền phòng trả trước này được tính cho **kỳ tròn tháng đầu tiên** tính từ ngày chốt đầu (xem bên dưới).
 - In **hợp đồng** từ mẫu Word, khách ký, tải **bản scan** lên phần mềm.
 - Mỗi lần thu tiền có thể tải **chứng từ** (ảnh chuyển khoản, phiếu thu), không bắt buộc.
 
-### Thu tiền hằng tháng
-- Ngày 10 hằng tháng lập phiếu cho các phòng đang thuê: nhập số điện mới, phần mềm tính:
-  tiền phòng (kỳ 10 → 10 tháng sau) + tiền điện ((số mới − số cũ) × 3.500) + tiền nước (số người × 80.000) ± khoản khác.
+### Thu tiền hằng tháng (ngày chốt mồng 10)
+- **Kỳ chốt đầu** của một khách là mồng 10 của **tháng sau tháng nhận phòng** (vào 20/10 → chốt đầu 10/11; vào 5/10 → cũng 10/11).
+  Phiếu kỳ chốt đầu gồm:
+  - **Tiền phòng từ ngày vào đến ngày chốt** (đoạn lẻ, vì tháng trả trước lúc vào đã bao kỳ 10/11 → 10/12).
+    Tính theo tháng 30 ngày: số ngày = 30 + (ngày thu − ngày vào); tiền = giá tháng × số ngày / 30, làm tròn nghìn.
+    Vào 20/10, giá 2.000.000: 20 ngày → 1.333.000đ. Vào 5/10: 35 ngày → 2.333.000đ. Vào đúng mồng 10: tròn 1 tháng.
+  - **Tiền điện** = số điện đã dùng (nhập) × 3.500.
+  - **Tiền nước** = số người × 80.000 (cố định, không theo ngày).
+- **Các kỳ sau** (từ 10/12): tiền phòng **đủ tháng** (2.000.000) + điện theo số đã dùng + nước cố định ± khoản khác.
+  Phiếu kỳ 10/M tính tiền phòng cho 10/M → 10/(M+1), tức khách luôn **đóng trước một tháng**.
+- Màn hình **Thu tiền tháng** liệt kê **tất cả phòng đang có khách**, thứ tự: **chưa thu trước, đã thu sau**; trong mỗi nhóm
+  theo **dãy A → B, tầng thấp → cao, số phòng bé → to**. Mỗi dòng chỉ cần **nhập số điện đã dùng**; tiền phòng, nước, điện tự tính
+  theo cấu hình. Có nút **Lập phiếu / Lưu**, **Thu tiền** (kèm chứng từ), **In phiếu thu**; trạng thái **Đã thu / Chưa thu**.
+- Phòng nhận trong chính tháng đó chưa đến kỳ chốt đầu nên không hiện (có thể bật "Hiện cả phòng không cần lập").
 - Thu tiền vào tài khoản hộ kinh doanh, thu một phần được, theo dõi còn nợ.
 
 ### Trả phòng (khách ra)
-- Chọn phòng, nhập ngày trả, **số điện cuối**, các khoản **phạt** (bẩn tường, vỡ kính…), **ảnh hiện trạng**, ghi chú.
+- Chọn phòng, nhập ngày trả, **số điện đã dùng** từ kỳ chốt trước, các khoản **phạt** (bẩn tường, vỡ kính…), **ảnh hiện trạng**, ghi chú.
 - **Kiểm đồ đạc**: nhập số lượng thực tế từng món; phần mềm **cảnh báo** món nào khác cấu hình của phòng hoặc mặc định của dãy.
-- **Quyết toán**: tiền cọc − tiền điện chưa thu − tiền phạt − các phiếu còn nợ = số trả lại khách
+- **Tiền phòng và tiền nước tính đủ tháng**: kỳ chốt nào đã tới ngày thu mà chưa lập phiếu thì tính **trọn tháng** tiền phòng
+  và tiền nước vào phiếu trả phòng (không chia ngày); kỳ đã lập phiếu thì chỉ lấy phần còn nợ. Không hoàn tiền phòng đã đóng
+  trước cho những ngày chưa ở (muốn hoàn thì nhập âm ở "khoản khác").
+- **Quyết toán**: tiền cọc − tiền điện − tiền phạt − tiền phòng/nước kỳ chưa lập − các phiếu còn nợ − khoản khác = số trả lại khách
   (âm thì khách phải nộp thêm). Nhập số tiền thực trả/thực thu.
-  **Giả định**: không hoàn lại tiền phòng đã đóng trước cho những ngày chưa ở (nhập ở "khoản khác" nếu muốn hoàn).
 - Ghi sổ: tiền cọc trả lại → **chi từ tài khoản cá nhân**. Phần cọc bị khấu trừ (điện, phạt, nợ) là doanh thu nên được
   **chuyển nội bộ** từ tài khoản cá nhân sang tài khoản hộ kinh doanh, để báo cáo hộ kinh doanh đủ doanh thu.
-- Chốt: hợp đồng kết thúc, phòng chuyển **trống**, số điện cuối thành số đầu cho khách sau.
+- Chốt: hợp đồng kết thúc, phòng chuyển **trống**.
 
 ## 3. Sửa chữa
 - Chọn **phòng** hoặc **khu vực chung** (ghi rõ vị trí), nội dung sửa, người/thợ thực hiện, số tiền.
@@ -69,15 +82,16 @@ Những chỗ yêu cầu chưa nói rõ được ghi là **Giả định**; đ�
 - **Nhân viên**: nhận/trả phòng, thu tiền, ghi sửa chữa, mua sắm; không sửa/xóa chứng từ tiền, không đổi cấu hình.
 - Tài khoản đầu tiên đăng ký là Quản trị; nhân viên do Quản trị tạo.
 
-## Rà soát luồng vào/ra (18/10/2026)
+## Rà soát luồng vào/ra (18/10/2026, cập nhật 19/10/2026 theo cách thu mới)
 
 Các kiểm tra phần mềm tự chặn hoặc cảnh báo:
 
 - **Nhận phòng**: không nhận vào phòng đang có khách hoặc đang sửa; khách đang ở phòng khác phải trả phòng cũ trước;
-  ngày vào không quá 31 ngày tới hoặc 2 năm trước; tiền cọc, tiền kỳ đầu đã thu không được lớn hơn số phải thu.
-- **Thu tiền**: không thu quá số còn phải thu của phiếu (khách đưa thừa thì ghi ở Thu chi > Thu khác); phiếu đã đủ thì không thu thêm.
-- **Trả phòng**: số điện cuối không nhỏ hơn số đã chốt; ngày trả không trước ngày vào và không quá 7 ngày tới;
-  cọc dùng để quyết toán là **cọc đã thu thật** (không phải số ghi trên hợp đồng); trả cọc không quá số đang giữ;
-  **cảnh báo khi còn kỳ tháng đã đến ngày thu mà chưa lập phiếu** (tiền phòng kỳ đó sẽ không được thu nếu cứ trả phòng).
+  ngày vào không quá 31 ngày tới hoặc 2 năm trước; tiền cọc, tiền phòng đã thu không được lớn hơn số phải thu.
+- **Thu tiền**: phải nhập số điện đã dùng (0 cũng được) mới lập được phiếu; không thu quá số còn phải thu của phiếu
+  (khách đưa thừa thì ghi ở Thu chi > Thu khác); phiếu đã đủ thì không thu thêm.
+- **Trả phòng**: ngày trả không trước ngày vào và không quá 7 ngày tới; cọc dùng để quyết toán là **cọc đã thu thật**
+  (không phải số ghi trên hợp đồng); trả cọc không quá số đang giữ; kỳ đã đến ngày thu mà chưa lập phiếu được **tính đủ tháng**
+  ngay trong phiếu trả phòng (không còn cảnh báo bỏ sót).
 - **Giới hạn đã biết**: nợ còn lại của hợp đồng đã trả phòng (khi cố tình trả phòng mà khách chưa nộp đủ) không hiện trên sơ đồ,
   chỉ xem được ở trang hợp đồng/phòng. Không hoàn tiền phòng đã thu khi khách đi giữa kỳ.

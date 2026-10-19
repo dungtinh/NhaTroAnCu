@@ -3,11 +3,12 @@
 Ứng dụng quản lý nhà trọ 2 dãy A, B, mỗi dãy 4 tầng × 8 phòng (64 phòng, mã `A0.1` … `B3.8`).
 
 - **Sơ đồ phòng**: màu theo trạng thái (trống, chưa lập phiếu, còn nợ, đã thu đủ, đang sửa), cảnh báo đồ đạc khác mặc định.
-- **Nhận phòng**: chọn phòng trống, tính tiền kỳ đầu theo ngày thu (mồng 10), cọc 1 tháng vào tài khoản cá nhân,
-  tiền phòng vào tài khoản hộ kinh doanh, số điện đầu lấy theo số khi khách trước trả phòng, quét CCCD nhiều người,
+- **Nhận phòng**: chọn phòng trống, thu đủ 1 tháng tiền phòng (trả trước) vào tài khoản hộ kinh doanh và tiền cọc
+  (mặc định 1.000.000đ) vào tài khoản cá nhân, không cần số điện, quét CCCD nhiều người,
   in hợp đồng Word rồi tải bản đã ký lên.
-- **Thu tiền tháng**: nhập số điện cả dãy, lập phiếu, thu một phần hoặc đủ, đính chứng từ, in phiếu thu PDF.
-- **Trả phòng**: chốt điện, kiểm đồ đạc, phạt hư hỏng, ảnh hiện trạng, quyết toán trừ vào cọc, in biên bản.
+- **Thu tiền tháng** (ngày chốt mồng 10): danh sách phòng có khách, chưa thu xếp trước; chỉ nhập số điện đã dùng (kWh),
+  tiền phòng, điện, nước tự tính; kỳ chốt đầu tính tiền phòng từ ngày vào đến ngày chốt; thu một phần hoặc đủ, đính chứng từ, in phiếu thu PDF.
+- **Trả phòng**: nhập số điện đã dùng, kiểm đồ đạc, phạt hư hỏng, ảnh hiện trạng; kỳ chưa lập phiếu tính đủ tháng; quyết toán trừ vào cọc, in biên bản.
 - **Sửa chữa**: theo phòng hoặc khu vực chung, bắt buộc ảnh và chứng từ, trừ thẳng vào tài khoản cá nhân, cảnh báo sửa lặp lại.
 - **Mua sắm** và **chi phí quảng cáo**: bắt buộc ảnh hóa đơn.
 - **Thu chi**: số dư từng tài khoản tính từ số dư đầu kỳ, sổ giao dịch, chuyển nội bộ, báo cáo tháng, xuất Excel.
@@ -75,7 +76,7 @@ git config core.hooksPath .githooks
 
 **Mẫu hợp đồng**: `NHNhaTro/Templates/HOPDONG.docx`. Có thể chèn các trường MERGEFIELD:
 `ngay`, `thang`, `nam`, `sophong`, `benthue`, `giathue`, `giathue_text`, `tiencoc`, `tiencoc_text`, `giadien`, `gianuoc`,
-`ngaybatdau`, `sodiendau`, `songuoi`, `ngaythu`, `dodac`, `chunha`, `diachi`, `dienthoai`.
+`ngaybatdau`, `songuoi`, `ngaythu`, `dodac`, `chunha`, `diachi`, `dienthoai` (`sodiendau` còn nhận nhưng để trống vì không còn quản lý số công tơ từng phòng).
 Mẫu hiện tại ghi cứng giá thuê, tiền cọc, giá điện nước; ứng dụng tự thay các đoạn đó bằng số của hợp đồng.
 
 **Font PDF**: PDF dùng Times New Roman của Windows. Máy chủ không có font này thì đặt file `.ttf` vào thư mục `NHNhaTro/Fonts`.

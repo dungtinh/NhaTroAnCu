@@ -21,32 +21,32 @@
     </div>
 
     <h5>Chọn phòng</h5>
-    <p>Ở đâu cần chọn phòng cũng làm 3 bước: <strong>Dãy → Tầng → Phòng</strong>. Phòng có khách hiện <i class="fas fa-lock"></i> và tên khách; màu xám là trống, xanh lá đã thu đủ, cam còn nợ, xanh dương chưa ghi số điện, tím đang sửa.</p>
+    <p>Ở đâu cần chọn phòng cũng làm 3 bước: <strong>Dãy → Tầng → Phòng</strong>. Phòng có khách hiện <i class="fas fa-lock"></i> và tên khách; màu xám là trống, xanh lá đã thu đủ, cam còn nợ, xanh dương chưa lập phiếu kỳ này, tím đang sửa.</p>
 
     <h5 id="nhan"><span class="badge bg-success">1</span> Nhận phòng (khách mới vào)</h5>
     <ol>
-        <li>Bấm <strong>Nhận phòng</strong>, chọn phòng trống. Ngày vào mặc định hôm nay; số điện lấy theo số khi khách trước trả phòng, sửa nếu công tơ khác.</li>
+        <li>Bấm <strong>Nhận phòng</strong>, chọn phòng trống. Ngày vào mặc định hôm nay. Không cần ghi số điện: công tơ do nhà trọ quản lý tập trung.</li>
         <li>Chụp <strong>2 mặt căn cước</strong> của khách. Nếu đã bật quét bằng AI, tên, số căn cước, ngày sinh, địa chỉ tự điền. Không thì gõ họ tên và số căn cước. Thêm người ở nếu phòng có nhiều người.</li>
-        <li>Tiền tự tính: tiền phòng kỳ đầu, tiền nước, tiền cọc. Khách nộp đủ thì để nguyên và bấm <strong>Nhận phòng</strong>. Khách nộp thiếu thì gạt công tắc "chưa nộp đủ" và ghi số đã thu.</li>
+        <li>Tiền thu khi vào = <strong>đủ 1 tháng tiền phòng</strong> + <strong>tiền cọc</strong> (mặc định @Fmt.Money(s?.DefaultDeposit ?? 0)đ). Khách nộp đủ thì để nguyên và bấm <strong>Nhận phòng</strong>. Khách nộp thiếu thì gạt công tắc "chưa nộp đủ" và ghi số đã thu.</li>
         <li>Sau đó bấm <strong>In hợp đồng (Word)</strong>, cho khách ký, chụp lại và tải lên ở ô "Hợp đồng đã ký".</li>
     </ol>
     <p class="small text-muted">Tiền cọc vào tài khoản cá nhân, tiền phòng vào tài khoản hộ kinh doanh. Khách đang ở phòng khác sẽ bị chặn, phải trả phòng cũ trước.</p>
 
     <h5 id="thu"><span class="badge bg-primary">2</span> Thu tiền tháng (mỗi tháng, quanh ngày @billingDay)</h5>
     <ol>
-        <li>Bấm <strong>Thu tiền tháng</strong>. Mỗi phòng một thẻ, chỉ cần ghi <strong>số điện mới</strong> trên công tơ. Số người lấy theo danh sách người ở, sửa nếu khác.</li>
-        <li>Bấm <strong>Lập phiếu</strong> ở từng phòng, hoặc ghi hết rồi bấm <strong>Lưu tất cả</strong>. Tiền điện, nước tính theo giá trong Cấu hình.</li>
+        <li>Bấm <strong>Thu tiền tháng</strong>. Danh sách mọi phòng có khách, <strong>chưa thu xếp trước, đã thu xếp sau</strong>, rồi theo dãy A → B, tầng, số phòng. Mỗi phòng chỉ cần ghi <strong>số điện đã dùng</strong> (kWh) trong kỳ. Số người lấy theo danh sách người ở, sửa nếu khác.</li>
+        <li>Bấm <strong>Lập phiếu</strong> ở từng phòng, hoặc ghi hết rồi bấm <strong>Lưu tất cả</strong>. Tiền phòng, điện, nước tự tính theo Cấu hình.</li>
         <li>Khách đưa tiền thì bấm <strong>Thu tiền</strong>, chụp ảnh chuyển khoản nếu có (số tiền tự đọc). Thu thiếu thì phòng hiện màu cam cho tới khi đủ.</li>
         <li>Bấm <i class="fas fa-print"></i> để in phiếu thu cho khách.</li>
     </ol>
-    <p class="small text-muted">Phòng mới vào tháng trước đã đóng kỳ đầu đến ngày @billingDay tháng này, nên không cần lập phiếu; phần mềm tự bỏ qua.</p>
+    <p class="small text-muted">Phòng mới vào trong tháng chưa đến kỳ chốt đầu (đã đóng 1 tháng khi vào) nên không hiện; kỳ chốt đầu của phòng đó là ngày @billingDay tháng sau, tiền phòng chỉ tính đoạn từ ngày vào đến ngày chốt.</p>
 
     <h5 id="tra"><span class="badge bg-danger">3</span> Trả phòng (khách chuyển đi)</h5>
     <ol>
-        <li>Bấm <strong>Trả phòng</strong>, chọn phòng khách đang ở. Nếu phần mềm báo "chưa lập phiếu tháng ...", hãy lập phiếu ở Thu tiền tháng trước, kẻo mất tiền phòng kỳ đó.</li>
-        <li>Ghi <strong>số điện cuối</strong>. Kiểm tra đồ đạc, thiếu hay hỏng thì mở mục đồ đạc và sửa số thực tế.</li>
+        <li>Bấm <strong>Trả phòng</strong>, chọn phòng khách đang ở. Kỳ nào đã đến ngày thu mà chưa lập phiếu, phần mềm tự tính <strong>đủ tháng</strong> tiền phòng và nước vào quyết toán.</li>
+        <li>Ghi <strong>số điện đã dùng</strong> từ kỳ chốt trước. Kiểm tra đồ đạc, thiếu hay hỏng thì mở mục đồ đạc và sửa số thực tế.</li>
         <li>Có hư hỏng thì bấm nhanh "Tường bẩn", "Vỡ kính"... và ghi tiền phạt. Chụp vài ảnh hiện trạng.</li>
-        <li>Phần mềm tự quyết toán: cọc trừ điện, trừ phạt, trừ nợ cũ. Số dương là <strong>trả lại khách</strong>, số âm là <strong>khách nộp thêm</strong>. Bấm <strong>Hoàn tất trả phòng</strong>, phòng về trạng thái trống.</li>
+        <li>Phần mềm tự quyết toán: cọc trừ điện, trừ phạt, trừ tiền phòng/nước kỳ chưa lập, trừ nợ cũ. Số dương là <strong>trả lại khách</strong>, số âm là <strong>khách nộp thêm</strong>. Bấm <strong>Hoàn tất trả phòng</strong>, phòng về trạng thái trống.</li>
     </ol>
 
     <h5 id="sua"><span class="badge bg-warning text-dark">4</span> Sửa chữa</h5>
@@ -62,9 +62,9 @@
     <h5 id="tien">Tiền tính thế nào</h5>
     <ul>
         <li><strong>Kỳ thu:</strong> từ ngày @billingDay tháng này đến ngày @billingDay tháng sau.</li>
-        <li><strong>Kỳ đầu khi vào:</strong> tiền phòng tháng cộng hoặc trừ số ngày chênh so với ngày @billingDay (mỗi ngày bằng giá tháng chia 30), tính đến ngày @billingDay tháng sau. Tiền nước kỳ đầu tính cùng tỷ lệ.</li>
+        <li><strong>Khi vào:</strong> thu đủ 1 tháng tiền phòng (trả trước) + cọc. <strong>Kỳ chốt đầu</strong> (ngày @billingDay tháng sau): tiền phòng từ ngày vào đến ngày chốt (mỗi ngày bằng giá tháng chia 30) + điện + nước. Các kỳ sau thu đủ tháng. Ví dụ giá 2.000.000đ, vào 20/10: nộp 3.000.000đ khi vào; ngày 10/11 thu 1.333.000đ tiền phòng + điện + nước; từ 10/12 thu 2.000.000đ + điện + nước.</li>
         <li><strong>Điện:</strong> @Fmt.Money(s?.ElectricityPrice ?? 0)đ mỗi số. <strong>Nước:</strong> @Fmt.Money(s?.WaterPricePerPerson ?? 0)đ mỗi người mỗi tháng. Đổi ở Cấu hình, không cần ghi ở đâu khác.</li>
-        <li><strong>Cọc:</strong> bằng một tháng tiền phòng, giữ ở tài khoản cá nhân, trả lại khi trả phòng sau khi trừ điện, phạt, nợ.</li>
+        <li><strong>Cọc:</strong> @Fmt.Money(s?.DefaultDeposit ?? 0)đ cho mọi khách (đổi ở Cấu hình), giữ ở tài khoản cá nhân, trả lại khi trả phòng sau khi trừ điện, phạt, nợ.</li>
         <li><strong>Hai tài khoản:</strong> tiền phòng, điện, nước vào <em>hộ kinh doanh</em>; cọc, sửa chữa, mua sắm ở <em>cá nhân</em>. Số dư xem ở Thông tin → Thu chi.</li>
     </ul>
 

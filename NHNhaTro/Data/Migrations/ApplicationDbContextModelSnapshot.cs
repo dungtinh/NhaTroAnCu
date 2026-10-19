@@ -272,6 +272,10 @@ namespace NHNhaTro.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<decimal>("DefaultDeposit")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
                     b.Property<decimal>("ElectricityPrice")
                         .HasPrecision(18)
                         .HasColumnType("decimal(18,0)");
@@ -405,18 +409,15 @@ namespace NHNhaTro.Migrations
                         .HasPrecision(18)
                         .HasColumnType("decimal(18,0)");
 
+                    b.Property<int>("ElectricityKwh")
+                        .HasColumnType("int");
+
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<int>("LeaseId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("MeterEnd")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("MeterStart")
                         .HasColumnType("int");
 
                     b.Property<int>("Month")
@@ -651,9 +652,6 @@ namespace NHNhaTro.Migrations
                     b.Property<DateTime?>("EndDate")
                         .HasColumnType("date");
 
-                    b.Property<int?>("EndMeterReading")
-                        .HasColumnType("int");
-
                     b.Property<string>("FurnitureWarnings")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
@@ -671,9 +669,6 @@ namespace NHNhaTro.Migrations
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("date");
-
-                    b.Property<int>("StartMeterReading")
-                        .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -984,9 +979,6 @@ namespace NHNhaTro.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("MaxOccupants")
-                        .HasColumnType("int");
-
-                    b.Property<int>("MeterReading")
                         .HasColumnType("int");
 
                     b.Property<string>("Note")

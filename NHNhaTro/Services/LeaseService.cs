@@ -35,7 +35,6 @@ public class CheckInForm
     public DateTime MoveInDate { get; set; } = DateTime.Today;
     public decimal MonthlyRent { get; set; }
     public decimal Deposit { get; set; }
-    public int StartMeterReading { get; set; }
     public string? Note { get; set; }
     public List<TenantInput> Tenants { get; set; } = [new()];
 
@@ -47,11 +46,11 @@ public class CheckInForm
     public List<PendingFile> PaymentReceipts { get; set; } = [];
 }
 
-/// <summary>Tiền kỳ đầu: từ ngày vào đến ngày thu (mồng 10) tháng sau.</summary>
-public record FirstPeriod(DateTime From, DateTime To, decimal Rent, int AdjustDays, decimal Water, int PersonCount)
-{
-    public decimal Total => Rent + Water;
-}
+/// <summary>
+/// Đoạn lẻ đầu: tiền phòng từ ngày vào đến ngày chốt đầu (mồng 10 tháng sau tháng nhận phòng), thu ở kỳ chốt đầu.
+/// Tháng trả trước lúc nhận phòng bao kỳ tròn tháng kế tiếp [To, To + 1 tháng).
+/// </summary>
+public record StubPeriod(DateTime From, DateTime To, decimal Rent, int Days);
 
 public class PenaltyInput
 {
@@ -63,7 +62,8 @@ public class CheckoutForm
 {
     public int LeaseId { get; set; }
     public DateTime EndDate { get; set; } = DateTime.Today;
-    public int EndMeterReading { get; set; }
+    /// <summary>Số điện đã dùng từ kỳ chốt trước đến ngày trả (kWh).</summary>
+    public int Kwh { get; set; }
     public List<PenaltyInput> Penalties { get; set; } = [];
     /// <summary>Khoản khác: dương = khách phải trả thêm, âm = hoàn lại khách.</summary>
     public decimal OtherAmount { get; set; }
@@ -78,11 +78,16 @@ public class CheckoutForm
     public List<PendingFile> RefundReceipts { get; set; } = [];
 }
 
-public record CheckoutPreview(decimal Deposit, int LastMeter, int UsedKwh, decimal Electricity, decimal Penalties, decimal Other,
-    decimal UnpaidBills, List<(Bill Bill, decimal Due)> UnpaidList, List<string> FurnitureWarnings, List<string> MissingBills)
+/// <summary>Kỳ đã đến ngày thu mà chưa lập phiếu: tính đủ tháng tiền phòng và nước vào phiếu trả phòng.</summary>
+public record MissingPeriod(int Month, int Year, DateTime From, DateTime To, decimal Rent, decimal Water, int PersonCount);
+
+public record CheckoutPreview(decimal Deposit, int UsedKwh, decimal Electricity, decimal Penalties, decimal Other,
+    decimal UnpaidBills, List<(Bill Bill, decimal Due)> UnpaidList, List<string> FurnitureWarnings, List<MissingPeriod> Missing)
 {
+    public decimal MissingRent => Missing.Sum(m => m.Rent);
+    public decimal MissingWater => Missing.Sum(m => m.Water);
     /// <summary>Dương = trả lại khách, âm = khách phải nộp thêm.</summary>
-    public decimal Balance => Deposit - Electricity - Penalties - Other - UnpaidBills;
+    public decimal Balance => Deposit - Electricity - Penalties - Other - UnpaidBills - MissingRent - MissingWater;
 }
 
 public record CardScanResult(string? Id, string? Name, DateTime? BirthDate, string? Gender, string? Address, string? Ethnicity, string? Nationality);
@@ -110,15 +115,15 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
     public static decimal RoundMoney(decimal v) => Math.Round(v / 1000m, MidpointRounding.AwayFromZero) * 1000m;
 
     /// <summary>
-    /// Tiền phòng kỳ đầu = giá tháng + (ngày thu − ngày vào) × giá tháng / 30, làm tròn nghìn đồng.
-    /// Kỳ đầu tính đến ngày thu (mồng 10) của tháng sau tháng nhận phòng. Tiền nước kỳ đầu theo cùng tỷ lệ.
+    /// Đoạn lẻ đầu: từ ngày vào đến ngày chốt đầu (mồng 10 tháng sau tháng nhận phòng), tính theo tháng 30 ngày:
+    /// số ngày = 30 + (ngày thu − ngày vào); tiền = giá tháng × số ngày / 30, làm tròn nghìn đồng.
+    /// Vào 20/10 → 20 ngày; vào 5/10 → 35 ngày; vào đúng mồng 10 → tròn 1 tháng.
     /// </summary>
-    public static FirstPeriod CalculateFirstPeriod(decimal rent, DateTime moveIn, int billingDay, decimal waterPerPerson, int persons)
+    public static StubPeriod CalculateStubPeriod(decimal rent, DateTime moveIn, int billingDay)
     {
-        var to = new DateTime(moveIn.Year, moveIn.Month, 1).AddMonths(1).AddDays(billingDay - 1);
-        int adjust = billingDay - moveIn.Day;
-        var ratio = Math.Max(0m, 1m + adjust / 30m);
-        return new FirstPeriod(moveIn.Date, to, RoundMoney(rent * ratio), adjust, RoundMoney(waterPerPerson * persons * ratio), persons);
+        var to = RoomService.BillingDate(moveIn.AddMonths(1).Month, moveIn.AddMonths(1).Year, billingDay);
+        int days = Math.Max(0, 30 + billingDay - moveIn.Day);
+        return new StubPeriod(moveIn.Date, to, RoundMoney(rent * days / 30m), days);
     }
 
     public async Task<TenantInput?> FindTenantAsync(string identityCard)
@@ -188,7 +193,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
             throw new InvalidOperationException($"Phòng {room.Code} đang sửa, chưa cho thuê được (bỏ đánh dấu ở trang phòng trước).");
         if (form.MoveInDate.Date > DateTime.Today.AddDays(31)) throw new InvalidOperationException("Ngày vào quá xa trong tương lai, kiểm tra lại.");
         if (form.MoveInDate.Date < DateTime.Today.AddYears(-2)) throw new InvalidOperationException("Ngày vào quá xa trong quá khứ, kiểm tra lại.");
-        if (form.StartMeterReading < 0) throw new InvalidOperationException("Số điện không được âm.");
+        if (form.FirstPaymentPaid > form.MonthlyRent) throw new InvalidOperationException($"Tiền phòng đã thu ({Fmt.Vnd(form.FirstPaymentPaid)}) lớn hơn 1 tháng tiền phòng ({Fmt.Vnd(form.MonthlyRent)}).");
         if (form.DepositPaid > form.Deposit) throw new InvalidOperationException($"Tiền cọc đã thu ({Fmt.Vnd(form.DepositPaid)}) lớn hơn tiền cọc ({Fmt.Vnd(form.Deposit)}).");
         if (tenants.Count > room.MaxOccupants) throw new InvalidOperationException($"Phòng {room.Code} tối đa {room.MaxOccupants} người.");
         foreach (var t in tenants)
@@ -201,7 +206,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         var lease = new Lease
         {
             RoomId = room.Id, StartDate = form.MoveInDate.Date, MonthlyRent = form.MonthlyRent, Deposit = form.Deposit,
-            StartMeterReading = form.StartMeterReading, Note = form.Note, Status = LeaseStatus.Active, CreatedAt = DateTime.Now, CreatedBy = user
+            Note = form.Note, Status = LeaseStatus.Active, CreatedAt = DateTime.Now, CreatedBy = user
         };
         db.Leases.Add(lease);
         bool first = true;
@@ -212,21 +217,20 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
             first = false;
         }
 
-        var period = CalculateFirstPeriod(form.MonthlyRent, lease.StartDate, settings.BillingDay, settings.WaterPricePerPerson, tenants.Count);
-        if (form.FirstPaymentPaid > period.Total) throw new InvalidOperationException($"Tiền phòng đã thu ({Fmt.Vnd(form.FirstPaymentPaid)}) lớn hơn tiền kỳ đầu ({Fmt.Vnd(period.Total)}).");
+        // Thu đủ 1 tháng tiền phòng khi vào: tháng này tính cho kỳ tròn tháng đầu [chốt đầu, chốt đầu + 1 tháng).
+        // Đoạn lẻ từ ngày vào đến ngày chốt đầu, điện và nước thu ở kỳ chốt đầu (Thu tiền tháng).
+        var stub = CalculateStubPeriod(form.MonthlyRent, lease.StartDate, settings.BillingDay);
         var bill = new Bill
         {
             Lease = lease, Kind = BillKind.MoveIn, Month = lease.StartDate.Month, Year = lease.StartDate.Year,
-            PeriodFrom = period.From, PeriodTo = period.To, RentAmount = period.Rent, PersonCount = period.PersonCount, WaterAmount = period.Water,
-            MeterStart = form.StartMeterReading, TotalAmount = period.Total,
-            Note = $"Kỳ đầu {period.From:dd/MM} - {period.To:dd/MM/yyyy} ({(period.AdjustDays >= 0 ? "+" : "")}{period.AdjustDays} ngày so với 1 tháng)",
+            PeriodFrom = stub.To, PeriodTo = stub.To.AddMonths(1), RentAmount = form.MonthlyRent, PersonCount = tenants.Count, TotalAmount = form.MonthlyRent,
+            Note = $"1 tháng tiền phòng trả trước khi nhận phòng {lease.StartDate:dd/MM/yyyy}. Tiền phòng {stub.From:dd/MM} - {stub.To:dd/MM/yyyy} ({stub.Days} ngày), điện, nước thu ở kỳ {stub.To:dd/MM/yyyy}.",
             CreatedAt = DateTime.Now, CreatedBy = user
         };
         db.Bills.Add(bill);
 
         room.Status = RoomStatus.Occupied;
         room.Rent = form.MonthlyRent;
-        room.MeterReading = form.StartMeterReading;
         await db.SaveChangesAsync();
 
         if (form.DepositPaid > 0)
@@ -245,7 +249,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
             var pay = new MoneyTransaction
             {
                 AccountId = settings.BusinessAccountId, Date = form.PaymentDate.Date, Amount = form.FirstPaymentPaid, Category = TxCategory.BillPayment,
-                Description = $"Thu tiền phòng kỳ đầu {room.Code}", RoomId = room.Id, LeaseId = lease.Id, BillId = bill.Id, CreatedAt = DateTime.Now, CreatedBy = user
+                Description = $"Thu 1 tháng tiền phòng khi nhận phòng {room.Code}", RoomId = room.Id, LeaseId = lease.Id, BillId = bill.Id, CreatedAt = DateTime.Now, CreatedBy = user
             };
             db.Transactions.Add(pay);
             await db.SaveChangesAsync();
@@ -360,12 +364,12 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         var settings = await db.Settings.AsNoTracking().FirstAsync();
         var lease = await db.Leases.AsNoTracking().Include(l => l.Room).ThenInclude(r => r.Furniture).ThenInclude(f => f.FurnitureItem)
             .Include(l => l.Room).ThenInclude(r => r.Block).ThenInclude(b => b.DefaultFurniture)
+            .Include(l => l.Tenants)
             .FirstAsync(l => l.Id == form.LeaseId);
         var bills = await db.Bills.AsNoTracking().Where(b => b.LeaseId == lease.Id)
             .Select(b => new { Bill = b, Paid = b.Payments.Sum(p => (decimal?)p.Amount) ?? 0 }).ToListAsync();
 
-        int lastMeter = bills.Where(b => b.Bill.MeterEnd != null).OrderByDescending(b => b.Bill.Id).Select(b => b.Bill.MeterEnd).FirstOrDefault() ?? lease.StartMeterReading;
-        int used = Math.Max(0, form.EndMeterReading - lastMeter);
+        int used = Math.Max(0, form.Kwh);
         var unpaid = bills.Where(b => b.Bill.TotalAmount - b.Paid > 0).Select(b => (b.Bill, b.Bill.TotalAmount - b.Paid)).ToList();
 
         var items = await db.FurnitureItems.AsNoTracking().ToDictionaryAsync(i => i.Id, i => i.Name);
@@ -384,17 +388,21 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         var held = await db.Transactions.Where(t => t.LeaseId == lease.Id && (t.Category == TxCategory.Deposit || t.Category == TxCategory.DepositRefund))
             .SumAsync(t => (decimal?)t.Amount) ?? 0;
 
-        // Kỳ tháng nào đã đến ngày thu (trước ngày trả) mà chưa lập phiếu thì tiền phòng kỳ đó sẽ không được thu: cảnh báo.
-        var missing = new List<string>();
+        // Kỳ nào đã đến ngày thu (không sau ngày trả) mà chưa lập phiếu thì tính đủ tháng tiền phòng và nước vào phiếu trả phòng.
+        int persons = Math.Max(1, lease.Tenants.Count(t => t.MoveOutDate == null));
+        var missing = new List<MissingPeriod>();
         for (var d = new DateTime(lease.StartDate.Year, lease.StartDate.Month, 1); d <= form.EndDate.Date; d = d.AddMonths(1))
         {
-            var due = new DateTime(d.Year, d.Month, Math.Min(settings.BillingDay, DateTime.DaysInMonth(d.Year, d.Month)));
+            var due = RoomService.BillingDate(d.Month, d.Year, settings.BillingDay);
             if (due > form.EndDate.Date || !RoomService.NeedsMonthlyBill(lease, d.Month, d.Year)) continue;
-            if (!bills.Any(b => b.Bill.Kind == BillKind.Monthly && b.Bill.Month == d.Month && b.Bill.Year == d.Year))
-                missing.Add($"{d.Month:00}/{d.Year}");
+            if (bills.Any(b => b.Bill.Kind == BillKind.Monthly && b.Bill.Month == d.Month && b.Bill.Year == d.Year)) continue;
+            var (from, to, rent) = RoomService.IsFirstBillingMonth(lease.StartDate, d.Month, d.Year)
+                ? (lease.StartDate, due, CalculateStubPeriod(lease.MonthlyRent, lease.StartDate, settings.BillingDay).Rent)
+                : (due, due.AddMonths(1), lease.MonthlyRent);
+            missing.Add(new MissingPeriod(d.Month, d.Year, from, to, rent, persons * settings.WaterPricePerPerson, persons));
         }
 
-        return new CheckoutPreview(Math.Max(0, held), lastMeter, used, used * settings.ElectricityPrice, form.Penalties.Sum(p => p.Amount), form.OtherAmount,
+        return new CheckoutPreview(Math.Max(0, held), used, used * settings.ElectricityPrice, form.Penalties.Sum(p => p.Amount), form.OtherAmount,
             unpaid.Sum(u => u.Item2), unpaid, warnings, missing);
     }
 
@@ -404,8 +412,8 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         if (form.Penalties.Any(p => p.Amount < 0 || (p.Amount > 0 && string.IsNullOrWhiteSpace(p.Description))))
             throw new InvalidOperationException("Mỗi khoản phạt cần nội dung và số tiền không âm.");
 
+        if (form.Kwh < 0) throw new InvalidOperationException("Số điện đã dùng không được âm.");
         var preview = await PreviewCheckoutAsync(form);
-        if (form.EndMeterReading < preview.LastMeter) throw new InvalidOperationException($"Số điện cuối không được nhỏ hơn số đã chốt ({preview.LastMeter}).");
         if (form.DepositRefund > preview.Deposit) throw new InvalidOperationException("Số tiền trả cọc lớn hơn tiền cọc.");
 
         await using var db = await dbFactory.CreateDbContextAsync();
@@ -419,17 +427,23 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         var date = form.EndDate.Date;
         var penalties = form.Penalties.Where(p => p.Amount > 0).ToList();
 
-        // Phiếu quyết toán: điện chưa thu + phạt + khoản khác
+        // Phiếu quyết toán: điện kỳ cuối + phạt + khoản khác + tiền phòng, nước đủ tháng của kỳ đã đến ngày thu mà chưa lập phiếu
         Bill? moveOut = null;
-        decimal moveOutTotal = preview.Electricity + preview.Penalties + form.OtherAmount;
-        if (preview.Electricity != 0 || penalties.Count > 0 || form.OtherAmount != 0)
+        decimal moveOutTotal = preview.Electricity + preview.Penalties + form.OtherAmount + preview.MissingRent + preview.MissingWater;
+        if (preview.Electricity != 0 || penalties.Count > 0 || form.OtherAmount != 0 || preview.Missing.Count > 0)
         {
+            var notes = preview.Missing.Select(m => $"Kỳ {m.Month:00}/{m.Year} chưa lập phiếu, tính đủ tháng: phòng {Fmt.Vnd(m.Rent)}, nước {m.PersonCount} người {Fmt.Vnd(m.Water)}")
+                .Concat(penalties.Select(p => $"{p.Description}: {Fmt.Vnd(p.Amount)}"))
+                .Append(form.OtherAmount != 0 ? $"{form.OtherNote ?? "Khoản khác"}: {Fmt.Vnd(form.OtherAmount)}" : null).Where(s => s != null);
             moveOut = new Bill
             {
-                LeaseId = lease.Id, Kind = BillKind.MoveOut, Month = date.Month, Year = date.Year, PeriodFrom = date, PeriodTo = date,
-                MeterStart = preview.LastMeter, MeterEnd = form.EndMeterReading, ElectricityAmount = preview.Electricity,
+                LeaseId = lease.Id, Kind = BillKind.MoveOut, Month = date.Month, Year = date.Year,
+                PeriodFrom = preview.Missing.Count > 0 ? preview.Missing.Min(m => m.From) : date,
+                PeriodTo = preview.Missing.Count > 0 ? preview.Missing.Max(m => m.To) : date,
+                RentAmount = preview.MissingRent, WaterAmount = preview.MissingWater, PersonCount = preview.Missing.Count > 0 ? preview.Missing[0].PersonCount : 0,
+                ElectricityKwh = preview.UsedKwh, ElectricityAmount = preview.Electricity,
                 OtherAmount = preview.Penalties + form.OtherAmount, TotalAmount = moveOutTotal,
-                Note = string.Join("; ", penalties.Select(p => $"{p.Description}: {Fmt.Vnd(p.Amount)}").Append(form.OtherAmount != 0 ? $"{form.OtherNote ?? "Khoản khác"}: {Fmt.Vnd(form.OtherAmount)}" : null).Where(s => s != null)),
+                Note = string.Join("; ", notes),
                 CreatedAt = DateTime.Now, CreatedBy = user
             };
             db.Bills.Add(moveOut);
@@ -506,7 +520,6 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         // 4) Chốt hợp đồng, phòng, đồ đạc
         lease.Status = LeaseStatus.Ended;
         lease.EndDate = date;
-        lease.EndMeterReading = form.EndMeterReading;
         lease.CheckoutElectricity = preview.Electricity;
         lease.CheckoutPenalty = preview.Penalties;
         lease.CheckoutOther = form.OtherAmount;
@@ -517,7 +530,6 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         foreach (var t in lease.Tenants.Where(t => t.MoveOutDate == null)) t.MoveOutDate = date;
 
         room.Status = RoomStatus.Empty;
-        room.MeterReading = form.EndMeterReading;
         if (form.UpdateRoomFurniture && form.FurnitureActual.Count > 0)
             SetupService.SyncFurniture(room.Furniture, form.FurnitureActual, (id, q) => new RoomFurniture { RoomId = room.Id, FurnitureItemId = id, Quantity = q },
                 x => x.FurnitureItemId, (x, q) => x.Quantity = q, db);

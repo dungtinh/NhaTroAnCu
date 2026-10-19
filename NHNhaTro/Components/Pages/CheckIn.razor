@@ -18,9 +18,8 @@
 }
 else
 {
-    int people = Math.Max(1, form.Tenants.Count(t => !t.IsEmpty));
-    var first = room == null ? null : LeaseService.CalculateFirstPeriod(form.MonthlyRent, form.MoveInDate, settings.BillingDay, settings.WaterPricePerPerson, people);
-    decimal total = first == null ? 0 : first.Total + form.Deposit;
+    var stub = room == null ? null : LeaseService.CalculateStubPeriod(form.MonthlyRent, form.MoveInDate, settings.BillingDay);
+    decimal total = form.MonthlyRent + form.Deposit;
 
     <div class="row g-3">
         <div class="col-lg-8">
@@ -31,12 +30,11 @@ else
                 {
                     <div class="row g-2 mt-1">
                         <div class="col-6"><label class="form-label">Ngày vào</label><input type="date" class="form-control" @bind="form.MoveInDate" /></div>
-                        <div class="col-6"><label class="form-label">Số điện trên công tơ</label><input type="number" inputmode="numeric" min="0" class="form-control nh-meter" @bind="form.StartMeterReading" /></div>
+                        <div class="col-6"><label class="form-label">Tiền phòng/tháng</label><MoneyInput @bind-Value="form.MonthlyRent" /></div>
                     </div>
                     <details class="mt-2">
-                        <summary class="small text-primary">Giá thuê @Fmt.Vnd(form.MonthlyRent), cọc @Fmt.Vnd(form.Deposit) · sửa nếu khác</summary>
+                        <summary class="small text-primary">Cọc @Fmt.Vnd(form.Deposit) (mặc định theo cấu hình) · sửa nếu khác</summary>
                         <div class="row g-2 mt-1">
-                            <div class="col-6"><label class="form-label">Tiền phòng/tháng</label><MoneyInput Value="form.MonthlyRent" ValueChanged="OnRentChanged" /></div>
                             <div class="col-6"><label class="form-label">Tiền cọc</label><MoneyInput @bind-Value="form.Deposit" /></div>
                             <div class="col-12"><label class="form-label">Ghi chú</label><input class="form-control" maxlength="1000" @bind="form.Note" /></div>
                         </div>
@@ -54,16 +52,19 @@ else
         </div>
 
         <div class="col-lg-4">
-            @if (first != null)
+            @if (room != null && stub != null)
             {
                 <div class="nh-card nh-sticky">
                     <h5>3. Tiền thu khi vào</h5>
                     <table class="nh-table mb-2">
-                        <tr><td>Tiền phòng kỳ đầu <span class="small text-muted d-block">@Fmt.Date(first.From) → @Fmt.Date(first.To)</span></td><td class="text-end fw-bold">@Fmt.Money(first.Rent)</td></tr>
-                        <tr><td>Tiền nước kỳ đầu (@first.PersonCount người)</td><td class="text-end">@Fmt.Money(first.Water)</td></tr>
+                        <tr><td>1 tháng tiền phòng <span class="small text-muted d-block">trả trước</span></td><td class="text-end fw-bold">@Fmt.Money(form.MonthlyRent)</td></tr>
                         <tr><td>Tiền cọc</td><td class="text-end">@Fmt.Money(form.Deposit)</td></tr>
                         <tr class="table-light"><td class="fw-bold">Khách phải nộp</td><td class="text-end fw-bold fs-5 text-primary">@Fmt.Vnd(total)</td></tr>
                     </table>
+                    <div class="small text-muted mb-2">
+                        Kỳ chốt đầu <strong>@Fmt.Date(stub.To)</strong>: thu tiền phòng @Fmt.Date(stub.From) → @Fmt.Date(stub.To) (@stub.Days ngày, @Fmt.Vnd(stub.Rent))
+                        + tiền điện theo số đã dùng + tiền nước. Từ kỳ sau thu đủ tháng.
+                    </div>
 
                     <div class="form-check form-switch fs-6 mb-2">
                         <input class="form-check-input" type="checkbox" role="switch" id="paidAll" checked="@paidAll" @onchange="e => TogglePaid((bool)e.Value!)" />
@@ -116,7 +117,11 @@ else
     private bool paidAll = true;
     private int maxPeople = 4;
 
-    protected override async Task OnInitializedAsync() => settings = await Setup.GetSettingsAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        settings = await Setup.GetSettingsAsync();
+        form.Deposit = settings.DefaultDeposit;
+    }
 
     private async Task OnPicked(RoomCard? r)
     {
@@ -125,15 +130,8 @@ else
         var full = (await Rooms.ListRoomsAsync()).First(x => x.Id == r.Id);
         form.RoomId = r.Id;
         form.MonthlyRent = full.Rent;
-        form.Deposit = full.Rent;
-        form.StartMeterReading = full.MeterReading;
+        form.Deposit = settings!.DefaultDeposit;
         maxPeople = full.MaxOccupants;
-    }
-
-    private void OnRentChanged(decimal v)
-    {
-        if (form.Deposit == form.MonthlyRent) form.Deposit = v;
-        form.MonthlyRent = v;
     }
 
     private void TogglePaid(bool on)
@@ -144,10 +142,8 @@ else
 
     private void FillAll()
     {
-        if (settings == null || form.RoomId == 0) return;
-        var p = LeaseService.CalculateFirstPeriod(form.MonthlyRent, form.MoveInDate, settings.BillingDay, settings.WaterPricePerPerson, Math.Max(1, form.Tenants.Count(t => !t.IsEmpty)));
         form.DepositPaid = form.Deposit;
-        form.FirstPaymentPaid = p.Total;
+        form.FirstPaymentPaid = form.MonthlyRent;
     }
 
     private async Task SaveAsync()

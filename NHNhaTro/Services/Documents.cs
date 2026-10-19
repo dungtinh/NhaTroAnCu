@@ -35,10 +35,16 @@ public class Documents(IDbContextFactory<ApplicationDbContext> dbFactory, IWebHo
         var rep = bill.Lease.Tenants.OrderByDescending(t => t.IsRepresentative).Select(t => t.Tenant.FullName).FirstOrDefault() ?? "";
         decimal paid = bill.Payments.Sum(p => p.Amount);
         var lines = new List<(string Item, string Detail, decimal Amount)>();
-        if (bill.RentAmount != 0) lines.Add(("Tiền phòng", $"{bill.PeriodFrom:dd/MM/yyyy} - {bill.PeriodTo:dd/MM/yyyy}", bill.RentAmount));
-        if (bill.MeterEnd != null || bill.ElectricityAmount != 0)
-            lines.Add(("Tiền điện", $"{bill.MeterStart} → {bill.MeterEnd} = {(bill.MeterEnd ?? 0) - (bill.MeterStart ?? 0)} số × {Fmt.Money(s.ElectricityPrice)}đ", bill.ElectricityAmount));
-        if (bill.WaterAmount != 0) lines.Add(("Tiền nước", $"{bill.PersonCount} người × {Fmt.Money(s.WaterPricePerPerson)}đ" + (bill.Kind == BillKind.MoveIn ? " (theo số ngày)" : ""), bill.WaterAmount));
+        if (bill.RentAmount != 0)
+            lines.Add(("Tiền phòng", bill.Kind switch
+            {
+                BillKind.MoveIn => $"1 tháng trả trước, kỳ {bill.PeriodFrom:dd/MM/yyyy} - {bill.PeriodTo:dd/MM/yyyy}",
+                BillKind.MoveOut => $"Kỳ chưa lập phiếu, tính đủ tháng ({bill.PeriodFrom:dd/MM/yyyy} - {bill.PeriodTo:dd/MM/yyyy})",
+                _ => $"{bill.PeriodFrom:dd/MM/yyyy} - {bill.PeriodTo:dd/MM/yyyy}"
+            }, bill.RentAmount));
+        if (bill.ElectricityKwh != 0 || bill.ElectricityAmount != 0)
+            lines.Add(("Tiền điện", $"{bill.ElectricityKwh} số × {Fmt.Money(s.ElectricityPrice)}đ", bill.ElectricityAmount));
+        if (bill.WaterAmount != 0) lines.Add(("Tiền nước", $"{bill.PersonCount} người × {Fmt.Money(s.WaterPricePerPerson)}đ", bill.WaterAmount));
         if (bill.OtherAmount != 0) lines.Add(("Khoản khác", bill.Kind == BillKind.MoveOut ? "Phạt / khác khi trả phòng" : "", bill.OtherAmount));
         if (bill.Discount != 0) lines.Add(("Giảm trừ", "", -bill.Discount));
 
@@ -98,6 +104,7 @@ public class Documents(IDbContextFactory<ApplicationDbContext> dbFactory, IWebHo
             .Include(l => l.Tenants).ThenInclude(t => t.Tenant).AsSplitQuery().FirstOrDefaultAsync(l => l.Id == leaseId);
         if (lease == null || lease.Status != LeaseStatus.Ended) return null;
         var rep = lease.Tenants.OrderByDescending(t => t.IsRepresentative).Select(t => t.Tenant.FullName).FirstOrDefault() ?? "";
+        var moveOut = await db.Bills.AsNoTracking().Where(b => b.LeaseId == leaseId && b.Kind == BillKind.MoveOut).OrderByDescending(b => b.Id).FirstOrDefaultAsync();
 
         var doc = Document.Create(c => c.Page(page =>
         {
@@ -111,7 +118,7 @@ public class Documents(IDbContextFactory<ApplicationDbContext> dbFactory, IWebHo
                 col.Item().PaddingTop(6).AlignCenter().Text($"BIÊN BẢN TRẢ PHÒNG {lease.Room.Code}").FontSize(15).Bold();
                 col.Item().Text($"Người thuê: {rep}");
                 col.Item().Text($"Thời gian thuê: {Fmt.Date(lease.StartDate)} - {Fmt.Date(lease.EndDate)}");
-                col.Item().Text($"Số điện: đầu {lease.StartMeterReading}, cuối {lease.EndMeterReading}");
+                if (moveOut != null && moveOut.ElectricityKwh > 0) col.Item().Text($"Điện kỳ cuối: {moveOut.ElectricityKwh} số × {Fmt.Money(s.ElectricityPrice)}đ");
                 col.Item().PaddingTop(4).Table(t =>
                 {
                     t.ColumnsDefinition(cd => { cd.RelativeColumn(6); cd.RelativeColumn(3); });
@@ -121,7 +128,9 @@ public class Documents(IDbContextFactory<ApplicationDbContext> dbFactory, IWebHo
                         if (bold) { x.Bold(); y.Bold(); }
                     }
                     Row("Tiền cọc", lease.Deposit);
-                    Row("Trừ tiền điện chưa thu", -(lease.CheckoutElectricity ?? 0));
+                    Row("Trừ tiền điện kỳ cuối", -(lease.CheckoutElectricity ?? 0));
+                    if (moveOut != null && moveOut.RentAmount != 0) Row($"Trừ tiền phòng kỳ chưa lập phiếu (đủ tháng)", -moveOut.RentAmount);
+                    if (moveOut != null && moveOut.WaterAmount != 0) Row("Trừ tiền nước kỳ chưa lập phiếu", -moveOut.WaterAmount);
                     foreach (var p in lease.Penalties) Row("Trừ phạt: " + p.Description, -p.Amount);
                     if ((lease.CheckoutOther ?? 0) != 0) Row("Khoản khác", -(lease.CheckoutOther ?? 0));
                     Row("Đã trả lại khách", lease.DepositRefunded ?? 0, true);
@@ -175,7 +184,7 @@ public class Documents(IDbContextFactory<ApplicationDbContext> dbFactory, IWebHo
             ["giathue"] = Fmt.Money(lease.MonthlyRent), ["giathue_text"] = VietnameseNumber.ToWords(lease.MonthlyRent),
             ["tiencoc"] = Fmt.Money(lease.Deposit), ["tiencoc_text"] = VietnameseNumber.ToWords(lease.Deposit),
             ["giadien"] = Fmt.Money(s.ElectricityPrice), ["gianuoc"] = Fmt.Money(s.WaterPricePerPerson),
-            ["ngaybatdau"] = lease.StartDate.ToString("dd/MM/yyyy"), ["sodiendau"] = lease.StartMeterReading.ToString(),
+            ["ngaybatdau"] = lease.StartDate.ToString("dd/MM/yyyy"), ["sodiendau"] = "",
             ["songuoi"] = tenants.Count.ToString(), ["ngaythu"] = s.BillingDay.ToString(),
             ["dodac"] = string.Join(", ", lease.Room.Furniture.OrderBy(f => f.FurnitureItem.SortOrder).Select(f => $"{f.FurnitureItem.Name} ({f.Quantity})")),
             ["chunha"] = s.Owner ?? "", ["diachi"] = s.Address ?? "", ["dienthoai"] = s.Phone ?? ""

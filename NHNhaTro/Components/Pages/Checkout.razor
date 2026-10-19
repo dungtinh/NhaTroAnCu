@@ -4,6 +4,7 @@
 @inherits NhPage
 @inject LeaseService Leases
 @inject RoomService Rooms
+@inject SetupService Setup
 
 <PageTitle>Trả phòng @lease?.Room.Code</PageTitle>
 
@@ -28,12 +29,12 @@ else
     <div class="row g-3">
         <div class="col-lg-7">
             <div class="nh-card">
-                <h5>1. Chốt điện</h5>
+                <h5>1. Ngày trả và điện kỳ cuối</h5>
                 <div class="row g-2">
-                    <div class="col-6 col-md-4"><label class="form-label">Ngày trả phòng</label><input type="date" class="form-control" @bind="form.EndDate" /></div>
-                    <div class="col-6 col-md-4"><label class="form-label">Số điện cuối <span class="text-danger">*</span></label>
-                        <input type="number" inputmode="numeric" min="0" class="form-control nh-meter" @bind="form.EndMeterReading" @bind:after="RefreshAsync" /></div>
-                    <div class="col-md-4 small text-muted pt-md-4">Số đã chốt gần nhất: <strong>@preview?.LastMeter</strong><br />Dùng @preview?.UsedKwh số = @Fmt.Money(preview?.Electricity ?? 0)đ</div>
+                    <div class="col-6 col-md-4"><label class="form-label">Ngày trả phòng</label><input type="date" class="form-control" @bind="form.EndDate" @bind:after="RefreshAsync" /></div>
+                    <div class="col-6 col-md-4"><label class="form-label">Số điện đã dùng (kWh) <span class="text-danger">*</span></label>
+                        <input type="number" inputmode="numeric" min="0" class="form-control nh-meter" @bind="form.Kwh" @bind:after="RefreshAsync" /></div>
+                    <div class="col-md-4 small text-muted pt-md-4">Từ kỳ chốt trước đến ngày trả.<br />@preview?.UsedKwh số × @Fmt.Money(electricityPrice)đ = @Fmt.Money(preview?.Electricity ?? 0)đ</div>
                 </div>
             </div>
 
@@ -106,11 +107,11 @@ else
                 <h5>5. Quyết toán</h5>
                 @if (preview != null)
                 {
-                    @if (preview.MissingBills.Count > 0)
+                    @if (preview.Missing.Count > 0)
                     {
-                        <div class="alert alert-danger small py-2">
-                            <i class="fas fa-exclamation-triangle"></i> Chưa lập phiếu tháng <strong>@string.Join(", ", preview.MissingBills)</strong> cho phòng này.
-                            Tiền phòng, nước kỳ đó sẽ không được tính. <a href="thu-tien">Lập phiếu ở Thu tiền tháng</a> rồi quay lại.
+                        <div class="alert alert-info small py-2">
+                            <i class="fas fa-info-circle"></i> Kỳ <strong>@string.Join(", ", preview.Missing.Select(m => $"{m.Month:00}/{m.Year}"))</strong> đã đến ngày thu mà chưa lập phiếu:
+                            tiền phòng và nước kỳ đó được <strong>tính đủ tháng</strong> vào quyết toán.
                         </div>
                     }
                     <table class="nh-table mb-2">
@@ -119,7 +120,12 @@ else
                         {
                             <tr><td colspan="2" class="small text-danger">Hợp đồng ghi cọc @Fmt.Vnd(lease.Deposit) nhưng mới thu @Fmt.Vnd(preview.Deposit).</td></tr>
                         }
-                        <tr><td>− Tiền điện chưa thu (@preview.UsedKwh số)</td><td class="text-end">@Fmt.Money(preview.Electricity)</td></tr>
+                        <tr><td>− Tiền điện kỳ cuối (@preview.UsedKwh số)</td><td class="text-end">@Fmt.Money(preview.Electricity)</td></tr>
+                        @foreach (var m in preview.Missing)
+                        {
+                            <tr><td>− Tiền phòng kỳ @m.Month.ToString("00")/@m.Year (đủ tháng) <span class="small text-muted d-block">@Fmt.Date(m.From) → @Fmt.Date(m.To)</span></td><td class="text-end">@Fmt.Money(m.Rent)</td></tr>
+                            <tr><td>− Tiền nước kỳ @m.Month.ToString("00")/@m.Year (@m.PersonCount người)</td><td class="text-end">@Fmt.Money(m.Water)</td></tr>
+                        }
                         <tr><td>− Phạt hư hỏng</td><td class="text-end">@Fmt.Money(preview.Penalties)</td></tr>
                         @if (preview.Other != 0) { <tr><td>− Khoản khác</td><td class="text-end">@Fmt.Money(preview.Other)</td></tr> }
                         @foreach (var u in preview.UnpaidList)
@@ -151,7 +157,7 @@ else
                 <button type="button" class="btn btn-danger btn-lg w-100 mt-3 d-none d-lg-block" disabled="@Busy" @onclick="SaveAsync">
                     <i class="fas @(Busy ? "fa-spinner fa-spin" : "fa-check")"></i> Hoàn tất trả phòng
                 </button>
-                <div class="small text-muted mt-2">Sau khi hoàn tất, phòng chuyển về trạng thái trống và số điện cuối thành số đầu cho khách sau.</div>
+                <div class="small text-muted mt-2">Sau khi hoàn tất, hợp đồng kết thúc và phòng chuyển về trạng thái trống.</div>
             </div>
         </div>
     </div>
@@ -171,6 +177,7 @@ else
     private CheckoutForm form = new();
     private CheckoutPreview? preview;
     private List<FurnitureLine> furniture = [];
+    private decimal electricityPrice;
 
     /// <summary>Chênh lệch giữa số tiền nhập và quyết toán (dương = thu/giữ thiếu so với số phải thu).</summary>
     private decimal Mismatch => preview == null ? 0 : (preview.Deposit - form.DepositRefund + form.Collected) - (preview.Deposit - preview.Balance);
@@ -182,10 +189,10 @@ else
         if (lease == null || lease.Status != LeaseStatus.Active) return;
         var details = await Rooms.GetDetailsAsync(lease.Room.Code);
         furniture = details?.Furniture ?? [];
+        electricityPrice = (await Setup.GetSettingsAsync()).ElectricityPrice;
         form.LeaseId = LeaseId;
         form.FurnitureActual = furniture.ToDictionary(f => f.ItemId, f => f.Quantity);
         preview = await Leases.PreviewCheckoutAsync(form);
-        form.EndMeterReading = preview.LastMeter;
         FillSuggested();
     }
 
@@ -212,7 +219,6 @@ else
     {
         await RefreshAsync();
         if (preview == null) return;
-        if (preview.MissingBills.Count > 0 && !await ConfirmAsync($"Chưa lập phiếu tháng {string.Join(", ", preview.MissingBills)}. Tiền phòng kỳ đó sẽ KHÔNG được thu. Vẫn trả phòng?")) return;
         if (Mismatch != 0 && !await ConfirmAsync($"Số tiền lệch quyết toán {Fmt.Vnd(Mismatch)}. Vẫn hoàn tất trả phòng?")) return;
         if (preview.FurnitureWarnings.Count > 0 && !await ConfirmAsync("Đồ đạc phòng khác cấu hình/mặc định:\n- " + string.Join("\n- ", preview.FurnitureWarnings) + "\n\nVẫn hoàn tất?")) return;
         var user = await GetUserNameAsync();

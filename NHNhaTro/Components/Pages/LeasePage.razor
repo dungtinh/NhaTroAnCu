@@ -33,8 +33,6 @@ else
                 <table class="nh-table">
                     <tr><td>Ngày vào</td><td class="text-end">@Fmt.Date(lease.StartDate)</td></tr>
                     @if (!active) { <tr><td>Ngày trả</td><td class="text-end">@Fmt.Date(lease.EndDate)</td></tr> }
-                    <tr><td>Số điện đầu</td><td class="text-end">@lease.StartMeterReading</td></tr>
-                    @if (!active) { <tr><td>Số điện cuối</td><td class="text-end">@lease.EndMeterReading</td></tr> }
                 </table>
                 <div class="row g-2 mt-1">
                     <div class="col-6"><label class="form-label">Giá thuê</label><MoneyInput @bind-Value="rent" disabled="@(!active)" /></div>
@@ -56,7 +54,7 @@ else
                     <h5><i class="fas fa-clipboard-check"></i> Trả phòng</h5>
                     <table class="nh-table">
                         <tr><td>Tiền cọc</td><td class="text-end">@Fmt.Money(lease.Deposit)</td></tr>
-                        <tr><td>Điện chưa thu</td><td class="text-end">@Fmt.Money(lease.CheckoutElectricity ?? 0)</td></tr>
+                        <tr><td>Điện kỳ cuối</td><td class="text-end">@Fmt.Money(lease.CheckoutElectricity ?? 0)</td></tr>
                         @foreach (var p in lease.Penalties) { <tr><td>Phạt: @p.Description</td><td class="text-end">@Fmt.Money(p.Amount)</td></tr> }
                         @if ((lease.CheckoutOther ?? 0) != 0) { <tr><td>Khoản khác</td><td class="text-end">@Fmt.Money(lease.CheckoutOther ?? 0)</td></tr> }
                         <tr><td class="fw-bold">Đã trả cọc</td><td class="text-end fw-bold">@Fmt.Money(lease.DepositRefunded ?? 0)</td></tr>
@@ -105,7 +103,7 @@ else
                             <div>
                                 <strong>@BillKind.Display(b.Kind) @b.Month.ToString("00")/@b.Year</strong>
                                 <span class="text-muted small ms-2">@Fmt.Date(b.PeriodFrom) → @Fmt.Date(b.PeriodTo)</span>
-                                <div class="small">Phòng @Fmt.Money(b.RentAmount) · Điện @Fmt.Money(b.ElectricityAmount)@(b.MeterEnd != null ? $" ({b.MeterStart}→{b.MeterEnd})" : "") · Nước @Fmt.Money(b.WaterAmount) (@b.PersonCount người)@(b.OtherAmount - b.Discount != 0 ? $" · Khác {Fmt.Money(b.OtherAmount - b.Discount)}" : "")</div>
+                                <div class="small">Phòng @Fmt.Money(b.RentAmount) · Điện @Fmt.Money(b.ElectricityAmount)@(b.ElectricityKwh > 0 ? $" ({b.ElectricityKwh} số)" : "") · Nước @Fmt.Money(b.WaterAmount) (@b.PersonCount người)@(b.OtherAmount - b.Discount != 0 ? $" · Khác {Fmt.Money(b.OtherAmount - b.Discount)}" : "")</div>
                                 @if (!string.IsNullOrEmpty(b.Note)) { <div class="small text-muted">@b.Note</div> }
                             </div>
                             <div class="text-end">

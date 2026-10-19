@@ -27,6 +27,7 @@
                     <div class="col-md-4"><label class="form-label">Giá điện (đ/số)</label><MoneyInput @bind-Value="s.ElectricityPrice" /></div>
                     <div class="col-md-4"><label class="form-label">Nước (đ/người/tháng)</label><MoneyInput @bind-Value="s.WaterPricePerPerson" /></div>
                     <div class="col-md-4"><label class="form-label">Ngày thu hằng tháng</label><input type="number" min="1" max="28" class="form-control" @bind="s.BillingDay" /></div>
+                    <div class="col-md-4"><label class="form-label">Tiền cọc mặc định (mọi khách)</label><MoneyInput @bind-Value="s.DefaultDeposit" /></div>
                     <div class="col-md-6"><label class="form-label">TK nhận cọc</label>
                         <select class="form-select" @bind="s.PersonalAccountId">@foreach (var a in accounts) {<option value="@a.Id">@a.Name</option>}</select></div>
                     <div class="col-md-6"><label class="form-label">TK nhận tiền phòng</label>

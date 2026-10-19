@@ -135,7 +135,7 @@ public class ChatService(IDbContextFactory<ApplicationDbContext> dbFactory, Chat
         if (maint.Count > 0) sb.AppendLine("Đang sửa: " + string.Join(", ", maint));
         if (roomCode != null && await rooms.GetDetailsAsync(roomCode) is { } d)
         {
-            sb.AppendLine($"Chi tiết phòng {roomCode}: giá {Fmt.Money(d.Room.Rent)}, số điện hiện tại {d.Room.MeterReading}, đồ đạc: {string.Join(", ", d.Furniture.Where(f => f.Quantity > 0).Select(f => $"{f.Name} x{f.Quantity}"))}.");
+            sb.AppendLine($"Chi tiết phòng {roomCode}: giá {Fmt.Money(d.Room.Rent)}, đồ đạc: {string.Join(", ", d.Furniture.Where(f => f.Quantity > 0).Select(f => $"{f.Name} x{f.Quantity}"))}.");
             foreach (var b in d.Bills.OrderByDescending(b => b.Id).Take(6))
                 sb.AppendLine($"- Phiếu {BillKind.Display(b.Kind)} {b.Month:00}/{b.Year}: tổng {Fmt.Money(b.TotalAmount)}, đã thu {Fmt.Money(d.BillPaid.GetValueOrDefault(b.Id))}");
         }
