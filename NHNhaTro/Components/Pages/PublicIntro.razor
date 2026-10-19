@@ -38,7 +38,7 @@
         <div class="col-lg-7">
             <div class="nh-card">
                 <h5><i class="fas fa-door-open"></i> Phòng còn trống (@vacant.Count)</h5>
-                <div class="small text-muted mb-2">Điện @Fmt.Money(s.ElectricityPrice)đ/số · nước @Fmt.Money(s.WaterPricePerPerson)đ/người/tháng · cọc 1 tháng tiền phòng</div>
+                <div class="small text-muted mb-2">Điện @Fmt.Money(s.ElectricityPrice)đ/số · nước @Fmt.Money(s.WaterPricePerPerson)đ/người/tháng · cọc @Fmt.Vnd(s.DefaultDeposit)</div>
                 @if (vacant.Count == 0)
                 {
                     <p class="mb-0">Hiện đã kín phòng. Hãy gọi để được báo khi có phòng trống.</p>
