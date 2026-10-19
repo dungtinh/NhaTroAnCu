@@ -1,0 +1,47 @@
+@* Một phiếu thu dạng thẻ: viền trái xanh = đã thu đủ, cam = thu một phần, đỏ = chưa thu. *@
+
+@{
+    var due = Bill.TotalAmount - Paid;
+    var state = due <= 0 ? "" : Paid > 0 ? "part" : "due";
+}
+<div class="nh-bill @state">
+    <div class="hd">
+        <div class="min-w-0">
+            <div class="ttl">@BillKind.Display(Bill.Kind) · tháng @Bill.Month.ToString("00")/@Bill.Year</div>
+            <div class="per">@RentDetail</div>
+        </div>
+        <div class="tot">
+            <b>@Fmt.Vnd(Bill.TotalAmount)</b>
+            @if (due <= 0) { <span class="chip chip-green"><i class="fas fa-check"></i> Đã thu đủ</span> }
+            else if (Paid > 0) { <span class="chip chip-amber">Còn @Fmt.Money(due)</span> }
+            else { <span class="chip chip-red">Chưa thu</span> }
+        </div>
+    </div>
+    <div class="parts">
+        <div><div class="l">Phòng</div><div class="v">@Fmt.Money(Bill.RentAmount)</div></div>
+        <div><div class="l">Điện</div><div class="v">@Fmt.Money(Bill.ElectricityAmount)</div>@if (Bill.ElectricityKwh > 0) { <div class="s">@Bill.ElectricityKwh số</div> }</div>
+        <div><div class="l">Nước</div><div class="v">@Fmt.Money(Bill.WaterAmount)</div>@if (Bill.WaterAmount > 0) { <div class="s">@Bill.PersonCount người</div> }</div>
+        <div><div class="l">Khác</div><div class="v">@Fmt.Money(Bill.OtherAmount - Bill.Discount)</div></div>
+    </div>
+    @if (ShowNote && !string.IsNullOrEmpty(Bill.Note)) { <div class="note">@Bill.Note</div> }
+    <div class="ft">
+        <span class="small text-muted">Đã thu <strong class="@(due <= 0 ? "text-success" : "text-danger")">@Fmt.Money(Paid)</strong></span>
+        <div class="btns">
+            @if (due > 0 && OnPay.HasDelegate) { <button type="button" class="btn btn-sm btn-success" @onclick="OnPay"><i class="fas fa-hand-holding-usd"></i> Thu tiền</button> }
+            <a class="btn btn-sm btn-outline-secondary" href="@($"files/bills/{Bill.Id}")" target="_blank" title="In phiếu thu"><i class="fas fa-print"></i> In</a>
+            @if (OnDelete.HasDelegate) { <button type="button" class="btn btn-sm btn-outline-danger" title="Xóa phiếu" @onclick="OnDelete"><i class="fas fa-trash"></i></button> }
+        </div>
+    </div>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Bill Bill { get; set; } = null!;
+    [Parameter] public decimal Paid { get; set; }
+    [Parameter] public string? RentDetail { get; set; }
+    [Parameter] public bool ShowNote { get; set; }
+    [Parameter] public EventCallback OnPay { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+    /// <summary>Các lần thu tiền của phiếu (hiện dưới thẻ).</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

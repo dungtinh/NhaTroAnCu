@@ -1,0 +1,29 @@
+@* Thẻ một người ở: ảnh chân dung (hoặc chữ cái đầu), tên, CCCD, điện thoại bấm gọi. Số CCCD tạm (nhập ban đầu) báo vàng. *@
+
+@{
+    var t = Link.Tenant;
+    var photo = t.Portrait ?? t.PhotoList.FirstOrDefault();
+    bool noCard = t.IdentityCard.StartsWith("CHUA-CO", StringComparison.OrdinalIgnoreCase);
+    var initials = string.Concat(t.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).TakeLast(1).Select(w => w[0])).ToUpperInvariant();
+}
+<div class="nh-person @(Link.MoveOutDate != null ? "gone" : "")">
+    <div class="nh-avatar">
+        @if (photo != null) { <a href="@photo" target="_blank"><img src="@photo" alt="@t.FullName" /></a> }
+        else { @initials }
+    </div>
+    <div class="min-w-0 flex-grow-1">
+        <div class="nm">@t.FullName</div>
+        <div class="ln">
+            @if (Link.IsRepresentative) { <span class="chip chip-blue">Đại diện</span> }
+            @if (Link.MoveOutDate != null) { <span class="chip chip-slate">Đã chuyển đi @Fmt.Date(Link.MoveOutDate)</span> }
+            @if (Nationality.IsForeign(t.Nationality, t.Ethnicity)) { <span class="chip chip-violet">@t.Nationality</span> }
+            @if (noCard) { <span class="chip chip-amber"><i class="fas fa-id-card"></i> Chưa có CCCD</span> }
+            else { <span><i class="fas fa-id-card"></i> @t.IdentityCard</span> }
+            @if (!string.IsNullOrEmpty(t.Phone)) { <a href="tel:@t.Phone"><i class="fas fa-phone"></i> @t.Phone</a> }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public LeaseTenant Link { get; set; } = null!;
+}

@@ -16,145 +16,209 @@
 else
 {
     bool active = lease.Status == LeaseStatus.Active;
-    <div class="nh-page-title">
-        <h2><i class="fas fa-file-contract"></i> Hợp đồng phòng @lease.Room.Code
-            <span class="badge @(active ? "bg-success" : "bg-secondary") fs-6 align-middle">@(active ? "Đang thuê" : "Đã trả phòng")</span>
-            @if (lease.IsExistingTenant) { <span class="badge bg-warning text-dark fs-6 align-middle" title="Khách đang ở trước khi dùng phần mềm, nhập ban đầu">Khách cũ</span> }</h2>
-        <div class="d-flex flex-wrap gap-2">
-            <a class="btn btn-outline-secondary" href="@($"phong/{lease.Room.Code}")"><i class="fas fa-door-closed"></i> Phòng @lease.Room.Code</a>
-            <a class="btn btn-outline-primary" href="@($"files/contracts/{lease.Id}")" target="_blank"><i class="fas fa-print"></i> In hợp đồng (Word)</a>
-            @if (active) { <a class="btn btn-danger" href="@($"tra-phong/{lease.Id}")"><i class="fas fa-sign-out-alt"></i> Trả phòng</a> }
-            else { <a class="btn btn-outline-secondary" href="@($"files/checkout/{lease.Id}")" target="_blank"><i class="fas fa-file-pdf"></i> Biên bản trả phòng</a> }
+    var people = lease.Tenants.Where(t => t.MoveOutDate == null).OrderByDescending(t => t.IsRepresentative).ToList();
+    var gone = lease.Tenants.Where(t => t.MoveOutDate != null).OrderByDescending(t => t.MoveOutDate).ToList();
+    var debt = lease.Bills.Sum(b => Math.Max(0, b.TotalAmount - b.Payments.Sum(p => p.Amount)));
+    var missingCards = people.Count(t => t.Tenant.IdentityCard.StartsWith("CHUA-CO", StringComparison.OrdinalIgnoreCase));
+    var st = !active ? "st-ended" : debt > 0 ? "st-debt" : "";
+
+    <div class="nh-hero-room @st">
+        <div class="top">
+            <div class="min-w-0">
+                <div class="code">Phòng @lease.Room.Code</div>
+                <div class="sub"><i class="fas fa-user"></i> @(people.FirstOrDefault()?.Tenant.FullName ?? "—") · @people.Count người · @Fmt.Date(lease.StartDate)@(active ? "" : " → " + Fmt.Date(lease.EndDate))</div>
+            </div>
+            <div class="tags">
+                <span class="tag">@(active ? "Đang thuê" : "Đã trả phòng")</span>
+                @if (lease.IsExistingTenant) { <span class="tag" title="Khách đang ở trước khi dùng phần mềm, nhập ban đầu">Khách cũ</span> }
+                @if (missingCards > 0) { <span class="tag warn"><i class="fas fa-id-card"></i> @missingCards người chưa có CCCD</span> }
+            </div>
+        </div>
+        <div class="nh-hero-stats">
+            <div><div class="l">Giá thuê</div><div class="v">@Fmt.Money(lease.MonthlyRent)</div></div>
+            <div><div class="l">Cọc đang giữ</div><div class="v">@Fmt.Money(depositHeld)</div></div>
+            <div><div class="l">Còn nợ</div><div class="v">@Fmt.Money(debt)</div></div>
         </div>
     </div>
 
+    <div class="nh-quick">
+        <a class="q-slate" href="@($"phong/{lease.Room.Code}")"><i class="fas fa-door-closed"></i>Phòng @lease.Room.Code</a>
+        <a class="q-violet" href="@($"files/contracts/{lease.Id}")" target="_blank"><i class="fas fa-print"></i>In hợp đồng</a>
+        @if (active)
+        {
+            <button type="button" class="q-blue" @onclick="() => editPeople = !editPeople"><i class="fas fa-user-edit"></i>Sửa người ở</button>
+            <a class="q-red" href="@($"tra-phong/{lease.Id}")"><i class="fas fa-sign-out-alt"></i>Trả phòng</a>
+        }
+        else
+        {
+            <a class="q-red" href="@($"files/checkout/{lease.Id}")" target="_blank"><i class="fas fa-file-pdf"></i>Biên bản trả phòng</a>
+        }
+    </div>
+
     <div class="row g-3">
-        <div class="col-lg-4">
-            <div class="nh-card">
-                <h5><i class="fas fa-info-circle"></i> Thông tin thuê</h5>
-                <table class="nh-table">
-                    <tr><td>Ngày vào</td><td class="text-end">@Fmt.Date(lease.StartDate)</td></tr>
-                    @if (!active) { <tr><td>Ngày trả</td><td class="text-end">@Fmt.Date(lease.EndDate)</td></tr> }
-                </table>
-                <div class="row g-2 mt-1">
-                    <div class="col-6"><label class="form-label">Giá thuê</label><MoneyInput @bind-Value="rent" disabled="@(!active)" /></div>
-                    <div class="col-6"><label class="form-label">Tiền cọc</label><MoneyInput @bind-Value="deposit" disabled="@(!active || !isAdmin)" /></div>
-                    <div class="col-12"><label class="form-label">Ghi chú</label><textarea class="form-control" rows="2" @bind="note" disabled="@(!active)"></textarea></div>
+        <div class="col-lg-7">
+            <div class="nh-sec t-blue">
+                <div class="nh-sec-h">
+                    <span class="ic"><i class="fas fa-users"></i></span>
+                    <h5>Người ở <small>@people.Count người đang ở@(gone.Count > 0 ? $" · {gone.Count} đã chuyển đi" : "")</small></h5>
+                    @if (active)
+                    {
+                        <button type="button" class="btn btn-sm @(editPeople ? "btn-secondary" : "btn-outline-primary")" @onclick="() => editPeople = !editPeople">
+                            <i class="fas @(editPeople ? "fa-times" : "fa-pen")"></i> @(editPeople ? "Đóng" : "Sửa")
+                        </button>
+                    }
                 </div>
-                @if (active) { <button type="button" class="btn btn-sm btn-primary mt-2" @onclick="SaveTermsAsync"><i class="fas fa-save"></i> Lưu</button> }
+                @if (!editPeople)
+                {
+                    <div class="nh-sec-b">
+                        <div class="nh-people">
+                            @foreach (var t in people) { <PersonCard Link="t" /> }
+                            @foreach (var t in gone) { <PersonCard Link="t" /> }
+                        </div>
+                        @if (missingCards > 0 && active)
+                        {
+                            <div class="small mt-2 text-warning-emphasis"><i class="fas fa-info-circle"></i> Bấm <strong>Sửa</strong> để chụp CCCD, quét và nhập số CCCD, điện thoại cho từng người.</div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="nh-sec-edit">
+                        <TenantEditor Tenants="tenants" MaxPeople="lease.Room.MaxOccupants" ExceptLeaseId="lease.Id" />
+                        <div class="d-flex flex-wrap gap-2 align-items-end mt-3">
+                            <div><label class="form-label">Ngày thay đổi (vào/ra)</label><input type="date" class="form-control" @bind="changeDate" /></div>
+                            <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="SaveTenantsAsync"><i class="fas fa-save"></i> Lưu danh sách người ở</button>
+                        </div>
+                        <div class="small text-muted mt-1">Bỏ một người khỏi danh sách sẽ ghi ngày chuyển đi; tiền nước các kỳ sau tính theo số người còn ở.</div>
+                    </div>
+                }
             </div>
 
-            <div class="nh-card">
-                <h5><i class="fas fa-file-signature"></i> Hợp đồng đã ký (scan)</h5>
-                <AttachmentList EntityType="@AttachmentOwner.Lease" EntityId="lease.Id" Kind="@AttachmentKind.ContractScan" CanDelete="isAdmin" Version="version" />
-                <div class="mt-2"><FileUpload Kind="Contracts" ButtonText="Tải bản scan" Files="scanFiles" Uploaded="OnScanUploadedAsync" /></div>
+            <div class="nh-sec t-green">
+                <div class="nh-sec-h">
+                    <span class="ic"><i class="fas fa-receipt"></i></span>
+                    <h5>Phiếu thu và các lần thu tiền <small>@lease.Bills.Count phiếu · còn nợ @Fmt.Vnd(debt)</small></h5>
+                </div>
+                <div class="nh-sec-b">
+                    @if (lease.Bills.Count == 0)
+                    {
+                        <div class="nh-empty-hint"><i class="fas fa-receipt"></i>Chưa có phiếu thu.@(lease.IsExistingTenant ? " Khách cũ: kỳ thu đầu trên phần mềm là kỳ chốt tới." : "")</div>
+                    }
+                    <div class="nh-bills">
+                        @foreach (var b in lease.Bills.OrderByDescending(b => b.Year).ThenByDescending(b => b.Month).ThenByDescending(b => b.Id))
+                        {
+                            var paid = b.Payments.Sum(p => p.Amount);
+                            var canDelete = isAdmin && b.Kind == BillKind.Monthly && b.Payments.Count == 0;
+                            <BillCard Bill="b" Paid="paid" RentDetail="@RentDetail(b)" ShowNote="true"
+                                      OnPay="() => { payBill = b; payPaid = paid; }"
+                                      OnDelete="@(canDelete ? EventCallback.Factory.Create(this, () => DeleteBillAsync(b)) : default)">
+                                @foreach (var p in b.Payments.OrderBy(p => p.Date))
+                                {
+                                    <div class="pay">
+                                        <span><i class="fas fa-check-circle text-success"></i> @Fmt.Date(p.Date): <strong>@Fmt.Vnd(p.Amount)</strong></span>
+                                        <span class="text-muted">@p.Description · @p.CreatedBy</span>
+                                        <AttachmentList EntityType="@AttachmentOwner.Transaction" EntityId="p.Id" ShowEmpty="false" CanDelete="isAdmin" />
+                                        @if (isAdmin) { <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-auto" @onclick="() => DeletePaymentAsync(p)">Xóa khoản thu</button> }
+                                    </div>
+                                }
+                            </BillCard>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="nh-sec t-violet">
+                <div class="nh-sec-h">
+                    <span class="ic"><i class="fas fa-file-contract"></i></span>
+                    <h5>Hợp đồng</h5>
+                    @if (active)
+                    {
+                        <button type="button" class="btn btn-sm @(editTerms ? "btn-secondary" : "btn-outline-secondary")" @onclick="() => editTerms = !editTerms">
+                            <i class="fas @(editTerms ? "fa-times" : "fa-pen")"></i> @(editTerms ? "Đóng" : "Sửa")
+                        </button>
+                    }
+                </div>
+                <div class="nh-sec-b">
+                    <div class="nh-kv">
+                        <div><div class="l">Ngày vào</div><div class="v">@Fmt.Date(lease.StartDate)</div></div>
+                        @if (!active) { <div><div class="l">Ngày trả</div><div class="v">@Fmt.Date(lease.EndDate)</div></div> }
+                        <div><div class="l">Giá thuê/tháng</div><div class="v">@Fmt.Vnd(lease.MonthlyRent)</div></div>
+                        <div><div class="l">Cọc theo hợp đồng</div><div class="v">@Fmt.Vnd(lease.Deposit)</div></div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(lease.Note)) { <div class="small mt-2 text-muted"><i class="fas fa-sticky-note"></i> @lease.Note</div> }
+                    <div class="mt-3">
+                        <div class="small fw-bold mb-1"><i class="fas fa-file-signature text-secondary"></i> Hợp đồng đã ký (scan)</div>
+                        <AttachmentList EntityType="@AttachmentOwner.Lease" EntityId="lease.Id" Kind="@AttachmentKind.ContractScan" CanDelete="isAdmin" Version="version" />
+                        <div class="mt-2"><FileUpload Kind="Contracts" ButtonText="Tải bản scan" Files="scanFiles" Uploaded="OnScanUploadedAsync" /></div>
+                    </div>
+                </div>
+                @if (editTerms && active)
+                {
+                    <div class="nh-sec-edit">
+                        <div class="row g-2">
+                            <div class="col-6"><label class="form-label">Giá thuê</label><MoneyInput @bind-Value="rent" /></div>
+                            <div class="col-6"><label class="form-label">Tiền cọc</label><MoneyInput @bind-Value="deposit" disabled="@(!isAdmin)" /></div>
+                            <div class="col-12"><label class="form-label">Ghi chú</label><textarea class="form-control" rows="2" @bind="note"></textarea></div>
+                        </div>
+                        <button type="button" class="btn btn-primary w-100 mt-2" disabled="@Busy" @onclick="SaveTermsAsync"><i class="fas fa-save"></i> Lưu hợp đồng</button>
+                    </div>
+                }
+            </div>
+
+            <div class="nh-sec t-amber">
+                <div class="nh-sec-h">
+                    <span class="ic"><i class="fas fa-piggy-bank"></i></span>
+                    <h5>Tiền cọc <small>tài khoản cá nhân · đang giữ @Fmt.Vnd(depositHeld)</small></h5>
+                </div>
+                <div class="nh-sec-b @(deposits.Count > 0 ? "p0" : "")">
+                    @foreach (var t in deposits)
+                    {
+                        <div class="nh-list-row">
+                            <div class="main"><div class="t">@t.Description</div><div class="s">@Fmt.Date(t.Date)</div></div>
+                            <AttachmentList EntityType="@AttachmentOwner.Transaction" EntityId="t.Id" ShowEmpty="false" />
+                            <div class="amt @(t.Amount > 0 ? "text-success" : "text-danger")">@(t.Amount > 0 ? "+" : "")@Fmt.Money(t.Amount)</div>
+                        </div>
+                    }
+                    @if (deposits.Count == 0) { <div class="text-muted small">Chưa ghi khoản cọc nào.</div> }
+                </div>
+                @if (active && depositHeld < lease.Deposit)
+                {
+                    <div class="nh-sec-edit">
+                        <div class="small mb-2">Cọc theo hợp đồng @Fmt.Vnd(lease.Deposit), mới thu <strong class="text-danger">@Fmt.Vnd(depositHeld)</strong>.</div>
+                        <div class="row g-2 align-items-end">
+                            <div class="col-6"><label class="form-label">Thu thêm cọc</label><MoneyInput @bind-Value="depositAmount" /></div>
+                            <div class="col-6"><label class="form-label">Ngày</label><input type="date" class="form-control" @bind="depositDate" /></div>
+                        </div>
+                        <div class="mt-2"><FileUpload Kind="Receipts" ButtonText="Chứng từ" @bind-Files="depositFiles" Scanned="r => { if (r.Amount is decimal a) depositAmount = a; if (r.Date is DateTime d) depositDate = d; }" /></div>
+                        <button type="button" class="btn btn-warning w-100 mt-2 fw-bold" disabled="@Busy" @onclick="CollectDepositAsync"><i class="fas fa-hand-holding-usd"></i> Thu cọc</button>
+                    </div>
+                }
             </div>
 
             @if (!active)
             {
-                <div class="nh-card">
-                    <h5><i class="fas fa-clipboard-check"></i> Trả phòng</h5>
-                    <table class="nh-table">
-                        <tr><td>Tiền cọc</td><td class="text-end">@Fmt.Money(lease.Deposit)</td></tr>
-                        <tr><td>Điện kỳ cuối</td><td class="text-end">@Fmt.Money(lease.CheckoutElectricity ?? 0)</td></tr>
-                        @foreach (var p in lease.Penalties) { <tr><td>Phạt: @p.Description</td><td class="text-end">@Fmt.Money(p.Amount)</td></tr> }
-                        @if ((lease.CheckoutOther ?? 0) != 0) { <tr><td>Khoản khác</td><td class="text-end">@Fmt.Money(lease.CheckoutOther ?? 0)</td></tr> }
-                        <tr><td class="fw-bold">Đã trả cọc</td><td class="text-end fw-bold">@Fmt.Money(lease.DepositRefunded ?? 0)</td></tr>
-                        <tr><td class="fw-bold">Khách nộp thêm</td><td class="text-end fw-bold">@Fmt.Money(lease.CheckoutCollected ?? 0)</td></tr>
-                    </table>
-                    @if (!string.IsNullOrEmpty(lease.FurnitureWarnings)) { <div class="alert alert-warning small py-2 mt-2 mb-2">@lease.FurnitureWarnings</div> }
-                    @if (!string.IsNullOrEmpty(lease.CheckoutNote)) { <p class="small mb-2">@lease.CheckoutNote</p> }
-                    <AttachmentList EntityType="@AttachmentOwner.Lease" EntityId="lease.Id" Kind="@AttachmentKind.CheckoutPhoto" />
+                <div class="nh-sec t-rose">
+                    <div class="nh-sec-h">
+                        <span class="ic"><i class="fas fa-clipboard-check"></i></span>
+                        <h5>Trả phòng <small>@Fmt.Date(lease.EndDate)</small></h5>
+                    </div>
+                    <div class="nh-sec-b">
+                        <div class="nh-kv">
+                            <div><div class="l">Tiền cọc</div><div class="v">@Fmt.Money(lease.Deposit)</div></div>
+                            <div><div class="l">Điện kỳ cuối</div><div class="v">@Fmt.Money(lease.CheckoutElectricity ?? 0)</div></div>
+                            @foreach (var p in lease.Penalties) { <div><div class="l">Phạt: @p.Description</div><div class="v">@Fmt.Money(p.Amount)</div></div> }
+                            @if ((lease.CheckoutOther ?? 0) != 0) { <div><div class="l">Khoản khác</div><div class="v">@Fmt.Money(lease.CheckoutOther ?? 0)</div></div> }
+                            <div><div class="l">Đã trả cọc</div><div class="v text-success">@Fmt.Money(lease.DepositRefunded ?? 0)</div></div>
+                            <div><div class="l">Khách nộp thêm</div><div class="v text-danger">@Fmt.Money(lease.CheckoutCollected ?? 0)</div></div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(lease.FurnitureWarnings)) { <div class="small text-danger mt-2"><i class="fas fa-exclamation-triangle"></i> @lease.FurnitureWarnings</div> }
+                        @if (!string.IsNullOrEmpty(lease.CheckoutNote)) { <p class="small mt-2 mb-2">@lease.CheckoutNote</p> }
+                        <AttachmentList EntityType="@AttachmentOwner.Lease" EntityId="lease.Id" Kind="@AttachmentKind.CheckoutPhoto" />
+                    </div>
                 </div>
             }
-        </div>
-
-        <div class="col-lg-8">
-            <div class="nh-card">
-                <h5><i class="fas fa-users"></i> Người ở</h5>
-                @if (active)
-                {
-                    <TenantEditor Tenants="tenants" MaxPeople="lease.Room.MaxOccupants" ExceptLeaseId="lease.Id" />
-                    <div class="d-flex flex-wrap gap-2 align-items-end mt-3">
-                        <div><label class="form-label">Ngày thay đổi (vào/ra)</label><input type="date" class="form-control" @bind="changeDate" /></div>
-                        <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="SaveTenantsAsync"><i class="fas fa-save"></i> Lưu danh sách người ở</button>
-                    </div>
-                    <div class="small text-muted mt-1">Bỏ một người khỏi danh sách sẽ ghi ngày chuyển đi; tiền nước các kỳ sau tính theo số người còn ở.</div>
-                }
-                <table class="nh-table mt-3">
-                    <thead><tr><th></th><th>Họ tên</th><th>CCCD</th><th>Điện thoại</th><th>Vào</th><th>Ra</th></tr></thead>
-                    <tbody>
-                        @foreach (var t in lease.Tenants.OrderBy(t => t.MoveOutDate != null).ThenByDescending(t => t.IsRepresentative))
-                        {
-                            var photo = t.Tenant.Portrait ?? t.Tenant.PhotoList.FirstOrDefault();
-                            <tr class="@(t.MoveOutDate != null ? "text-muted" : "")">
-                                <td>@if (photo != null) { <a href="@photo" target="_blank"><img src="@photo" alt="" class="nh-mini-thumb" /></a> }</td>
-                                <td>@t.Tenant.FullName @if (t.IsRepresentative) {<span class="badge bg-info">Đại diện</span>}</td>
-                                <td>@t.Tenant.IdentityCard</td><td>@t.Tenant.Phone</td><td>@Fmt.Date(t.MoveInDate)</td><td>@Fmt.Date(t.MoveOutDate)</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="nh-card">
-                <h5><i class="fas fa-receipt"></i> Phiếu thu và các lần thu tiền</h5>
-                @foreach (var b in lease.Bills.OrderByDescending(b => b.Year).ThenByDescending(b => b.Month).ThenByDescending(b => b.Id))
-                {
-                    var paid = b.Payments.Sum(p => p.Amount);
-                    <div class="border rounded p-2 mb-2">
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                            <div>
-                                <strong>@BillKind.Display(b.Kind) @b.Month.ToString("00")/@b.Year</strong>
-                                <span class="text-muted small ms-2">@Fmt.Date(b.PeriodFrom) → @Fmt.Date(b.PeriodTo)</span>
-                                <div class="small text-muted">@RentDetail(b)</div>
-                                <div class="small">Phòng @Fmt.Money(b.RentAmount) · Điện @Fmt.Money(b.ElectricityAmount)@(b.ElectricityKwh > 0 ? $" ({b.ElectricityKwh} số)" : "") · Nước @Fmt.Money(b.WaterAmount) (@b.PersonCount người)@(b.OtherAmount - b.Discount != 0 ? $" · Khác {Fmt.Money(b.OtherAmount - b.Discount)}" : "")</div>
-                                @if (!string.IsNullOrEmpty(b.Note)) { <div class="small text-muted">@b.Note</div> }
-                            </div>
-                            <div class="text-end">
-                                <div class="fw-bold">@Fmt.Vnd(b.TotalAmount)</div>
-                                <div class="small @(paid >= b.TotalAmount ? "text-success" : "text-danger")">Đã thu @Fmt.Money(paid)</div>
-                                <div class="mt-1">
-                                    @if (paid < b.TotalAmount) { <button type="button" class="btn btn-sm btn-success" @onclick="() => { payBill = b; payPaid = paid; }"><i class="fas fa-hand-holding-usd"></i> Thu</button> }
-                                    <a class="btn btn-sm btn-outline-secondary" href="@($"files/bills/{b.Id}")" target="_blank"><i class="fas fa-print"></i></a>
-                                    @if (isAdmin && b.Kind == BillKind.Monthly && b.Payments.Count == 0) { <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => DeleteBillAsync(b)"><i class="fas fa-trash"></i></button> }
-                                </div>
-                            </div>
-                        </div>
-                        @foreach (var p in b.Payments.OrderBy(p => p.Date))
-                        {
-                            <div class="d-flex flex-wrap gap-2 align-items-center small border-top mt-2 pt-2">
-                                <span><i class="fas fa-check text-success"></i> @Fmt.Date(p.Date): <strong>@Fmt.Vnd(p.Amount)</strong> - @p.Description <span class="text-muted">(@p.CreatedBy)</span></span>
-                                <AttachmentList EntityType="@AttachmentOwner.Transaction" EntityId="p.Id" ShowEmpty="false" CanDelete="isAdmin" />
-                                @if (isAdmin) { <button type="button" class="btn btn-sm btn-link text-danger p-0" @onclick="() => DeletePaymentAsync(p)">Xóa khoản thu</button> }
-                            </div>
-                        }
-                    </div>
-                }
-                @if (active && depositHeld < lease.Deposit)
-                {
-                    <div class="alert alert-warning py-2 mt-3">
-                        <div class="mb-2">Cọc theo hợp đồng @Fmt.Vnd(lease.Deposit), mới thu <strong>@Fmt.Vnd(depositHeld)</strong>.</div>
-                        <div class="d-flex flex-wrap gap-2 align-items-end">
-                            <div><label class="form-label small mb-0">Thu thêm cọc</label><MoneyInput @bind-Value="depositAmount" /></div>
-                            <div><label class="form-label small mb-0">Ngày</label><input type="date" class="form-control" @bind="depositDate" /></div>
-                            <FileUpload Kind="Receipts" ButtonText="Chứng từ" @bind-Files="depositFiles" Scanned="r => { if (r.Amount is decimal a) depositAmount = a; if (r.Date is DateTime d) depositDate = d; }" />
-                            <button type="button" class="btn btn-warning" disabled="@Busy" @onclick="CollectDepositAsync"><i class="fas fa-hand-holding-usd"></i> Thu cọc (TK cá nhân)</button>
-                        </div>
-                    </div>
-                }
-                @if (deposits.Count > 0)
-                {
-                    <h6 class="mt-3 fw-bold">Tiền cọc (tài khoản cá nhân)</h6>
-                    @foreach (var t in deposits)
-                    {
-                        <div class="d-flex flex-wrap gap-2 align-items-center small border-top py-1">
-                            <span>@Fmt.Date(t.Date): <strong class="@(t.Amount > 0 ? "text-success" : "text-danger")">@Fmt.Vnd(t.Amount)</strong> - @t.Description</span>
-                            <AttachmentList EntityType="@AttachmentOwner.Transaction" EntityId="t.Id" ShowEmpty="false" />
-                        </div>
-                    }
-                }
-            </div>
         </div>
     </div>
 
@@ -166,7 +230,7 @@ else
     private Lease? lease;
     private int billingDay = 10;
     private string RentDetail(Bill b) => lease == null ? "" : LeaseService.RentDetail(b, lease, billingDay);
-    private bool notFound, isAdmin;
+    private bool notFound, isAdmin, editPeople, editTerms;
     private decimal rent, deposit;
     private string? note;
     private List<TenantInput> tenants = [];
@@ -216,12 +280,12 @@ else
 
     private async Task SaveTermsAsync()
     {
-        if (await RunAsync(() => Leases.UpdateLeaseTermsAsync(Id, rent, deposit, note), "Đã lưu.")) await LoadAsync();
+        if (await RunAsync(() => Leases.UpdateLeaseTermsAsync(Id, rent, deposit, note), "Đã lưu.")) { editTerms = false; await LoadAsync(); }
     }
 
     private async Task SaveTenantsAsync()
     {
-        if (await RunAsync(() => Leases.SaveTenantsAsync(Id, tenants, changeDate), "Đã lưu danh sách người ở.")) await LoadAsync();
+        if (await RunAsync(() => Leases.SaveTenantsAsync(Id, tenants, changeDate), "Đã lưu danh sách người ở.")) { editPeople = false; await LoadAsync(); }
     }
 
     private async Task OnScanUploadedAsync(PendingFile f)
