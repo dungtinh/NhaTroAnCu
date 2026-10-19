@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.StaticFiles;
@@ -93,14 +93,15 @@ using (var scope = app.Services.CreateScope())
 // Lệnh quản trị chạy một lần rồi thoát (không mở web):
 //   NHNhaTro.exe --seed-demo   nạp dữ liệu nghiệm thu
 //   NHNhaTro.exe --clear-data  xóa toàn bộ dữ liệu nghiệp vụ, giữ cấu hình và người dùng
-if (args.Contains("--seed-demo") || args.Contains("--clear-data"))
+//   NHNhaTro.exe --seed-billing-test  thêm 1 khách thử (vào 2 tháng trước) có phiếu kỳ chốt đầu và kỳ 2 để đối chiếu tiền
+if (args.Contains("--seed-demo") || args.Contains("--clear-data") || args.Contains("--seed-billing-test"))
 {
     Console.OutputEncoding = System.Text.Encoding.UTF8;
     using var scope = app.Services.CreateScope();
     try
     {
-        var message = args.Contains("--clear-data")
-            ? await DemoDataSeeder.ClearAsync(scope.ServiceProvider)
+        var message = args.Contains("--clear-data") ? await DemoDataSeeder.ClearAsync(scope.ServiceProvider)
+            : args.Contains("--seed-billing-test") ? await DemoDataSeeder.SeedBillingTestAsync(scope.ServiceProvider)
             : await DemoDataSeeder.SeedAsync(scope.ServiceProvider);
         Console.WriteLine(message);
         return 0;

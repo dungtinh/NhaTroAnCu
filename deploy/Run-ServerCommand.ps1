@@ -3,9 +3,10 @@
 
   powershell -ExecutionPolicy Bypass -File deploy\Run-ServerCommand.ps1 -Command seed-demo   # nạp dữ liệu nghiệm thu
   powershell -ExecutionPolicy Bypass -File deploy\Run-ServerCommand.ps1 -Command clear-data  # xóa dữ liệu nghiệp vụ
+  powershell -ExecutionPolicy Bypass -File deploy\Run-ServerCommand.ps1 -Command seed-billing-test  # thêm 1 khách thử có phiếu kỳ đầu + kỳ 2
 #>
 param(
-    [Parameter(Mandatory)][ValidateSet('seed-demo', 'clear-data')][string]$Command,
+    [Parameter(Mandatory)][ValidateSet('seed-demo', 'clear-data', 'seed-billing-test')][string]$Command,
     [string]$Server = '192.168.1.89',
     [string]$SitePath = 'C:\inetpub\wwwroot\NhaTroAnCu',
     [string]$AppPool = 'NHNhaTro',

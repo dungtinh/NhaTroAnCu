@@ -1,4 +1,4 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using Microsoft.EntityFrameworkCore;
 using NHNhaTro.Data;
 using NHNhaTro.Data.Entities;
@@ -231,6 +231,75 @@ public static class DemoDataSeeder
         }
 
         return "Đã nạp dữ liệu nghiệm thu: 9 hợp đồng (1 đã trả phòng), phiếu tháng 9-10, 5 phiếu sửa chữa, 4 khoản mua sắm/quảng cáo, thu chi khác, ảnh quảng cáo.";
+    }
+
+    /// <summary>
+    /// Nạp 1 khách thử để kiểm tra tiền kỳ chốt đầu và kỳ thứ 2 (chạy: NHNhaTro.exe --seed-billing-test).
+    /// Khách vào ngày 20 của 2 tháng trước, giá 2.000.000đ, 2 người: khi vào thu 2.000.000 + cọc 1.000.000;
+    /// kỳ chốt đầu (mồng 10 tháng trước) tiền phòng 20 ngày + điện 100 kWh + nước 2 người, đã thu đủ;
+    /// kỳ thứ 2 (mồng 10 tháng này) tròn tháng + điện 120 kWh + nước, chưa thu. Chạy được trên DB đang có dữ liệu.
+    /// </summary>
+    public static async Task<string> SeedBillingTestAsync(IServiceProvider sp)
+    {
+        var dbFactory = sp.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        var setup = sp.GetRequiredService<SetupService>();
+        var rooms = sp.GetRequiredService<RoomService>();
+        var leases = sp.GetRequiredService<LeaseService>();
+        var billing = sp.GetRequiredService<BillingService>();
+        const string user = "test-thu-tien";
+        const string card1 = "031090999001", card2 = "031092999002";
+
+        await using (var db = await dbFactory.CreateDbContextAsync())
+        {
+            if (await db.LeaseTenants.AnyAsync(lt => lt.Tenant.IdentityCard == card1 && lt.Lease.Status == LeaseStatus.Active))
+                throw new InvalidOperationException("Khách thử Nguyễn Văn Thử đang ở một phòng: trả phòng đó trước nếu muốn nạp lại.");
+        }
+
+        var s = await setup.GetSettingsAsync();
+        var room = (await rooms.ListRoomsAsync(RoomStatus.Empty)).OrderBy(r => r.Code != "A1.1").ThenBy(r => r.Code).FirstOrDefault()
+            ?? throw new InvalidOperationException("Không còn phòng trống.");
+
+        var today = DateTime.Today;
+        var moveIn = new DateTime(today.Year, today.Month, 1).AddMonths(-2).AddDays(19);   // ngày 20 của 2 tháng trước
+        const decimal rent = 2_000_000;
+        var form = new CheckInForm
+        {
+            RoomId = room.Id, MoveInDate = moveIn, MonthlyRent = rent, Deposit = s.DefaultDeposit, PaymentDate = moveIn,
+            DepositPaid = s.DefaultDeposit, FirstPaymentPaid = rent, Note = "Khách thử kiểm tra tiền kỳ đầu và kỳ 2",
+            Tenants =
+            [
+                new() { FullName = "Nguyễn Văn Thử", IdentityCard = card1, Phone = "0900999001", Gender = "Nam", BirthDate = new DateTime(1990, 5, 15), PermanentAddress = "Kiến An, Hải Phòng", VehiclePlate = "15B1-999.01" },
+                new() { FullName = "Trần Thị Kiểm", IdentityCard = card2, Phone = "0900999002", Gender = "Nữ", BirthDate = new DateTime(1992, 8, 20), PermanentAddress = "Kiến An, Hải Phòng" },
+            ]
+        };
+        var leaseId = await leases.CheckInAsync(form, user);
+
+        var stub = LeaseService.CalculateStubPeriod(rent, moveIn, s.BillingDay);
+        var m1 = moveIn.AddMonths(1);           // kỳ chốt đầu
+        var m2 = moveIn.AddMonths(2);           // kỳ thứ 2
+        var lines = new List<string>
+        {
+            $"Phòng {room.Code}: Nguyễn Văn Thử + Trần Thị Kiểm, vào {moveIn:dd/MM/yyyy}, giá {Fmt.Vnd(rent)}, cọc {Fmt.Vnd(s.DefaultDeposit)}.",
+            $"  Khi vào đã thu: {Fmt.Vnd(rent)} tiền phòng (TK hộ kinh doanh) + {Fmt.Vnd(s.DefaultDeposit)} cọc (TK cá nhân) = {Fmt.Vnd(rent + s.DefaultDeposit)}.",
+        };
+
+        async Task<string> Bill(DateTime m, int kwh, bool pay, string label)
+        {
+            var sheet = await billing.GetSheetAsync(m.Month, m.Year);
+            var row = sheet.Rows.First(r => r.LeaseId == leaseId);
+            row.Kwh = kwh;
+            var billId = await billing.SaveBillAsync(m.Month, m.Year, row, user);
+            var bill = (await billing.GetBillAsync(billId))!;
+            if (pay)
+                await billing.RecordPaymentAsync(new PaymentForm { BillId = billId, Amount = bill.TotalAmount, Date = sheet.DueDate, AccountId = s.BusinessAccountId, Note = "Khách thử" }, user);
+            return $"  {label} {m.Month:00}/{m.Year} (chốt {sheet.DueDate:dd/MM}): tiền phòng {bill.PeriodFrom:dd/MM}-{bill.PeriodTo:dd/MM} {Fmt.Vnd(bill.RentAmount)}"
+                 + $" + điện {kwh} kWh {Fmt.Vnd(bill.ElectricityAmount)} + nước {bill.PersonCount} người {Fmt.Vnd(bill.WaterAmount)} = {Fmt.Vnd(bill.TotalAmount)}"
+                 + (pay ? " (đã thu đủ)" : " (CHƯA THU)");
+        }
+        lines.Add(await Bill(m1, 100, true, $"Kỳ chốt đầu ({stub.Days} ngày)"));
+        lines.Add(await Bill(m2, 120, false, "Kỳ thứ 2 (tròn tháng)"));
+        lines.Add("Kiểm tra ở: sơ đồ phòng, Thu tiền tháng (chọn từng tháng), trang hợp đồng, Thu chi, Báo cáo.");
+        return "Đã nạp khách thử:" + Environment.NewLine + string.Join(Environment.NewLine, lines);
     }
 
     /// <summary>Xóa toàn bộ dữ liệu nghiệp vụ (khách, hợp đồng, phiếu, thu chi, sửa chữa, mua sắm, file đính kèm). Giữ cấu hình, phòng, tài khoản tiền, người dùng.</summary>
