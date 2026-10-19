@@ -81,11 +81,13 @@ else
                     <div class="small text-muted mt-1">Bỏ một người khỏi danh sách sẽ ghi ngày chuyển đi; tiền nước các kỳ sau tính theo số người còn ở.</div>
                 }
                 <table class="nh-table mt-3">
-                    <thead><tr><th>Họ tên</th><th>CCCD</th><th>Điện thoại</th><th>Vào</th><th>Ra</th></tr></thead>
+                    <thead><tr><th></th><th>Họ tên</th><th>CCCD</th><th>Điện thoại</th><th>Vào</th><th>Ra</th></tr></thead>
                     <tbody>
                         @foreach (var t in lease.Tenants.OrderBy(t => t.MoveOutDate != null).ThenByDescending(t => t.IsRepresentative))
                         {
+                            var photo = t.Tenant.Portrait ?? t.Tenant.PhotoList.FirstOrDefault();
                             <tr class="@(t.MoveOutDate != null ? "text-muted" : "")">
+                                <td>@if (photo != null) { <a href="@photo" target="_blank"><img src="@photo" alt="" class="nh-mini-thumb" /></a> }</td>
                                 <td>@t.Tenant.FullName @if (t.IsRepresentative) {<span class="badge bg-info">Đại diện</span>}</td>
                                 <td>@t.Tenant.IdentityCard</td><td>@t.Tenant.Phone</td><td>@Fmt.Date(t.MoveInDate)</td><td>@Fmt.Date(t.MoveOutDate)</td>
                             </tr>

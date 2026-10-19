@@ -1,4 +1,4 @@
-/* ===================== NHÀ TRỌ AN CƯ (ưu tiên điện thoại) ===================== */
+﻿/* ===================== NHÀ TRỌ AN CƯ (ưu tiên điện thoại) ===================== */
 :root {
   --nh-primary: #1a5490; --nh-primary-2: #2980b9; --nh-bg: #f1f4f9; --nh-card: #fff; --nh-border: #e3e8ef; --nh-muted: #6b7280; --nh-ink: #1e293b;
   --nh-nav-h: 62px; --nh-safe-b: env(safe-area-inset-bottom, 0px);
@@ -113,6 +113,10 @@ body:has(.nh-bottomnav) .nh-main { padding-bottom: calc(var(--nh-nav-h) + var(--
   color: #475569; font-size: .72rem; text-align: center; cursor: pointer; background: #fff; padding: 4px; line-height: 1.15; }
 .nh-upload-btn:hover { border-color: var(--nh-primary-2); color: var(--nh-primary-2); }
 .nh-upload-btn.disabled { opacity: .6; pointer-events: none; }
+.nh-upload-btn.alt { border-style: solid; border-color: var(--nh-border); color: var(--nh-muted); }
+.nh-thumb.portrait, .nh-portrait .nh-thumb { border-radius: 50%; width: 72px; height: 72px; }
+.nh-tenant-photos { display: flex; flex-wrap: wrap; gap: 10px 18px; }
+.nh-photo-group .lbl { font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #64748b; margin-bottom: 4px; }
 .nh-upload-btn i { font-size: 1.25rem; }
 
 /* ---------- Thông báo ---------- */
@@ -188,7 +192,7 @@ a.nh-list-item:hover { box-shadow: var(--nh-shadow-2); transform: translateY(-1p
 /* ---------- Bảng lưới: mọi dòng dùng chung cột của bảng (CSS subgrid) nên luôn thẳng hàng ---------- */
 .nh-gwrap { container-type: inline-size; margin-bottom: 14px; }
 .nh-gtable { background: #fff; border: 1px solid var(--nh-border); border-radius: 16px; box-shadow: var(--nh-shadow-1); }
-.nh-gtable .gr > * { min-width: 0; }
+.nh-gtable .gr > *, .nh-gtable .c-info > * { min-width: 0; }
 .nh-gtable .n { text-align: right; font-variant-numeric: tabular-nums; }
 .nh-gtable .gh { font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #64748b; background: #f8fafc; border-radius: 16px 16px 0 0; }
 .nh-gtable .sec { font-size: .78rem; font-weight: 700; color: #475569; background: #f1f5f9; letter-spacing: .02em; }
@@ -224,12 +228,15 @@ a.nh-list-item:hover { box-shadow: var(--nh-shadow-2); transform: translateY(-1p
 .nh-gtable.meter .c-money { grid-area: money; text-align: left; font-size: .78rem; color: var(--nh-muted); }
 .nh-gtable.meter .c-ppl, .nh-gtable.meter .c-state { display: none; }
 .nh-gtable.meter .nh-kwh { min-height: 48px; font-size: 1.25rem; }
-.nh-gtable.bill .gr:not(.gh):not(.sec) { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-areas: "room name name total" "room name name state" "kwh rent el wa" "act act act act"; }
+.nh-gtable.bill .gr:not(.gh):not(.sec) { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "room name total" "room name state" "info info info" "act act act"; }
 .nh-gtable.bill .c-room { grid-area: room; } .nh-gtable.bill .c-name { grid-area: name; } .nh-gtable.bill .c-total { grid-area: total; font-size: 1.05rem; }
-.nh-gtable.bill .c-state { grid-area: state; text-align: right; }
-.nh-gtable.bill .c-kwh { grid-area: kwh; } .nh-gtable.bill .c-rent { grid-area: rent; } .nh-gtable.bill .c-el { grid-area: el; } .nh-gtable.bill .c-wa { grid-area: wa; }
+.nh-gtable.bill .c-name .sub { white-space: normal; }
+.nh-gtable.bill .c-state { grid-area: state; text-align: right; max-width: 46vw; }
+.nh-gtable.bill .c-state .pill { white-space: normal; line-height: 1.25; padding-block: 3px; }
+.nh-gtable.bill .c-info { grid-area: info; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .nh-gtable.bill .c-kwh, .nh-gtable.bill .c-rent, .nh-gtable.bill .c-el, .nh-gtable.bill .c-wa { text-align: left; font-size: .8rem; background: #f8fafc; border-radius: 8px; padding: 4px 8px; }
 .nh-gtable.bill .c-kwh::before, .nh-gtable.bill .c-rent::before, .nh-gtable.bill .c-el::before, .nh-gtable.bill .c-wa::before { content: attr(data-l); display: block; font-size: .68rem; color: var(--nh-muted); }
+.nh-gtable.bill .c-info .sub { white-space: normal; font-size: .68rem; line-height: 1.2; }
 .nh-gtable.bill .c-paid { display: none; }
 .nh-gtable.bill .c-act { grid-area: act; justify-content: stretch; flex-wrap: nowrap; margin-top: 4px; }
 .nh-gtable.bill .c-act .btn:not(.btn-light) { flex: 1; min-height: 42px; }
@@ -247,9 +254,11 @@ a.nh-list-item:hover { box-shadow: var(--nh-shadow-2); transform: translateY(-1p
   .nh-gtable.meter .nh-kwh { min-height: 38px; font-size: 1.05rem; }
 }
 @container (min-width: 1040px) {
-  .nh-gtable.bill { display: grid; grid-template-columns: 80px minmax(170px, 1.4fr) 76px 105px 95px 90px 110px 105px minmax(130px, 190px) 176px; }
+  .nh-gtable.bill { display: grid; grid-template-columns: 72px minmax(150px, 1.4fr) 62px minmax(92px, 1fr) minmax(96px, 1fr) minmax(92px, 1fr) minmax(100px, 1fr) minmax(92px, 1fr) minmax(120px, 1.2fr) 176px; }
   .nh-gtable.bill .gr, .nh-gtable.bill .gr:not(.gh):not(.sec) { grid-column: 1 / -1; grid-template-columns: subgrid; grid-template-areas: none !important; padding: 10px 4px; gap: 0; }
-  .nh-gtable.bill .gr > *, .nh-gtable.bill .gr:not(.gh):not(.sec) > * { padding: 0 10px; grid-area: auto !important; }
+  .nh-gtable.bill .c-info { display: contents; }
+  .nh-gtable.bill .gr > *, .nh-gtable.bill .gr:not(.gh):not(.sec) > *, .nh-gtable.bill .c-info > * { padding: 0 10px; grid-area: auto !important; }
+  .nh-gtable.bill .c-info .sub { white-space: nowrap; }
   .nh-gtable.bill .gh { display: grid; }
   .nh-gtable.bill .sec { display: block; padding: 6px 14px; }
   .nh-gtable.bill .c-kwh, .nh-gtable.bill .c-rent, .nh-gtable.bill .c-el, .nh-gtable.bill .c-wa, .nh-gtable.bill .c-paid { display: block; text-align: right; font-size: inherit; background: none; border-radius: 0; padding: 0 10px; }
@@ -348,6 +357,23 @@ body:has(.nh-bottomnav) .nh-callbar { display: none !important; }
 .nh-step { flex: 1; text-align: center; font-size: .78rem; font-weight: 600; padding: 6px 4px; border-radius: 999px; background: #eef2f7; color: #94a3b8; }
 .nh-step.on { background: var(--nh-primary); color: #fff; }
 .nh-step.done { background: #dcfce7; color: #166534; }
+button.nh-step { border: 0; }
+button.nh-step:disabled { opacity: .55; }
+.nh-steps-lg { margin-bottom: 14px; }
+.nh-steps-lg .nh-step { font-size: .9rem; padding: 9px 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; }
+.nh-steps-lg .nh-step span { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,.35); font-size: .78rem; }
+.nh-steps-lg .nh-step:not(.on):not(.done) span { background: #fff; }
+.nh-fur-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 768px) { .nh-fur-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1200px) { .nh-fur-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.nh-fur { display: flex; flex-direction: column; align-items: stretch; gap: 6px; border: 1px solid var(--nh-border); border-radius: 12px; padding: 8px 10px; background: #fff; }
+@media (min-width: 768px) { .nh-fur { flex-direction: row; justify-content: space-between; align-items: center; } }
+.nh-fur.diff { border-color: #f59e0b; background: #fffbeb; }
+.nh-fur .name { font-weight: 600; min-width: 0; overflow: hidden; }
+.nh-fur .name small { display: block; color: var(--nh-muted); font-weight: 400; font-size: .7rem; white-space: nowrap; }
+.nh-fur .qty { display: flex; align-items: center; justify-content: center; gap: 4px; flex: 0 0 auto; }
+.nh-fur .qty input { width: 52px; padding: 4px; min-height: 36px; font-size: 1rem; }
+.nh-fur .qty .btn { width: 36px; min-height: 36px; padding: 0; border: 1px solid var(--nh-border); display: inline-flex; align-items: center; justify-content: center; }
 .nh-pick-grid { display: grid; gap: 8px; }
 .nh-pick-grid.two { grid-template-columns: repeat(2, 1fr); }
 .nh-pick-grid.four { grid-template-columns: repeat(4, 1fr); }

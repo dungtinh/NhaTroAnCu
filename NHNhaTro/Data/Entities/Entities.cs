@@ -1,4 +1,4 @@
-namespace NHNhaTro.Data.Entities;
+﻿namespace NHNhaTro.Data.Entities;
 
 // ============================ CẤU HÌNH ============================
 
@@ -173,6 +173,8 @@ public class Tenant
     public string? VehiclePlate { get; set; }
     /// <summary>Ảnh CCCD, nhiều ảnh cách nhau bằng dấu ;</summary>
     public string? Photos { get; set; }
+    /// <summary>Ảnh chân dung (chụp mặt khi nhận phòng).</summary>
+    public string? Portrait { get; set; }
 
     public List<LeaseTenant> Leases { get; set; } = [];
 

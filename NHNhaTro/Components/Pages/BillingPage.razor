@@ -124,10 +124,12 @@ else
                 <div class="sub" title="@r.RentDetail">@r.RentDetail
                     @if (r.PreviousDebt > 0) { <span class="debt"> · nợ cũ @Fmt.Money(r.PreviousDebt)</span> }</div>
             </div>
-            <div class="c-kwh n" data-l="Số điện">@(r.Kwh is int k ? k.ToString() : "-")</div>
-            <div class="c-rent n" data-l="Phòng">@Fmt.Money(r.Rent)</div>
-            <div class="c-el n" data-l="Điện">@Fmt.Money(r.Electricity(ep))@if (r.Kwh is int kw) { <div class="sub">@kw số × @Fmt.Money(ep)</div> }</div>
-            <div class="c-wa n" data-l="Nước">@Fmt.Money(r.Water(wp))<div class="sub">@r.PersonCount người × @Fmt.Money(wp)</div></div>
+            <div class="c-info">
+                <div class="c-kwh n" data-l="Số điện">@(r.Kwh is int k ? k.ToString() : "-")</div>
+                <div class="c-rent n" data-l="Phòng">@Fmt.Money(r.Rent)</div>
+                <div class="c-el n" data-l="Điện">@Fmt.Money(r.Electricity(ep))@if (r.Kwh is int kw) { <div class="sub">@kw số × @Fmt.Money(ep)</div> }</div>
+                <div class="c-wa n" data-l="Nước">@Fmt.Money(r.Water(wp))<div class="sub">@r.PersonCount người × @Fmt.Money(wp)</div></div>
+            </div>
             <div class="c-total n">@(r.BillId != null || r.SkipThisMonth ? Fmt.Money(t) : "-")</div>
             <div class="c-paid n" data-l="Đã thu">@Fmt.Money(r.Paid)</div>
             <div class="c-state">

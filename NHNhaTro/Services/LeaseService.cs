@@ -20,12 +20,14 @@ public class TenantInput
     public string? Nationality { get; set; } = "Việt Nam";
     public string? VehiclePlate { get; set; }
     public List<string> Photos { get; set; } = [];
+    /// <summary>Ảnh chân dung.</summary>
+    public string? Portrait { get; set; }
     public bool IsEmpty => string.IsNullOrWhiteSpace(FullName) && string.IsNullOrWhiteSpace(IdentityCard);
 
     public static TenantInput From(Tenant t) => new()
     {
         TenantId = t.Id, FullName = t.FullName, IdentityCard = t.IdentityCard, BirthDate = t.BirthDate, Gender = t.Gender, Phone = t.Phone,
-        PermanentAddress = t.PermanentAddress, Ethnicity = t.Ethnicity, Nationality = t.Nationality, VehiclePlate = t.VehiclePlate, Photos = t.PhotoList.ToList()
+        PermanentAddress = t.PermanentAddress, Ethnicity = t.Ethnicity, Nationality = t.Nationality, VehiclePlate = t.VehiclePlate, Photos = t.PhotoList.ToList(), Portrait = t.Portrait
     };
 }
 
@@ -208,6 +210,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         tenant.Nationality = input.Nationality;
         tenant.VehiclePlate = input.VehiclePlate;
         tenant.Photos = input.Photos.Count > 0 ? string.Join(";", input.Photos) : null;
+        tenant.Portrait = string.IsNullOrWhiteSpace(input.Portrait) ? null : input.Portrait;
         return tenant;
     }
 
@@ -593,6 +596,6 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
             .Take(2000).ToListAsync();
         return rows.Select(r => new ResidentRow(r.LeaseId, r.Code, r.Tenant.FullName, r.Tenant.IdentityCard, r.Tenant.BirthDate, r.Tenant.Gender, r.Tenant.Phone,
             r.Tenant.Ethnicity, r.Tenant.Nationality, r.Tenant.PermanentAddress, r.Tenant.VehiclePlate, r.MoveInDate, r.MoveOutDate, r.IsRepresentative,
-            r.Tenant.PhotoList.FirstOrDefault())).ToList();
+            r.Tenant.Portrait ?? r.Tenant.PhotoList.FirstOrDefault())).ToList();
     }
 }

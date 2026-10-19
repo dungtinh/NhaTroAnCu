@@ -20,52 +20,102 @@ else
 {
     var stub = room == null ? null : LeaseService.CalculateStubPeriod(form.MonthlyRent, form.MoveInDate, settings.BillingDay);
     decimal total = form.MonthlyRent + form.Deposit;
+    var people = form.Tenants.Where(t => !t.IsEmpty).ToList();
+    var furDiff = furniture.Where(f => f.Quantity != f.Default).ToList();
 
-    <div class="row g-3">
-        <div class="col-lg-8">
+    @* 3 bước ngắn, mỗi bước một màn hình: Phòng (giá, cọc, đồ đạc) → Khách (CCCD, chân dung) → Tiền & xác nhận *@
+    <div class="nh-steps nh-steps-lg">
+        <button type="button" class="nh-step @(step == 1 ? "on" : room != null ? "done" : "")" @onclick="() => Go(1)"><span>1</span> Phòng@(room != null ? " " + room.Code : "")</button>
+        <button type="button" class="nh-step @(step == 2 ? "on" : step > 2 ? "done" : "")" disabled="@(room == null)" @onclick="() => Go(2)"><span>2</span> Khách@(people.Count > 0 ? $" ({people.Count})" : "")</button>
+        <button type="button" class="nh-step @(step == 3 ? "on" : "")" disabled="@(room == null)" @onclick="() => Go(3)"><span>3</span> Tiền &amp; xác nhận</button>
+    </div>
+
+    @if (step == 1)
+    {
+        <div class="nh-card">
+            <h5><i class="fas fa-door-closed"></i> Chọn phòng trống</h5>
+            <RoomPicker Mode="RoomPicker.PickMode.Empty" PresetCode="@RoomCode" Picked="OnPicked" />
+        </div>
+        @if (room != null && details != null)
+        {
             <div class="nh-card">
-                <h5>1. Chọn phòng trống</h5>
-                <RoomPicker Mode="RoomPicker.PickMode.Empty" PresetCode="@RoomCode" Picked="OnPicked" />
-                @if (room != null)
+                <h5><i class="fas fa-calendar-check"></i> Ngày vào, giá, cọc</h5>
+                <div class="row g-2">
+                    <div class="col-6 col-md-4"><label class="form-label">Ngày vào</label><input type="date" class="form-control" @bind="form.MoveInDate" /></div>
+                    <div class="col-6 col-md-4"><label class="form-label">Tiền phòng/tháng</label><MoneyInput @bind-Value="form.MonthlyRent" /></div>
+                    <div class="col-6 col-md-4"><label class="form-label">Tiền cọc</label><MoneyInput @bind-Value="form.Deposit" /></div>
+                </div>
+                @if (form.MonthlyRent != details.Room.Rent)
                 {
-                    <div class="row g-2 mt-1">
-                        <div class="col-6"><label class="form-label">Ngày vào</label><input type="date" class="form-control" @bind="form.MoveInDate" /></div>
-                        <div class="col-6"><label class="form-label">Tiền phòng/tháng</label><MoneyInput @bind-Value="form.MonthlyRent" /></div>
-                    </div>
-                    <details class="mt-2">
-                        <summary class="small text-primary">Cọc @Fmt.Vnd(form.Deposit) (mặc định theo cấu hình) · sửa nếu khác</summary>
-                        <div class="row g-2 mt-1">
-                            <div class="col-6"><label class="form-label">Tiền cọc</label><MoneyInput @bind-Value="form.Deposit" /></div>
-                            <div class="col-12"><label class="form-label">Ghi chú</label><input class="form-control" maxlength="1000" @bind="form.Note" /></div>
-                        </div>
-                    </details>
+                    <div class="small text-warning-emphasis mt-2"><i class="fas fa-info-circle"></i> Giá phòng @room.Code sẽ đổi từ @Fmt.Vnd(details.Room.Rent) thành @Fmt.Vnd(form.MonthlyRent).</div>
+                }
+                @if (form.Deposit != settings.DefaultDeposit)
+                {
+                    <div class="small text-muted mt-1">Cọc mặc định theo cấu hình là @Fmt.Vnd(settings.DefaultDeposit).</div>
                 }
             </div>
 
-            @if (room != null)
-            {
-                <div class="nh-card">
-                    <h5>2. Khách thuê</h5>
-                    <TenantEditor Tenants="form.Tenants" MaxPeople="maxPeople" Compact="true" Changed="StateHasChanged" />
+            <div class="nh-card">
+                <h5><i class="fas fa-couch"></i> Đồ đạc trong phòng <span class="small fw-normal text-muted">· kiểm và sửa số lượng thực tế</span></h5>
+                <div class="nh-fur-grid">
+                    @foreach (var f in furniture)
+                    {
+                        <div class="nh-fur @(f.Quantity != f.Default ? "diff" : "")" @key="f.ItemId">
+                            <div class="name">@f.Name<small>mặc định dãy: @f.Default</small></div>
+                            <div class="qty">
+                                <button type="button" class="btn btn-light" @onclick="() => f.Quantity = Math.Max(0, f.Quantity - 1)"><i class="fas fa-minus"></i></button>
+                                <input type="number" min="0" max="20" class="form-control text-center" @bind="f.Quantity" />
+                                <button type="button" class="btn btn-light" @onclick="() => f.Quantity = Math.Min(20, f.Quantity + 1)"><i class="fas fa-plus"></i></button>
+                            </div>
+                        </div>
+                    }
                 </div>
-            }
+                @if (furDiff.Count > 0)
+                {
+                    <div class="small text-warning-emphasis mt-2"><i class="fas fa-exclamation-triangle"></i> Khác mặc định của dãy: @string.Join(", ", furDiff.Select(f => $"{f.Name} {f.Quantity}/{f.Default}")). Sẽ lưu vào cấu hình phòng khi nhận phòng.</div>
+                }
+                <div class="row g-2 mt-1">
+                    <div class="col-5 col-md-3"><label class="form-label">Tối đa số người</label><input type="number" min="1" max="20" class="form-control" @bind="maxPeople" /></div>
+                    <div class="col-7 col-md-9"><label class="form-label">Ghi chú hợp đồng</label><input class="form-control" maxlength="1000" @bind="form.Note" /></div>
+                </div>
+            </div>
+        }
+    }
+    else if (step == 2)
+    {
+        <div class="nh-card">
+            <h5><i class="fas fa-users"></i> Khách thuê phòng @room!.Code <span class="small fw-normal text-muted">· chụp CCCD 2 mặt và ảnh chân dung, hoặc chọn ảnh có sẵn</span></h5>
+            <TenantEditor Tenants="form.Tenants" MaxPeople="maxPeople" Compact="true" Changed="StateHasChanged" />
         </div>
-
-        <div class="col-lg-4">
-            @if (room != null && stub != null)
-            {
-                <div class="nh-card nh-sticky">
-                    <h5>3. Tiền thu khi vào</h5>
-                    <table class="nh-table mb-2">
-                        <tr><td>1 tháng tiền phòng <span class="small text-muted d-block">trả trước</span></td><td class="text-end fw-bold">@Fmt.Money(form.MonthlyRent)</td></tr>
-                        <tr><td>Tiền cọc</td><td class="text-end">@Fmt.Money(form.Deposit)</td></tr>
-                        <tr class="table-light"><td class="fw-bold">Khách phải nộp</td><td class="text-end fw-bold fs-5 text-primary">@Fmt.Vnd(total)</td></tr>
-                    </table>
-                    <div class="small text-muted mb-2">
-                        @if (stub.Days > 0)
+    }
+    else
+    {
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <div class="nh-card">
+                    <h5><i class="fas fa-clipboard-check"></i> Xem lại</h5>
+                    <table class="nh-table mb-0">
+                        <tr><td>Phòng</td><td class="text-end fw-bold">@room!.Code · @Fmt.Vnd(form.MonthlyRent)/tháng</td></tr>
+                        <tr><td>Ngày vào</td><td class="text-end">@Fmt.Date(form.MoveInDate)</td></tr>
+                        <tr><td>Người ở (@people.Count)</td><td class="text-end">@string.Join(", ", people.Select(p => p.FullName))</td></tr>
+                        @if (furDiff.Count > 0)
                         {
-                            <div>Tháng trả trước tính cho <strong>@Fmt.Date(stub.To) → @Fmt.Date(stub.To.AddMonths(1))</strong>.</div>
-                            <div>Kỳ chốt đầu <strong>@Fmt.Date(stub.To)</strong> thu: tiền phòng @Fmt.Date(stub.From) → @Fmt.Date(stub.To)
+                            <tr><td>Đồ đạc khác mặc định</td><td class="text-end small">@string.Join(", ", furDiff.Select(f => $"{f.Name} {f.Quantity}/{f.Default}"))</td></tr>
+                        }
+                    </table>
+                    <div class="d-flex gap-2 mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => Go(1)"><i class="fas fa-pen"></i> Sửa phòng</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => Go(2)"><i class="fas fa-pen"></i> Sửa khách</button>
+                    </div>
+                </div>
+
+                <div class="nh-card">
+                    <h5><i class="fas fa-calculator"></i> Kỳ thu tiếp theo</h5>
+                    <div class="small">
+                        @if (stub!.Days > 0)
+                        {
+                            <div class="mb-1">Tháng trả trước tính cho <strong>@Fmt.Date(stub.To) → @Fmt.Date(stub.To.AddMonths(1))</strong>.</div>
+                            <div class="mb-1">Kỳ chốt đầu <strong>@Fmt.Date(stub.To)</strong> thu: tiền phòng @Fmt.Date(stub.From) → @Fmt.Date(stub.To)
                                 = <strong>@stub.Days ngày × @Fmt.Money(form.MonthlyRent) ÷ 30 = @Fmt.Vnd(stub.Rent)</strong>
                                 + điện (số đã dùng × @Fmt.Money(settings.ElectricityPrice)đ) + nước (@Fmt.Money(settings.WaterPricePerPerson)đ/người, không chia ngày).</div>
                             <div>Từ kỳ <strong>@Fmt.Date(stub.To.AddMonths(1))</strong> thu đủ tháng @Fmt.Vnd(form.MonthlyRent) + điện + nước.</div>
@@ -76,6 +126,17 @@ else
                                 Từ kỳ <strong>@Fmt.Date(stub.From.AddMonths(1))</strong> thu đủ tháng @Fmt.Vnd(form.MonthlyRent) + điện + nước.</div>
                         }
                     </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="nh-card">
+                    <h5><i class="fas fa-hand-holding-dollar"></i> Tiền thu khi vào</h5>
+                    <table class="nh-table mb-2">
+                        <tr><td>1 tháng tiền phòng <span class="small text-muted d-block">trả trước · TK hộ kinh doanh</span></td><td class="text-end fw-bold">@Fmt.Money(form.MonthlyRent)</td></tr>
+                        <tr><td>Tiền cọc <span class="small text-muted d-block">TK cá nhân</span></td><td class="text-end">@Fmt.Money(form.Deposit)</td></tr>
+                        <tr class="table-light"><td class="fw-bold">Khách phải nộp</td><td class="text-end fw-bold fs-5 text-primary">@Fmt.Vnd(total)</td></tr>
+                    </table>
 
                     <div class="form-check form-switch fs-6 mb-2">
                         <input class="form-check-input" type="checkbox" role="switch" id="paidAll" checked="@paidAll" @onchange="e => TogglePaid((bool)e.Value!)" />
@@ -98,35 +159,44 @@ else
                             <div class="mt-2"><FileUpload Kind="Receipts" ButtonText="Chứng từ tiền phòng" @bind-Files="form.PaymentReceipts" Scanned="r => { if (r.Amount is decimal a) { form.FirstPaymentPaid = a; paidAll = false; } if (r.Date is DateTime d) form.PaymentDate = d; }" /></div>
                         </div>
                     </details>
-                    <button type="button" class="btn btn-success btn-lg w-100 mt-3 d-none d-lg-block" disabled="@Busy" @onclick="SaveAsync">
-                        <i class="fas @(Busy ? "fa-spinner fa-spin" : "fa-check")"></i> Nhận phòng
-                    </button>
                 </div>
-            }
-            else
-            {
-                <div class="nh-card text-muted"><i class="fas fa-hand-point-up"></i> Chọn phòng trước, tiền sẽ tự tính theo cấu hình.</div>
-            }
-        </div>
-    </div>
-    @if (room != null)
-    {
-        <div class="nh-action-bar d-lg-none">
-            <button type="button" class="btn btn-success btn-lg" disabled="@Busy" @onclick="SaveAsync">
-                <i class="fas @(Busy ? "fa-spinner fa-spin" : "fa-check")"></i> Nhận phòng @room.Code · @Fmt.Vnd(paidAll ? total : form.DepositPaid + form.FirstPaymentPaid)
-            </button>
+            </div>
         </div>
     }
+
+    <div class="nh-action-bar">
+        @if (step > 1)
+        {
+            <button type="button" class="btn btn-outline-secondary btn-lg flex-grow-0" @onclick="() => Go(step - 1)"><i class="fas fa-chevron-left"></i> Lại</button>
+        }
+        @if (step < 3)
+        {
+            <button type="button" class="btn btn-primary btn-lg" disabled="@(room == null)" @onclick="() => Go(step + 1)">
+                @(room == null ? "Chọn phòng để tiếp tục" : step == 1 ? "Tiếp: Khách thuê" : "Tiếp: Tiền & xác nhận") <i class="fas fa-chevron-right"></i>
+            </button>
+        }
+        else
+        {
+            <button type="button" class="btn btn-success btn-lg" disabled="@Busy" @onclick="SaveAsync">
+                <i class="fas @(Busy ? "fa-spinner fa-spin" : "fa-check")"></i> Nhận phòng @room!.Code · @Fmt.Vnd(paidAll ? total : form.DepositPaid + form.FirstPaymentPaid)
+            </button>
+        }
+    </div>
 }
 
 @code {
     [SupplyParameterFromQuery(Name = "phong")] public string? RoomCode { get; set; }
 
+    private class FurnitureEdit { public int ItemId; public string Name = ""; public int Quantity; public int Default; }
+
     private AppSetting? settings;
     private RoomCard? room;
+    private RoomDetails? details;
+    private List<FurnitureEdit> furniture = [];
     private CheckInForm form = new();
     private bool paidAll = true;
     private int maxPeople = 4;
+    private int step = 1;
 
     protected override async Task OnInitializedAsync()
     {
@@ -137,12 +207,33 @@ else
     private async Task OnPicked(RoomCard? r)
     {
         room = r;
-        if (r == null) { form.RoomId = 0; return; }
-        var full = (await Rooms.ListRoomsAsync()).First(x => x.Id == r.Id);
+        details = null;
+        furniture = [];
+        if (r == null) { form.RoomId = 0; step = 1; return; }
+        details = await Rooms.GetDetailsAsync(r.Code);
+        if (details == null) { room = null; return; }
         form.RoomId = r.Id;
-        form.MonthlyRent = full.Rent;
+        form.MonthlyRent = details.Room.Rent;
         form.Deposit = settings!.DefaultDeposit;
-        maxPeople = full.MaxOccupants;
+        maxPeople = details.Room.MaxOccupants;
+        furniture = details.Furniture.Select(f => new FurnitureEdit { ItemId = f.ItemId, Name = f.Name, Quantity = f.Quantity, Default = f.DefaultQuantity }).ToList();
+    }
+
+    private void Go(int s)
+    {
+        if (s >= 2 && room == null) { Toast.Warning("Chọn phòng trước."); step = 1; return; }
+        if (s == 3)
+        {
+            var people = form.Tenants.Where(t => !t.IsEmpty).ToList();
+            if (people.Count == 0 || people.Any(t => string.IsNullOrWhiteSpace(t.FullName) || string.IsNullOrWhiteSpace(t.IdentityCard)))
+            {
+                Toast.Warning("Nhập họ tên và số CCCD của người thuê trước.");
+                step = 2;
+                return;
+            }
+            if (people.Count > maxPeople) { Toast.Warning($"Phòng tối đa {maxPeople} người."); step = 2; return; }
+        }
+        step = s;
     }
 
     private void TogglePaid(bool on)
@@ -157,12 +248,21 @@ else
         form.FirstPaymentPaid = form.MonthlyRent;
     }
 
+    private bool RoomConfigChanged => details != null
+        && (maxPeople != details.Room.MaxOccupants || furniture.Any(f => f.Quantity != details.Furniture.First(x => x.ItemId == f.ItemId).Quantity));
+
     private async Task SaveAsync()
     {
         if (paidAll) FillAll();
         int leaseId = 0;
         var user = await GetUserNameAsync();
-        if (await RunAsync(async () => leaseId = await Leases.CheckInAsync(form, user), "Đã nhận phòng. In hợp đồng cho khách ký rồi tải bản scan lên."))
-            Nav.NavigateTo($"hop-dong/{leaseId}");
+        var ok = await RunAsync(async () =>
+        {
+            // Đồ đạc, số người sửa ngay lúc nhận phòng thì lưu vào cấu hình phòng trước (giá phòng CheckInAsync tự cập nhật).
+            if (RoomConfigChanged)
+                await Rooms.UpdateRoomAsync(room!.Id, form.MonthlyRent, maxPeople, details!.Room.Note, false, furniture.ToDictionary(f => f.ItemId, f => f.Quantity));
+            leaseId = await Leases.CheckInAsync(form, user);
+        }, "Đã nhận phòng. In hợp đồng cho khách ký rồi tải bản scan lên.");
+        if (ok) Nav.NavigateTo($"hop-dong/{leaseId}");
     }
 }

@@ -1,4 +1,4 @@
-@* Nhập danh sách người ở trong phòng: ảnh CCCD, quét CCCD bằng AI (Gemini/Claude), tự điền người cũ theo số CCCD. *@
+﻿@* Nhập danh sách người ở trong phòng: ảnh CCCD, quét CCCD bằng AI (Gemini/Claude), tự điền người cũ theo số CCCD. *@
 @inject LeaseService Leases
 @inject DocumentScanService Scanner
 @inject ToastService Toast
@@ -20,18 +20,33 @@
                 <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => Remove(index)"><i class="fas fa-trash"></i> Bỏ</button>
             }
         </div>
-        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
-            <FileUpload Kind="TenantPhotos" Files="Pending(t)" ButtonText="Ảnh CCCD (2 mặt)" Accept="image/*" Camera="true" Uploaded="f => t.Photos.Add(f.Path)" BatchUploaded="_ => OnPhotosUploadedAsync(t)" Removed="f => t.Photos.Remove(f.Path)" />
-            @foreach (var p in t.Photos.Where(p => !Pending(t).Any(x => x.Path == p)))
-            {
-                <div class="nh-thumb"><a href="@p" target="_blank"><img src="@p" alt="CCCD" /></a><button type="button" class="nh-thumb-remove" @onclick="() => t.Photos.Remove(p)">×</button></div>
-            }
-            @if (scanConfigured && t.Photos.Count > 0)
-            {
-                <button type="button" class="btn btn-sm btn-info" disabled="@(scanning == t)" @onclick="() => ScanAsync(t)">
-                    <i class="fas @(scanning == t ? "fa-spinner fa-spin" : "fa-magic")"></i> Quét CCCD
-                </button>
-            }
+        <div class="nh-tenant-photos mb-2">
+            <div class="nh-photo-group">
+                <div class="lbl">CCCD 2 mặt</div>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <FileUpload Kind="TenantPhotos" Files="Pending(t)" ButtonText="Chụp CCCD" PickButtonText="Chọn ảnh" Accept="image/*" Camera="true" Uploaded="f => t.Photos.Add(f.Path)" BatchUploaded="_ => OnPhotosUploadedAsync(t)" Removed="f => t.Photos.Remove(f.Path)" />
+                    @foreach (var p in t.Photos.Where(p => !Pending(t).Any(x => x.Path == p)))
+                    {
+                        <div class="nh-thumb"><a href="@p" target="_blank"><img src="@p" alt="CCCD" /></a><button type="button" class="nh-thumb-remove" @onclick="() => t.Photos.Remove(p)">×</button></div>
+                    }
+                    @if (scanConfigured && t.Photos.Count > 0)
+                    {
+                        <button type="button" class="btn btn-sm btn-info" disabled="@(scanning == t)" @onclick="() => ScanAsync(t)">
+                            <i class="fas @(scanning == t ? "fa-spinner fa-spin" : "fa-magic")"></i> Quét CCCD
+                        </button>
+                    }
+                </div>
+            </div>
+            <div class="nh-photo-group">
+                <div class="lbl">Chân dung</div>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    @if (t.Portrait != null && !PortraitPending(t).Any(x => x.Path == t.Portrait))
+                    {
+                        <div class="nh-thumb portrait"><a href="@t.Portrait" target="_blank"><img src="@t.Portrait" alt="Chân dung" /></a><button type="button" class="nh-thumb-remove" @onclick="() => t.Portrait = null">×</button></div>
+                    }
+                    <FileUpload Kind="TenantPhotos" Class="nh-portrait" Files="PortraitPending(t)" ButtonText="Chụp mặt" PickButtonText="Chọn ảnh" Accept="image/*" Camera="true" CameraFacing="user" Multiple="false" Uploaded="f => t.Portrait = f.Path" Removed="_ => t.Portrait = null" />
+                </div>
+            </div>
         </div>
         <div class="row g-2">
             <div class="col-md-5"><label class="form-label">Họ và tên <span class="text-danger">*</span></label><input class="form-control" maxlength="100" @bind="t.FullName" @bind:after="() => Changed.InvokeAsync()" /></div>
@@ -76,8 +91,10 @@
     private bool scanConfigured;
     private TenantInput? scanning;
     private readonly Dictionary<TenantInput, List<PendingFile>> pending = [];
+    private readonly Dictionary<TenantInput, List<PendingFile>> portraitPending = [];
 
     private List<PendingFile> Pending(TenantInput t) => pending.TryGetValue(t, out var l) ? l : pending[t] = [];
+    private List<PendingFile> PortraitPending(TenantInput t) => portraitPending.TryGetValue(t, out var l) ? l : portraitPending[t] = [];
 
     protected override async Task OnInitializedAsync() => scanConfigured = await Scanner.IsConfiguredAsync();
 
@@ -144,6 +161,7 @@
         t.Ethnicity = old.Ethnicity ?? t.Ethnicity;
         t.Nationality = old.Nationality ?? t.Nationality;
         t.VehiclePlate ??= old.VehiclePlate;
+        t.Portrait ??= old.Portrait;
         foreach (var p in old.Photos.Where(p => !t.Photos.Contains(p))) t.Photos.Add(p);
         Toast.Info($"Đã điền thông tin người thuê cũ: {old.FullName}.");
     }

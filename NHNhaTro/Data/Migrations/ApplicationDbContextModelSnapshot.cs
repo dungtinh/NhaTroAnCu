@@ -1083,6 +1083,9 @@ namespace NHNhaTro.Migrations
                     b.Property<string>("Photos")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Portrait")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("VehiclePlate")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");

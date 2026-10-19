@@ -18,8 +18,13 @@ Những chỗ yêu cầu chưa nói rõ được ghi là **Giả định**; đ�
 ## 2. Khách thuê
 
 ### Nhận phòng (khách vào)
-- Chọn phòng đang trống, nhập ngày vào, giá thuê (lấy từ phòng, sửa được), tiền cọc (mặc định 1.000.000đ theo Cấu hình),
-  danh sách người ở (quét CCCD, nhiều người/phòng). **Không nhập số điện.**
+- Màn hình 3 bước (cập nhật 19/10/2026): **Phòng** → **Khách** → **Tiền & xác nhận**, mỗi bước một màn hình ngắn, thanh nút
+  "Tiếp"/"Nhận phòng" dính đáy trên điện thoại.
+  - Bước Phòng: chọn phòng trống, ngày vào, giá thuê (lấy từ phòng, sửa được và cập nhật lại giá phòng), tiền cọc (mặc định
+    1.000.000đ theo Cấu hình), **kiểm và sửa số lượng đồ đạc thực tế** (lưu vào cấu hình phòng), tối đa số người, ghi chú.
+  - Bước Khách: nhiều người/phòng; mỗi người **chụp CCCD 2 mặt hoặc chọn ảnh có sẵn**, **ảnh chân dung** (chụp bằng camera trước
+    hoặc chọn ảnh), quét CCCD bằng AI để tự điền. **Không nhập số điện.**
+  - Bước Tiền: xem lại phòng/khách, bảng tiền thu khi vào, công thức kỳ chốt đầu, nộp đủ hay nộp thiếu, chứng từ.
 - **Tiền thu khi vào** gồm 2 khoản tách riêng:
   - **Tiền cọc** 1.000.000đ → ghi vào **tài khoản cá nhân**.
   - **Đủ 1 tháng tiền phòng** (trả trước) → ghi vào **tài khoản hộ kinh doanh**. Không thu nước, điện lúc vào.

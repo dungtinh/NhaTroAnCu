@@ -1,9 +1,9 @@
-@* Tải ảnh/chứng từ lên ngay khi chọn; danh sách file chờ gắn vào phiếu khi lưu. *@
+﻿@* Tải ảnh/chứng từ lên ngay khi chọn; danh sách file chờ gắn vào phiếu khi lưu. *@
 @inject AttachmentService Attachments
 @inject ToastService Toast
 @inject DocumentScanService Scanner
 
-<div class="nh-upload">
+<div class="nh-upload @Class">
     @if (!string.IsNullOrEmpty(Label))
     {
         <label class="form-label mb-1">@Label @if (Required) {<span class="text-danger">*</span>}</label>
@@ -26,8 +26,17 @@
         <label class="nh-upload-btn @(uploading ? "disabled" : "")">
             <i class="fas @(uploading || scanning ? "fa-spinner fa-spin" : (Camera ? "fa-camera" : "fa-paperclip"))"></i>
             <span>@(scanning ? "Đang quét chứng từ..." : uploading ? "Đang tải..." : ButtonText)</span>
-            <InputFile class="d-none" accept="@Accept" multiple="@Multiple" capture="@(Camera ? "environment" : null)" OnChange="OnSelected" disabled="@uploading" />
+            <InputFile class="d-none" accept="@Accept" multiple="@Multiple" capture="@(Camera ? CameraFacing : null)" OnChange="OnSelected" disabled="@uploading" />
         </label>
+        @if (Camera && !string.IsNullOrEmpty(PickButtonText))
+        {
+            @* Nút thứ hai không ép mở máy ảnh: chọn ảnh có sẵn trong máy / thư viện *@
+            <label class="nh-upload-btn alt @(uploading ? "disabled" : "")">
+                <i class="fas fa-images"></i>
+                <span>@PickButtonText</span>
+                <InputFile class="d-none" accept="@Accept" multiple="@Multiple" OnChange="OnSelected" disabled="@uploading" />
+            </label>
+        }
     </div>
 </div>
 
@@ -39,7 +48,13 @@
     [Parameter] public string ButtonText { get; set; } = "Chọn ảnh/chứng từ";
     [Parameter] public string Accept { get; set; } = "image/*,.pdf";
     [Parameter] public bool Multiple { get; set; } = true;
+    /// <summary>Nút chính mở thẳng máy ảnh (capture).</summary>
     [Parameter] public bool Camera { get; set; }
+    /// <summary>"environment" = camera sau (giấy tờ), "user" = camera trước (chân dung).</summary>
+    [Parameter] public string CameraFacing { get; set; } = "environment";
+    /// <summary>Có đặt (và Camera=true) thì thêm nút chọn ảnh có sẵn, không ép mở máy ảnh.</summary>
+    [Parameter] public string? PickButtonText { get; set; }
+    [Parameter] public string? Class { get; set; }
     [Parameter] public bool Required { get; set; }
     [Parameter] public bool IsPublic { get; set; }
     [Parameter] public EventCallback<PendingFile> Uploaded { get; set; }

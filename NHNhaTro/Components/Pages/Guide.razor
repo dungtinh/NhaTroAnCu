@@ -25,9 +25,9 @@
 
     <h5 id="nhan"><span class="badge bg-success">1</span> Nhận phòng (khách mới vào)</h5>
     <ol>
-        <li>Bấm <strong>Nhận phòng</strong>, chọn phòng trống. Ngày vào mặc định hôm nay. Không cần ghi số điện: công tơ do nhà trọ quản lý tập trung.</li>
-        <li>Chụp <strong>2 mặt căn cước</strong> của khách. Nếu đã bật quét bằng AI, tên, số căn cước, ngày sinh, địa chỉ tự điền. Không thì gõ họ tên và số căn cước. Thêm người ở nếu phòng có nhiều người.</li>
-        <li>Tiền thu khi vào = <strong>đủ 1 tháng tiền phòng</strong> + <strong>tiền cọc</strong> (mặc định @Fmt.Money(s?.DefaultDeposit ?? 0)đ). Khách nộp đủ thì để nguyên và bấm <strong>Nhận phòng</strong>. Khách nộp thiếu thì gạt công tắc "chưa nộp đủ" và ghi số đã thu.</li>
+        <li><strong>Bước 1 Phòng:</strong> bấm <strong>Nhận phòng</strong>, chọn phòng trống. Ngày vào mặc định hôm nay. Sửa ngay giá phòng, tiền cọc, số lượng đồ đạc thực tế (bấm +/−) nếu khác cấu hình. Không cần ghi số điện: công tơ do nhà trọ quản lý tập trung.</li>
+        <li><strong>Bước 2 Khách:</strong> <strong>Chụp CCCD</strong> 2 mặt hoặc <strong>Chọn ảnh</strong> có sẵn trong máy; chụp hoặc chọn <strong>ảnh chân dung</strong>. Nếu đã bật quét bằng AI, tên, số căn cước, ngày sinh, địa chỉ tự điền. Không thì gõ họ tên và số căn cước. Thêm người ở nếu phòng có nhiều người.</li>
+        <li><strong>Bước 3 Tiền:</strong> tiền thu khi vào = <strong>đủ 1 tháng tiền phòng</strong> + <strong>tiền cọc</strong> (mặc định @Fmt.Money(s?.DefaultDeposit ?? 0)đ). Khách nộp đủ thì để nguyên và bấm <strong>Nhận phòng</strong>. Khách nộp thiếu thì gạt công tắc "chưa nộp đủ" và ghi số đã thu.</li>
         <li>Sau đó bấm <strong>In hợp đồng (Word)</strong>, cho khách ký, chụp lại và tải lên ở ô "Hợp đồng đã ký".</li>
     </ol>
     <p class="small text-muted">Tiền cọc vào tài khoản cá nhân, tiền phòng vào tài khoản hộ kinh doanh. Khách đang ở phòng khác sẽ bị chặn, phải trả phòng cũ trước.</p>
