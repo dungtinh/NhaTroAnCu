@@ -93,7 +93,7 @@ using (var scope = app.Services.CreateScope())
 // Lệnh quản trị chạy một lần rồi thoát (không mở web):
 //   NHNhaTro.exe --seed-demo   nạp dữ liệu nghiệm thu
 //   NHNhaTro.exe --clear-data  xóa toàn bộ dữ liệu nghiệp vụ, giữ cấu hình và người dùng
-//   NHNhaTro.exe --seed-billing-test  thêm 1 khách thử (vào 2 tháng trước) có phiếu kỳ chốt đầu và kỳ 2 để đối chiếu tiền
+//   NHNhaTro.exe --seed-billing-test  thêm 2 khách thử (vào ngày 5 và ngày 20 của 2 tháng trước) có phiếu kỳ chốt đầu và kỳ 2 để đối chiếu tiền
 if (args.Contains("--seed-demo") || args.Contains("--clear-data") || args.Contains("--seed-billing-test"))
 {
     Console.OutputEncoding = System.Text.Encoding.UTF8;
