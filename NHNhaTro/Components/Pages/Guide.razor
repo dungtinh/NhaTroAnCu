@@ -71,7 +71,7 @@
             Vào đúng ngày @billingDay: thu như bình thường, không thêm bớt (nộp 1 tháng + cọc khi vào, từ ngày @billingDay tháng sau thu đủ tháng + điện + nước).</li>
         <li><strong>Điện:</strong> @Fmt.Money(s?.ElectricityPrice ?? 0)đ mỗi số. <strong>Nước:</strong> @Fmt.Money(s?.WaterPricePerPerson ?? 0)đ mỗi người mỗi tháng. Đổi ở Cấu hình, không cần ghi ở đâu khác.</li>
         <li><strong>Cọc:</strong> @Fmt.Money(s?.DefaultDeposit ?? 0)đ cho mọi khách (đổi ở Cấu hình), giữ ở tài khoản cá nhân, trả lại khi trả phòng sau khi trừ điện, phạt, nợ.</li>
-        <li><strong>Hai tài khoản:</strong> tiền phòng, điện, nước vào <em>hộ kinh doanh</em>; cọc, sửa chữa, mua sắm ở <em>cá nhân</em>. Số dư xem ở Thông tin → Thu chi.</li>
+        <li><strong>Hai tài khoản:</strong> tiền phòng, điện, nước vào <em>hộ kinh doanh</em>; cọc, tiền trả cọc và thu thêm khi trả phòng, sửa chữa, mua sắm ở <em>cá nhân</em>. Số dư xem ở Thông tin → Thu chi.</li>
     </ul>
 
     <h5 id="khac">Việc khác (trong Thông tin)</h5>

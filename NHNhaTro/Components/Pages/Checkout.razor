@@ -173,7 +173,7 @@ else
                     <MoneyInput Value="form.DepositRefund" ValueChanged="v => { form.DepositRefund = v; amountsTouched = true; }" />
                     <div class="my-2"><FileUpload Kind="Receipts" ButtonText="Chứng từ trả cọc" @bind-Files="form.RefundReceipts" Scanned="r => { if (r.Amount is decimal a) form.DepositRefund = a; }" /></div>
 
-                    <label class="form-label">Khách nộp thêm (vào TK hộ kinh doanh)</label>
+                    <label class="form-label">Khách nộp thêm (vào TK cá nhân)</label>
                     <MoneyInput Value="form.Collected" ValueChanged="v => { form.Collected = v; amountsTouched = true; }" />
                     @if (amountsTouched)
                     {
@@ -187,11 +187,11 @@ else
                     <div class="small text-muted">
                         @if (preview.DepositRefundable)
                         {
-                            <text>Phần cọc giữ lại (@Fmt.Money(Math.Max(0, preview.Deposit - form.DepositRefund))đ) được chuyển từ TK cá nhân sang TK hộ kinh doanh để trừ các khoản trên; dư ra thì ghi là doanh thu.</text>
+                            <text>Mọi khoản khi trả phòng ghi ở TK cá nhân. Phần cọc giữ lại (@Fmt.Money(Math.Max(0, preview.Deposit - form.DepositRefund))đ) dùng để trừ các khoản trên; dư ra thì ghi là doanh thu.</text>
                         }
                         else
                         {
-                            <text>Cọc giữ lại (@Fmt.Money(Math.Max(0, preview.Deposit - form.DepositRefund))đ) ghi là doanh thu hộ kinh doanh, không trừ vào các khoản trên; khách nộp riêng @Fmt.Vnd(Math.Max(0, -preview.Balance)).</text>
+                            <text>Mọi khoản khi trả phòng ghi ở TK cá nhân. Cọc giữ lại (@Fmt.Money(Math.Max(0, preview.Deposit - form.DepositRefund))đ) ghi là doanh thu, không trừ vào các khoản trên; khách nộp riêng @Fmt.Vnd(Math.Max(0, -preview.Balance)).</text>
                         }
                     </div>
                     @if (Mismatch != 0)

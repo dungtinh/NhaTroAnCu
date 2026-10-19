@@ -1,4 +1,4 @@
-@* Ô nhập tiền hiển thị dạng 1.234.567 (thay AutoNumeric của bản cũ). *@
+﻿@* Ô nhập tiền hiển thị dạng 1.234.567, kể cả lúc đang gõ (nh.js chèn dấu chấm hàng nghìn ngay khi gõ). *@
 <input type="text" inputmode="numeric" autocomplete="off" class="@CssClass" id="@Id" placeholder="@Placeholder" readonly="@ReadOnly"
        value="@display" @onchange="OnChange" @onfocus="OnFocus" @onblur="OnBlur" @attributes="AdditionalAttributes" />
 
@@ -34,7 +34,7 @@
     private async Task OnChange(ChangeEventArgs e)
     {
         var v = Parse(e.Value?.ToString());
-        display = focused ? v.ToString("0") : Format(v);
+        display = Format(v);
         if (v != Value)
         {
             Value = v;
@@ -46,7 +46,7 @@
     {
         if (ReadOnly) return;
         focused = true;
-        display = Value == 0 ? "" : Value.ToString("0");
+        display = Value == 0 ? "" : Format(Value);
     }
 
     private void OnBlur()

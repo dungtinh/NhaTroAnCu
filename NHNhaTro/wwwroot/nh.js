@@ -119,3 +119,19 @@ document.addEventListener('keydown', function (e) {
         open(a.href, a.getAttribute('title') || (img && img.alt) || '', isPdf && !isImg);
     }, true);
 })();
+
+// Ô nhập tiền (input.money): chèn dấu chấm hàng nghìn ngay khi gõ (1.234.567), giữ vị trí con trỏ theo số chữ số đứng trước nó.
+document.addEventListener('input', function (e) {
+    var el = e.target;
+    if (!el.classList || !el.classList.contains('money') || el.readOnly) return;
+    var v = el.value, caret = el.selectionStart == null ? v.length : el.selectionStart;
+    var digitsBefore = v.slice(0, caret).replace(/\D/g, '').length;
+    var neg = /^\s*-/.test(v);
+    var digits = v.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+    var out = (neg ? '-' : '') + digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    if (out === v) return;
+    el.value = out;
+    var pos = neg ? 1 : 0, seen = 0;
+    while (pos < out.length && seen < digitsBefore) { if (/\d/.test(out[pos])) seen++; pos++; }
+    try { el.setSelectionRange(pos, pos); } catch (err) { }
+});

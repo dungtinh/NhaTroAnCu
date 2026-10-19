@@ -517,16 +517,19 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         var dues = preview.UnpaidList.Select(u => (u.Bill.Id, u.Due)).ToList();
         if (moveOut != null && moveOut.TotalAmount > 0) dues.Add((moveOut.Id, moveOut.TotalAmount));
 
-        // 1) Khấu trừ cọc: chuyển từ TK cá nhân sang TK hộ kinh doanh, ghi là tiền thu của từng phiếu.
-        //    Ở chưa đủ tháng tối thiểu thì cọc không hoàn trả và cũng không trừ vào các khoản: khách nộp riêng, cọc là doanh thu (1b).
-        decimal applied = preview.DepositRefundable ? Math.Min(preview.Deposit - form.DepositRefund, dues.Sum(d => d.Due)) : 0;
+        // Trả phòng: mọi khoản tiền (khấu trừ cọc, cọc không hoàn trả, khách nộp thêm, trả cọc) ghi ở TK cá nhân (yêu cầu 19/10/2026).
+        var acct = settings.PersonalAccountId;
         var room = lease.Room;
+
+        // 1) Khấu trừ cọc vào các khoản phải thu: trong TK cá nhân ghi "dùng cọc" (giảm cọc giữ hộ) và tiền thu của từng phiếu (doanh thu),
+        //    số dư tài khoản không đổi. Ở chưa đủ tháng tối thiểu thì cọc không trừ vào các khoản: khách nộp riêng, cọc là doanh thu (1b).
+        decimal applied = preview.DepositRefundable ? Math.Min(preview.Deposit - form.DepositRefund, dues.Sum(d => d.Due)) : 0;
         if (applied > 0)
         {
             var group = Guid.NewGuid();
             db.Transactions.Add(new MoneyTransaction
             {
-                AccountId = settings.PersonalAccountId, Date = date, Amount = -applied, Category = TxCategory.Transfer, TransferGroup = group,
+                AccountId = acct, Date = date, Amount = -applied, Category = TxCategory.DepositRefund, TransferGroup = group,
                 Description = $"Khấu trừ cọc phòng {room.Code} khi trả phòng", RoomId = room.Id, LeaseId = lease.Id, CreatedAt = DateTime.Now, CreatedBy = user
             });
             decimal left = applied;
@@ -535,7 +538,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
                 var part = Math.Min(left, dues[i].Due);
                 db.Transactions.Add(new MoneyTransaction
                 {
-                    AccountId = settings.BusinessAccountId, Date = date, Amount = part, Category = TxCategory.BillPayment, TransferGroup = group,
+                    AccountId = acct, Date = date, Amount = part, Category = TxCategory.BillPayment, TransferGroup = group,
                     Description = $"Khấu trừ cọc phòng {room.Code}", RoomId = room.Id, LeaseId = lease.Id, BillId = dues[i].Id, CreatedAt = DateTime.Now, CreatedBy = user
                 });
                 dues[i] = (dues[i].Id, dues[i].Due - part);
@@ -543,8 +546,8 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
             }
         }
 
-        // 1b) Phần cọc giữ lại ngoài khấu trừ (ở chưa đủ tháng tối thiểu nên không hoàn trả, hoặc chủ nhà quyết định giữ):
-        //     là doanh thu hộ kinh doanh, chuyển nội bộ từ TK cá nhân sang TK hộ kinh doanh.
+        // 1b) Phần cọc giữ lại ngoài khấu trừ (ở chưa đủ tháng tối thiểu nên không hoàn trả, hoặc chủ nhà quyết định giữ): là doanh thu,
+        //     ghi trong TK cá nhân: "dùng cọc" và thu khác, số dư không đổi.
         decimal forfeited = preview.Deposit - form.DepositRefund - applied;
         if (forfeited > 0)
         {
@@ -552,17 +555,17 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
             var why = preview.DepositRefundable ? "" : $" (ở {preview.StayDays} ngày, chưa đủ {preview.MinStayMonths} tháng)";
             db.Transactions.Add(new MoneyTransaction
             {
-                AccountId = settings.PersonalAccountId, Date = date, Amount = -forfeited, Category = TxCategory.Transfer, TransferGroup = group,
+                AccountId = acct, Date = date, Amount = -forfeited, Category = TxCategory.DepositRefund, TransferGroup = group,
                 Description = $"Cọc không hoàn trả phòng {room.Code}{why}", RoomId = room.Id, LeaseId = lease.Id, CreatedAt = DateTime.Now, CreatedBy = user
             });
             db.Transactions.Add(new MoneyTransaction
             {
-                AccountId = settings.BusinessAccountId, Date = date, Amount = forfeited, Category = TxCategory.OtherIncome, TransferGroup = group,
+                AccountId = acct, Date = date, Amount = forfeited, Category = TxCategory.OtherIncome, TransferGroup = group,
                 Description = $"Cọc không hoàn trả phòng {room.Code}{why}", RoomId = room.Id, LeaseId = lease.Id, CreatedAt = DateTime.Now, CreatedBy = user
             });
         }
 
-        // 2) Tiền khách nộp thêm (vào TK hộ kinh doanh)
+        // 2) Tiền khách nộp thêm (vào TK cá nhân)
         if (form.Collected > 0)
         {
             decimal left = form.Collected;
@@ -572,7 +575,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
                 var part = Math.Min(left, dues[i].Due);
                 db.Transactions.Add(new MoneyTransaction
                 {
-                    AccountId = settings.BusinessAccountId, Date = date, Amount = part, Category = TxCategory.BillPayment,
+                    AccountId = acct, Date = date, Amount = part, Category = TxCategory.BillPayment,
                     Description = $"Thu khi trả phòng {room.Code}", RoomId = room.Id, LeaseId = lease.Id, BillId = dues[i].Id, CreatedAt = DateTime.Now, CreatedBy = user
                 });
                 dues[i] = (dues[i].Id, dues[i].Due - part);
@@ -581,7 +584,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
             if (left > 0)
                 db.Transactions.Add(new MoneyTransaction
                 {
-                    AccountId = settings.BusinessAccountId, Date = date, Amount = left, Category = TxCategory.OtherIncome,
+                    AccountId = acct, Date = date, Amount = left, Category = TxCategory.OtherIncome,
                     Description = $"Thu thêm khi trả phòng {room.Code}", RoomId = room.Id, LeaseId = lease.Id, CreatedAt = DateTime.Now, CreatedBy = user
                 });
         }
