@@ -68,11 +68,24 @@
                 }
                 try
                 {
-                    await using var stream = file.OpenReadStream(FileStorage.MaxFileSize);
+                    // Ảnh chụp điện thoại thường 3-8MB: thu nhỏ ngay trên trình duyệt (tối đa 1600px, JPEG) trước khi tải lên
+                    // để tải nhanh và quét AI nhanh. Trình duyệt không đọc được định dạng (HEIC cũ...) thì giữ nguyên file gốc.
+                    var upload = file;
+                    var name = file.Name;
+                    if (file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) && file.Size > 300 * 1024)
+                    {
+                        try
+                        {
+                            upload = await file.RequestImageFileAsync("image/jpeg", 1600, 1600);
+                            name = Path.ChangeExtension(file.Name, ".jpg");
+                        }
+                        catch (Exception) { upload = file; name = file.Name; }
+                    }
+                    await using var stream = upload.OpenReadStream(FileStorage.MaxFileSize);
                     using var buffer = new MemoryStream();
                     await stream.CopyToAsync(buffer);
                     buffer.Position = 0;
-                    var saved = await Attachments.UploadAsync(buffer, file.Name, Kind, IsPublic);
+                    var saved = await Attachments.UploadAsync(buffer, name, Kind, IsPublic);
                     if (!Multiple) Files.Clear();
                     Files.Add(saved);
                     batch.Add(saved);

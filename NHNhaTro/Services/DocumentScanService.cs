@@ -142,28 +142,90 @@ public class DocumentScanService(IDbContextFactory<ApplicationDbContext> dbFacto
         return ParseJsonObject(text);
     }
 
+    /// <summary>Mô hình dùng thay khi mô hình đã chọn quá tải (503/429) liên tục.</summary>
+    private static readonly string[] GeminiFallbackModels = ["gemini-3.5-flash", "gemini-3.1-flash-lite"];
+    private static readonly TimeSpan[] RetryDelays = [TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2.5)];
+
+    /// <summary>Mô hình quá tải hoặc hết hạn mức, đã thử lại nhưng không được.</summary>
+    private sealed class ProviderBusyException(string message) : InvalidOperationException(message);
+
     private async Task<string> CallGeminiAsync(AppSetting s, string prompt, List<(string Mime, string Base64)> images, bool json = true)
     {
-        var parts = new JsonArray { new JsonObject { ["text"] = prompt } };
-        foreach (var (mime, data) in images)
-            parts.Add(new JsonObject { ["inline_data"] = new JsonObject { ["mime_type"] = mime, ["data"] = data } });
-        var body = new JsonObject
+        var primary = string.IsNullOrWhiteSpace(s.GeminiModel) ? ScanProvider.DefaultGeminiModel : s.GeminiModel.Trim();
+        var models = new List<string> { primary };
+        models.AddRange(GeminiFallbackModels.Where(m => !m.Equals(primary, StringComparison.OrdinalIgnoreCase)));
+        ProviderBusyException? busy = null;
+        foreach (var model in models)
         {
-            ["contents"] = new JsonArray { new JsonObject { ["role"] = "user", ["parts"] = parts } },
-            ["generationConfig"] = json ? new JsonObject { ["responseMimeType"] = "application/json", ["temperature"] = 0 } : new JsonObject { ["temperature"] = 0.3 }
-        };
-        var model = string.IsNullOrWhiteSpace(s.GeminiModel) ? ScanProvider.DefaultGeminiModel : s.GeminiModel.Trim();
-        using var req = new HttpRequestMessage(HttpMethod.Post, $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}:generateContent")
+            try { return await CallGeminiModelAsync(s.GeminiApiKey!.Trim(), model, prompt, images, json); }
+            catch (ProviderBusyException ex)
+            {
+                busy = ex;
+                logger.LogWarning("Gemini {Model} quá tải, chuyển sang mô hình dự phòng.", model);
+            }
+        }
+        throw busy!;
+    }
+
+    /// <summary>
+    /// Tắt bớt phần "suy nghĩ" của mô hình để trả lời nhanh (đọc giấy tờ không cần suy luận dài):
+    /// dòng 2.x dùng thinkingBudget, dòng 3.x trở lên dùng thinkingLevel.
+    /// </summary>
+    private static JsonObject ThinkingConfig(string model) =>
+        model.StartsWith("gemini-2", StringComparison.OrdinalIgnoreCase)
+            ? new JsonObject { ["thinkingBudget"] = 0 }
+            : new JsonObject { ["thinkingLevel"] = "low" };
+
+    private async Task<string> CallGeminiModelAsync(string apiKey, string model, string prompt, List<(string Mime, string Base64)> images, bool json)
+    {
+        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}:generateContent";
+        bool withThinking = true;
+        string Body()
         {
-            Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json")
-        };
-        req.Headers.Add("x-goog-api-key", s.GeminiApiKey!.Trim());
-        using var doc = await SendAsync(req, "Gemini");
-        var root = doc.RootElement;
-        if (root.TryGetProperty("candidates", out var c) && c.ValueKind == JsonValueKind.Array && c.GetArrayLength() > 0
-            && c[0].TryGetProperty("content", out var content) && content.TryGetProperty("parts", out var ps))
-            return string.Concat(ps.EnumerateArray().Select(p => p.TryGetProperty("text", out var t) ? t.GetString() : ""));
-        throw new InvalidOperationException("Gemini không trả về kết quả (ảnh có thể bị chặn hoặc không đọc được).");
+            var parts = new JsonArray { new JsonObject { ["text"] = prompt } };
+            foreach (var (mime, data) in images)
+                parts.Add(new JsonObject { ["inline_data"] = new JsonObject { ["mime_type"] = mime, ["data"] = data } });
+            var gen = json ? new JsonObject { ["responseMimeType"] = "application/json", ["temperature"] = 0 } : new JsonObject { ["temperature"] = 0.3 };
+            if (withThinking) gen["thinkingConfig"] = ThinkingConfig(model);
+            return new JsonObject { ["contents"] = new JsonArray { new JsonObject { ["role"] = "user", ["parts"] = parts } }, ["generationConfig"] = gen }.ToJsonString();
+        }
+        HttpRequestMessage Request()
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = new StringContent(Body(), Encoding.UTF8, "application/json") };
+            req.Headers.Add("x-goog-api-key", apiKey);
+            return req;
+        }
+
+        for (int attempt = 0; ; attempt++)
+        {
+            var (status, body) = await PostAsync(Request());
+            if (status is 200)
+            {
+                using var doc = JsonDocument.Parse(body);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("candidates", out var c) && c.ValueKind == JsonValueKind.Array && c.GetArrayLength() > 0
+                    && c[0].TryGetProperty("content", out var content) && content.TryGetProperty("parts", out var ps))
+                {
+                    var text = string.Concat(ps.EnumerateArray().Select(p => p.TryGetProperty("text", out var t) ? t.GetString() : ""));
+                    if (!string.IsNullOrWhiteSpace(text)) return text;
+                }
+                throw new InvalidOperationException("Gemini không trả về kết quả (ảnh có thể bị chặn hoặc không đọc được).");
+            }
+            // Mô hình không nhận cấu hình suy nghĩ: gửi lại không kèm.
+            if (status == 400 && withThinking && body.Contains("hinking", StringComparison.OrdinalIgnoreCase))
+            {
+                withThinking = false;
+                continue;
+            }
+            // Quá tải / hết hạn mức: chờ rồi thử lại vài lần, sau đó báo để đổi mô hình.
+            if (status is 429 or 500 or 503)
+            {
+                logger.LogWarning("Gemini {Model} trả về {Status} (lần {Attempt}).", model, status, attempt + 1);
+                if (attempt < RetryDelays.Length) { await Task.Delay(RetryDelays[attempt]); continue; }
+                throw new ProviderBusyException(status == 429 ? "Lỗi Gemini: vượt hạn mức miễn phí, thử lại sau ít phút." : "Lỗi Gemini: máy chủ Google đang quá tải, đã thử lại nhưng chưa được. Thử lại sau ít phút.");
+            }
+            ThrowFor("Gemini", status, body);
+        }
     }
 
     private async Task<string> CallClaudeAsync(AppSetting s, string prompt, List<(string Mime, string Base64)> images, bool json = true)
@@ -186,36 +248,42 @@ public class DocumentScanService(IDbContextFactory<ApplicationDbContext> dbFacto
         };
         req.Headers.Add("x-api-key", s.ClaudeApiKey!.Trim());
         req.Headers.Add("anthropic-version", "2023-06-01");
-        using var doc = await SendAsync(req, "Claude");
+        var (status, responseBody) = await PostAsync(req);
+        if (status != 200) ThrowFor("Claude", status, responseBody);
+        using var doc = JsonDocument.Parse(responseBody);
         if (doc.RootElement.TryGetProperty("content", out var blocks) && blocks.ValueKind == JsonValueKind.Array)
             return string.Concat(blocks.EnumerateArray().Where(b => b.TryGetProperty("type", out var t) && t.GetString() == "text")
                 .Select(b => b.GetProperty("text").GetString()));
         throw new InvalidOperationException("Claude không trả về kết quả.");
     }
 
-    private async Task<JsonDocument> SendAsync(HttpRequestMessage req, string name)
+    private async Task<(int Status, string Body)> PostAsync(HttpRequestMessage req)
     {
-        req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        var client = httpFactory.CreateClient("ai");
-        using var res = await client.SendAsync(req);
-        var body = await res.Content.ReadAsStringAsync();
-        if (!res.IsSuccessStatusCode)
+        using (req)
         {
-            logger.LogWarning("{Name} trả về {Status}: {Body}", name, (int)res.StatusCode, body.Length > 1000 ? body[..1000] : body);
-            string? detail = null;
-            try { detail = JsonNode.Parse(body)?["error"]?["message"]?.GetValue<string>(); } catch (Exception) { }
-            bool badKey = body.Contains("API_KEY_INVALID") || body.Contains("API key not valid") || body.Contains("invalid x-api-key");
-            var msg = badKey ? "API key sai" : (int)res.StatusCode switch
-            {
-                400 => "yêu cầu không hợp lệ" + (detail != null ? $" ({detail})" : ""),
-                401 or 403 => "API key sai hoặc không có quyền",
-                404 => "không tìm thấy mô hình",
-                429 => "vượt hạn mức miễn phí, thử lại sau ít phút",
-                _ => $"mã lỗi {(int)res.StatusCode}"
-            };
-            throw new InvalidOperationException($"Lỗi {name}: {msg}.");
+            req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            var client = httpFactory.CreateClient("ai");
+            using var res = await client.SendAsync(req);
+            return ((int)res.StatusCode, await res.Content.ReadAsStringAsync());
         }
-        return JsonDocument.Parse(body);
+    }
+
+    private void ThrowFor(string name, int status, string body)
+    {
+        logger.LogWarning("{Name} trả về {Status}: {Body}", name, status, body.Length > 1000 ? body[..1000] : body);
+        string? detail = null;
+        try { detail = JsonNode.Parse(body)?["error"]?["message"]?.GetValue<string>(); } catch (Exception) { }
+        bool badKey = body.Contains("API_KEY_INVALID") || body.Contains("API key not valid") || body.Contains("invalid x-api-key");
+        var msg = badKey ? "API key sai" : status switch
+        {
+            400 => "yêu cầu không hợp lệ" + (detail != null ? $" ({detail})" : ""),
+            401 or 403 => "API key sai hoặc không có quyền",
+            404 => "không tìm thấy mô hình" + (detail != null ? $" ({detail})" : ""),
+            429 => "vượt hạn mức miễn phí, thử lại sau ít phút",
+            503 => "máy chủ đang quá tải, thử lại sau ít phút",
+            _ => $"mã lỗi {status}"
+        };
+        throw new InvalidOperationException($"Lỗi {name}: {msg}.");
     }
 
     /// <summary>Lấy đối tượng JSON trong câu trả lời (bỏ khối ```json nếu có).</summary>

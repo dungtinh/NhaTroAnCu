@@ -85,6 +85,9 @@ Mẫu hiện tại ghi cứng giá thuê, tiền cọc, giá điện nước; �
 Key Gemini miễn phí lấy tại aistudio.google.com/apikey, key Claude tại console.anthropic.com. Key lưu trong database, không nằm trong mã nguồn.
 Khi đã bật, ảnh CCCD tự điền thông tin người ở; ảnh chứng từ (chuyển khoản, hóa đơn) tự điền số tiền, ngày và nội dung ở các ô thu tiền,
 thu cọc, trả cọc, sửa chữa, mua sắm, thu chi. Luôn kiểm tra lại số đã điền.
+Ảnh chụp từ điện thoại được thu nhỏ ngay trên trình duyệt (tối đa 1600px, JPEG) trước khi tải lên nên tải và quét nhanh.
+Gemini được gọi với mức "suy nghĩ" thấp để trả lời nhanh; khi mô hình đã chọn quá tải (503/429) phần mềm tự thử lại
+rồi chuyển sang `gemini-3.5-flash`, `gemini-3.1-flash-lite`.
 
 **Chat nội bộ**: `/chat`, tin đến tức thì qua kết nối SignalR sẵn có của Blazor Server (ChatHub phát trong tiến trình, một máy chủ).
 Gõ `@ai` đầu câu để hỏi trợ lý; trợ lý dùng Gemini/Claude đã cấu hình và được kèm tình hình phòng, nợ hiện tại.
