@@ -493,3 +493,6 @@ appsettings.*.local.json
 *.pubxml.user
 .env
 appsettings.Production.json
+
+# Dữ liệu thật (danh sách khách) không đưa lên GitHub
+temps/

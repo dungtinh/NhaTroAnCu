@@ -15,6 +15,13 @@ Những chỗ yêu cầu chưa nói rõ được ghi là **Giả định**; đ�
 - Cấu hình chung: giá điện **3.500đ/số**, nước **80.000đ/người/tháng** (cố định, không theo ngày), ngày thu tiền **mồng 10**,
   **tiền cọc mặc định 1.000.000đ** cho mọi khách (sửa được từng hợp đồng).
 
+### Đưa vào dùng thật (19/10/2026)
+- Lệnh `--import-tenants <file.xlsx>` xóa dữ liệu thử và nhập khách đang ở từ danh sách tiền phòng (cột PHÒNG, NGƯỜI THUÊ, TIỀN PHÒNG, GHI CHÚ).
+- Đồ đạc chỉ còn: Điều hòa, Bàn ghế, Đệm, Máy giặt, Chăn ga, Quạt, Tủ lạnh. **Dãy A** giá 2.000.000đ, mặc định Điều hòa, Bàn ghế, Đệm.
+  **Dãy B** giá 2.200.000đ, mặc định Điều hòa, Bàn ghế, Máy giặt, Đệm, Chăn ga, Quạt, Tủ lạnh. Giá từng phòng lấy theo danh sách.
+- Khách đang ở: ngày vào ghi là ngày chốt kỳ hiện tại (tháng này coi như đã thu ngoài phần mềm), cọc mặc định ghi đang giữ ở TK cá nhân,
+  số CCCD tạm `CHUA-CO-<phòng>-<thứ tự>` chờ bổ sung ở trang hợp đồng, đánh dấu **Khách cũ** (không áp dụng quy định ở đủ 3 tháng mới trả cọc).
+
 ## 2. Khách thuê
 
 ### Nhận phòng (khách vào)

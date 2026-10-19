@@ -454,7 +454,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         // Chỉ trả lại cọc khi khách ở đủ số tháng tối thiểu (Cấu hình, mặc định 3 tháng); ở ít hơn thì cọc không hoàn trả.
         int minMonths = Math.Max(0, settings.MinStayMonthsForDepositRefund);
         var eligibleFrom = lease.StartDate.AddMonths(minMonths);
-        bool refundable = minMonths == 0 || form.EndDate.Date >= eligibleFrom;
+        bool refundable = minMonths == 0 || lease.IsExistingTenant || form.EndDate.Date >= eligibleFrom;
         int stayDays = Math.Max(0, (form.EndDate.Date - lease.StartDate).Days);
 
         // Khách xin ở thêm vài ngày để thu xếp: tiền phòng theo ngày = giá tháng ÷ 30, làm tròn nghìn.

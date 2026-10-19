@@ -659,6 +659,9 @@ namespace NHNhaTro.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<bool>("IsExistingTenant")
+                        .HasColumnType("bit");
+
                     b.Property<decimal>("MonthlyRent")
                         .HasPrecision(18)
                         .HasColumnType("decimal(18,0)");

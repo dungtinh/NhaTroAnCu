@@ -18,7 +18,8 @@ else
     bool active = lease.Status == LeaseStatus.Active;
     <div class="nh-page-title">
         <h2><i class="fas fa-file-contract"></i> Hợp đồng phòng @lease.Room.Code
-            <span class="badge @(active ? "bg-success" : "bg-secondary") fs-6 align-middle">@(active ? "Đang thuê" : "Đã trả phòng")</span></h2>
+            <span class="badge @(active ? "bg-success" : "bg-secondary") fs-6 align-middle">@(active ? "Đang thuê" : "Đã trả phòng")</span>
+            @if (lease.IsExistingTenant) { <span class="badge bg-warning text-dark fs-6 align-middle" title="Khách đang ở trước khi dùng phần mềm, nhập ban đầu">Khách cũ</span> }</h2>
         <div class="d-flex flex-wrap gap-2">
             <a class="btn btn-outline-secondary" href="@($"phong/{lease.Room.Code}")"><i class="fas fa-door-closed"></i> Phòng @lease.Room.Code</a>
             <a class="btn btn-outline-primary" href="@($"files/contracts/{lease.Id}")" target="_blank"><i class="fas fa-print"></i> In hợp đồng (Word)</a>

@@ -93,14 +93,17 @@ using (var scope = app.Services.CreateScope())
 // Lệnh quản trị chạy một lần rồi thoát (không mở web):
 //   NHNhaTro.exe --seed-demo   nạp dữ liệu nghiệm thu
 //   NHNhaTro.exe --clear-data  xóa toàn bộ dữ liệu nghiệp vụ, giữ cấu hình và người dùng
+//   NHNhaTro.exe --import-tenants <file.xlsx>  xóa dữ liệu thử, đặt cấu hình dãy/đồ đạc thật, nhập khách đang ở từ Excel
 //   NHNhaTro.exe --seed-billing-test  thêm 2 khách thử (vào ngày 01 và ngày 20 tháng trước) có phiếu kỳ chốt đầu và kỳ sau để đối chiếu tiền
-if (args.Contains("--seed-demo") || args.Contains("--clear-data") || args.Contains("--seed-billing-test"))
+if (args.Contains("--seed-demo") || args.Contains("--clear-data") || args.Contains("--seed-billing-test") || args.Contains("--import-tenants"))
 {
     Console.OutputEncoding = System.Text.Encoding.UTF8;
     using var scope = app.Services.CreateScope();
     try
     {
-        var message = args.Contains("--clear-data") ? await DemoDataSeeder.ClearAsync(scope.ServiceProvider)
+        var importIdx = Array.IndexOf(args, "--import-tenants");
+        var message = importIdx >= 0 ? await TenantImporter.RunAsync(scope.ServiceProvider, importIdx + 1 < args.Length ? args[importIdx + 1] : "")
+            : args.Contains("--clear-data") ? await DemoDataSeeder.ClearAsync(scope.ServiceProvider)
             : args.Contains("--seed-billing-test") ? await DemoDataSeeder.SeedBillingTestAsync(scope.ServiceProvider)
             : await DemoDataSeeder.SeedAsync(scope.ServiceProvider);
         Console.WriteLine(message);

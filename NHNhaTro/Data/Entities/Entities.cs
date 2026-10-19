@@ -141,6 +141,8 @@ public class Lease
     public string Status { get; set; } = LeaseStatus.Active;
     public string? ContractScanPath { get; set; }
     public string? Note { get; set; }
+    /// <summary>Khách đang ở trước khi dùng phần mềm (nhập ban đầu): ngày vào thật không rõ nên không áp dụng quy định ở đủ số tháng mới trả cọc.</summary>
+    public bool IsExistingTenant { get; set; }
 
     // Trả phòng
     public decimal? CheckoutElectricity { get; set; }
