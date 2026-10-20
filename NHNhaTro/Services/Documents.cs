@@ -154,110 +154,82 @@ public class Documents(IDbContextFactory<ApplicationDbContext> dbFactory, IWebHo
 
     public string ContractTemplatePath => Path.Combine(env.ContentRootPath, "Templates", "HOPDONG.docx");
 
+    /// <summary>
+    /// Điền hợp đồng từ mẫu Templates/HOPDONG.docx. Chỉ điền phần của khách: số phòng, họ tên / CCCD / điện thoại
+    /// từng người ở, ngày ký và thời hạn thuê; giá thuê, phí, bên cho thuê... giữ nguyên như mẫu.
+    /// </summary>
     public async Task<(byte[] Bytes, string FileName)?> ContractDocxAsync(int leaseId)
     {
         if (!File.Exists(ContractTemplatePath)) throw new InvalidOperationException("Không tìm thấy file mẫu hợp đồng (Templates/HOPDONG.docx).");
         await using var db = await dbFactory.CreateDbContextAsync();
         var s = await db.Settings.AsNoTracking().FirstAsync();
-        var lease = await db.Leases.AsNoTracking().Include(l => l.Room).ThenInclude(r => r.Furniture).ThenInclude(f => f.FurnitureItem)
+        var lease = await db.Leases.AsNoTracking().Include(l => l.Room)
             .Include(l => l.Tenants).ThenInclude(t => t.Tenant).AsSplitQuery().FirstOrDefaultAsync(l => l.Id == leaseId);
         if (lease == null) return null;
 
         var tenants = lease.Tenants.Where(t => t.MoveOutDate == null || lease.Status == LeaseStatus.Ended)
             .OrderByDescending(t => t.IsRepresentative).ThenBy(t => t.MoveInDate).Select(t => t.Tenant).ToList();
-        var sb = new StringBuilder();
-        if (tenants.Count > 0)
-        {
-            var m = tenants[0];
-            sb.AppendLine($"Họ và tên: {m.FullName}");
-            sb.AppendLine($"CCCD/Hộ chiếu: {m.IdentityCard}" + (m.BirthDate.HasValue ? $"; Ngày sinh: {m.BirthDate:dd/MM/yyyy}" : ""));
-            sb.AppendLine($"Điện thoại: {m.Phone}");
-            sb.AppendLine($"Địa chỉ thường trú: {m.PermanentAddress}");
-            if (tenants.Count > 1)
-            {
-                sb.AppendLine("Cùng ở với:");
-                for (int i = 1; i < tenants.Count; i++) sb.AppendLine($"{i}. {tenants[i].FullName} - CCCD: {tenants[i].IdentityCard}");
-            }
-        }
-        var data = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["ngay"] = lease.StartDate.Day.ToString(), ["thang"] = lease.StartDate.Month.ToString(), ["nam"] = lease.StartDate.Year.ToString(),
-            ["sophong"] = lease.Room.Code, ["benthue"] = sb.ToString().TrimEnd(),
-            ["giathue"] = Fmt.Money(lease.MonthlyRent), ["giathue_text"] = VietnameseNumber.ToWords(lease.MonthlyRent),
-            ["tiencoc"] = Fmt.Money(lease.Deposit), ["tiencoc_text"] = VietnameseNumber.ToWords(lease.Deposit),
-            ["giadien"] = Fmt.Money(s.ElectricityPrice), ["gianuoc"] = Fmt.Money(s.WaterPricePerPerson),
-            ["ngaybatdau"] = lease.StartDate.ToString("dd/MM/yyyy"), ["sodiendau"] = "",
-            ["songuoi"] = tenants.Count.ToString(), ["ngaythu"] = s.BillingDay.ToString(),
-            ["dodac"] = string.Join(", ", lease.Room.Furniture.OrderBy(f => f.FurnitureItem.SortOrder).Select(f => $"{f.FurnitureItem.Name} ({f.Quantity})")),
-            ["chunha"] = s.Owner ?? "", ["diachi"] = s.Address ?? "", ["dienthoai"] = s.Phone ?? ""
-        };
+        var start = lease.StartDate.Date;
+        var termEnd = start.AddMonths(Math.Max(1, s.MinStayMonthsForDepositRefund)).AddDays(-1);
 
-        // Mẫu cũ ghi cứng một số con số: thay bằng số liệu của hợp đồng.
+        // Các đoạn chấm chấm trong mẫu -> số liệu của hợp đồng (chữ trong mẫu bị tách nhiều run nên tìm theo cả đoạn văn).
         var literals = new Dictionary<string, string>
         {
-            ["Kể từ ngày …/…/2025"] = $"Kể từ ngày {lease.StartDate:dd/MM/yyyy}",
-            ["đến hết ngày …/…/2025"] = "đến hết ngày …/…/……",
-            ["[…………………VNĐ/tháng ]"] = $"[{Fmt.Money(lease.MonthlyRent)} VNĐ/tháng ({VietnameseNumber.ToWords(lease.MonthlyRent)})]",
-            ["đến ngày mồng 10 tháng sau"] = $"đến ngày mồng {s.BillingDay} tháng sau",
-            ["Tiền điện:  3.500Đ/Kw sử dụng"] = $"Tiền điện: {Fmt.Money(s.ElectricityPrice)}Đ/kWh sử dụng",
-            ["Tiền nước: 15.000Đ/m3sử dụng"] = $"Tiền nước: {Fmt.Money(s.WaterPricePerPerson)}Đ/người/tháng",
-            ["[2.000.000Đ (hai triệu đồng)]"] = $"[{Fmt.Money(lease.Deposit)}Đ ({VietnameseNumber.ToWords(lease.Deposit)})]",
+            ["PHÒNG SỐ: …….."] = $"PHÒNG SỐ: {lease.Room.Code}",
+            ["Phòng số […………]"] = $"Phòng số [{lease.Room.Code}]",
+            ["ngày …. tháng …. năm 2026"] = $"ngày {start.Day:00} tháng {start.Month:00} năm {start.Year}",
+            ["Kể từ ngày …/…/2026 đến …/…/2026"] = $"Kể từ ngày {start:dd/MM/yyyy} đến {termEnd:dd/MM/yyyy}",
         };
 
         using var ms = new MemoryStream();
         await using (var fs = File.OpenRead(ContractTemplatePath)) await fs.CopyToAsync(ms);
         using (var doc = WordprocessingDocument.Open(ms, true))
         {
-            var main = doc.MainDocumentPart;
-            var parts = new List<OpenXmlPartRootElement?> { main?.Document };
-            if (main != null)
-            {
-                parts.AddRange(main.HeaderParts.Select(h => (OpenXmlPartRootElement)h.Header));
-                parts.AddRange(main.FooterParts.Select(f => (OpenXmlPartRootElement)f.Footer));
-            }
-            foreach (var root in parts.OfType<OpenXmlPartRootElement>())
-            {
-                MergeFields(root, data);
-                ReplaceText(root, literals);
-                root.Save();
-            }
+            var body = doc.MainDocumentPart?.Document.Body ?? throw new InvalidOperationException("File mẫu hợp đồng không hợp lệ.");
+            FillTenantLines(body, tenants);
+            ReplaceText(body, literals);
+            doc.MainDocumentPart!.Document.Save();
         }
         return (ms.ToArray(), $"HopDong_{lease.Room.Code}_{lease.StartDate:yyyyMMdd}.docx");
     }
 
-    private static void MergeFields(OpenXmlElement root, Dictionary<string, string> data)
+    /// <summary>
+    /// Mẫu có sẵn các dòng "Họ và tên: … /CCCD: […]/Đt[…]" dưới BÊN THUÊ. Mỗi người ở điền một dòng (thiếu dòng thì nhân bản dòng cuối);
+    /// dòng thừa giữ nguyên chấm chấm để viết tay. Thông tin chưa có (CCCD tạm CHUA-CO, không số điện thoại) cũng để chấm chấm.
+    /// </summary>
+    private static void FillTenantLines(Body body, List<Tenant> tenants)
     {
-        foreach (var simple in root.Descendants<SimpleField>().ToList())
+        var lines = body.Descendants<Paragraph>()
+            .Where(p => { var t = p.InnerText.TrimStart(); return t.StartsWith("Họ và tên:", StringComparison.Ordinal) && t.Contains("CCCD", StringComparison.Ordinal); })
+            .ToList();
+        if (lines.Count == 0) return;
+        while (lines.Count < tenants.Count)
         {
-            var name = FieldName(simple.Instruction?.Value);
-            if (name == null || !data.TryGetValue(name, out var value)) continue;
-            var props = simple.Descendants<RunProperties>().FirstOrDefault()?.CloneNode(true) as RunProperties;
-            simple.Parent?.ReplaceChild(BuildRun(value, props), simple);
+            var clone = (Paragraph)lines[^1].CloneNode(true);
+            // Word yêu cầu paraId/textId duy nhất trong tài liệu: bỏ ở bản sao để Word tự cấp lại.
+            foreach (var a in clone.GetAttributes().Where(a => a.LocalName is "paraId" or "textId").ToList()) clone.RemoveAttribute(a.LocalName, a.NamespaceUri);
+            lines[^1].InsertAfterSelf(clone);
+            lines.Add(clone);
         }
+        for (int i = 0; i < tenants.Count; i++)
+        {
+            var t = tenants[i];
+            var card = string.IsNullOrWhiteSpace(t.IdentityCard) || t.IdentityCard.StartsWith("CHUA-CO", StringComparison.OrdinalIgnoreCase) ? "………………………" : t.IdentityCard.Trim();
+            var phone = string.IsNullOrWhiteSpace(t.Phone) ? "………………." : t.Phone.Trim();
+            SetParagraphText(lines[i], $"Họ và tên: {t.FullName.Trim()} /CCCD: [{card}]/Đt[{phone}]");
+        }
+    }
 
-        static bool IsChar(Run r, FieldCharValues type) => r.GetFirstChild<FieldChar>()?.FieldCharType?.Value == type;
-        foreach (var paragraph in root.Descendants<Paragraph>().ToList())
-        {
-            int searchFrom = 0;
-            while (true)
-            {
-                var runs = paragraph.Elements<Run>().ToList();
-                if (searchFrom >= runs.Count) break;
-                int begin = runs.FindIndex(searchFrom, r => IsChar(r, FieldCharValues.Begin));
-                if (begin < 0) break;
-                int end = runs.FindIndex(begin, r => IsChar(r, FieldCharValues.End));
-                if (end < 0) break;
-                int sep = runs.FindIndex(begin, end - begin, r => IsChar(r, FieldCharValues.Separate));
-                var instr = string.Concat(runs.Skip(begin).Take((sep >= 0 ? sep : end) - begin).SelectMany(r => r.Elements<FieldCode>()).Select(fc => fc.Text));
-                var name = FieldName(instr);
-                if (name == null || !data.TryGetValue(name, out var value)) { searchFrom = end + 1; continue; }
-                var resultRun = sep >= 0 ? runs.Skip(sep + 1).Take(end - sep - 1).FirstOrDefault(r => r.GetFirstChild<Text>() != null) : null;
-                var props = (resultRun ?? runs[begin]).RunProperties?.CloneNode(true) as RunProperties;
-                runs[begin].InsertBeforeSelf(BuildRun(value, props));
-                for (int i = begin; i <= end; i++) runs[i].Remove();
-                searchFrom = begin + 1;
-            }
-        }
+    /// <summary>Thay toàn bộ chữ của đoạn văn, giữ định dạng của run đầu tiên.</summary>
+    private static void SetParagraphText(Paragraph p, string text)
+    {
+        var runs = p.Elements<Run>().ToList();
+        var props = runs.FirstOrDefault()?.RunProperties?.CloneNode(true) as RunProperties;
+        foreach (var r in runs) r.Remove();
+        var run = new Run();
+        if (props != null) run.Append(props);
+        run.Append(new Text(text) { Space = SpaceProcessingModeValues.Preserve });
+        p.Append(run);
     }
 
     /// <summary>Thay chữ trong từng đoạn văn, kể cả khi chữ bị tách qua nhiều run; giữ định dạng các phần khác của đoạn.</summary>
@@ -291,26 +263,6 @@ public class Documents(IDbContextFactory<ApplicationDbContext> dbFactory, IWebHo
                 }
             }
         }
-    }
-
-    private static string? FieldName(string? instruction)
-    {
-        if (string.IsNullOrWhiteSpace(instruction)) return null;
-        var parts = instruction.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length >= 2 && parts[0].Equals("MERGEFIELD", StringComparison.OrdinalIgnoreCase) ? parts[1].Trim('"') : null;
-    }
-
-    private static Run BuildRun(string value, RunProperties? props)
-    {
-        var run = new Run();
-        if (props != null) run.Append(props);
-        var lines = value.Replace("\r\n", "\n").Split('\n');
-        for (int i = 0; i < lines.Length; i++)
-        {
-            if (i > 0) run.Append(new Break());
-            run.Append(new Text(lines[i]) { Space = SpaceProcessingModeValues.Preserve });
-        }
-        return run;
     }
 
     // ============================ EXCEL ============================

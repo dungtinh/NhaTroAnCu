@@ -78,10 +78,12 @@ Sau khi clone, bật hook một lần:
 git config core.hooksPath .githooks
 ```
 
-**Mẫu hợp đồng**: `NHNhaTro/Templates/HOPDONG.docx`. Có thể chèn các trường MERGEFIELD:
-`ngay`, `thang`, `nam`, `sophong`, `benthue`, `giathue`, `giathue_text`, `tiencoc`, `tiencoc_text`, `giadien`, `gianuoc`,
-`ngaybatdau`, `songuoi`, `ngaythu`, `dodac`, `chunha`, `diachi`, `dienthoai` (`sodiendau` còn nhận nhưng để trống vì không còn quản lý số công tơ từng phòng).
-Mẫu hiện tại ghi cứng giá thuê, tiền cọc, giá điện nước; ứng dụng tự thay các đoạn đó bằng số của hợp đồng.
+**Mẫu hợp đồng**: `NHNhaTro/Templates/HOPDONG.docx` (mẫu của hộ kinh doanh, giữ nguyên nội dung).
+Khi tải *HĐ đã điền* ở trang hợp đồng, ứng dụng chỉ điền phần của khách: số phòng, mỗi người ở một dòng
+*Họ và tên / CCCD / Đt* (thiếu dòng thì thêm, CCCD tạm hoặc chưa có điện thoại thì để chấm chấm), ngày ký = ngày vào,
+thời hạn thuê = từ ngày vào đủ số tháng tối thiểu trong cấu hình. Giá thuê, phí, tiền cọc, bên cho thuê giữ nguyên như mẫu;
+đổi mẫu thì giữ các cụm chấm chấm `PHÒNG SỐ: ……..`, `Phòng số […………]`, `ngày …. tháng …. năm 2026`, `Kể từ ngày …/…/2026 đến …/…/2026`
+và các dòng `Họ và tên: … /CCCD: […]/Đt[…]` để ứng dụng tìm được chỗ điền.
 
 **Font PDF**: PDF dùng Times New Roman của Windows. Máy chủ không có font này thì đặt file `.ttf` vào thư mục `NHNhaTro/Fonts`.
 
