@@ -4,6 +4,7 @@
 @inherits NhPage
 @inject RoomService Rooms
 @inject SetupService Setup
+@inject AttachmentService Attachments
 
 <PageTitle>Phòng @Code</PageTitle>
 
@@ -76,6 +77,17 @@ else
                         {
                             <div class="small mt-2"><span class="chip chip-amber"><i class="fas fa-file-signature"></i> Chưa có bản scan hợp đồng</span> <a href="@($"hop-dong/{lease.Id}")">Tải lên</a></div>
                         }
+                    </div>
+                </div>
+
+                <div class="nh-sec t-violet">
+                    <div class="nh-sec-h">
+                        <span class="ic"><i class="fas fa-id-card"></i></span>
+                        <h5>Ảnh CCCD</h5>
+                    </div>
+                    <div class="nh-sec-b">
+                        <AttachmentList EntityType="@AttachmentOwner.Room" EntityId="d.Room.Id" Kind="@AttachmentKind.IdentityCard" CanDelete="true" Version="cardVersion" />
+                        <div class="mt-2"><FileUpload Kind="IdentityCards" Accept="image/*" Camera="true" ButtonText="Chụp CCCD" PickButtonText="Chọn ảnh" Files="cardPending" Uploaded="AddCardAsync" /></div>
                     </div>
                 </div>
 
@@ -225,6 +237,18 @@ else
     private List<FurnitureEdit> furniture = [];
     private Bill? payBill;
     private decimal payPaid;
+    private List<PendingFile> cardPending = [];
+    private int cardVersion;
+
+    private async Task AddCardAsync(PendingFile f)
+    {
+        var user = await GetUserNameAsync();
+        if (await RunAsync(() => Attachments.AddAsync(AttachmentOwner.Room, d!.Room.Id, [f with { Kind = AttachmentKind.IdentityCard }], user)))
+        {
+            cardPending.Clear();
+            cardVersion++;
+        }
+    }
 
     private class FurnitureEdit
     {

@@ -420,6 +420,8 @@ public static class AttachmentKind
     public const string PurchaseReceipt = "PurchaseReceipt";
     public const string Gallery = "Gallery";
     public const string RoomPhoto = "RoomPhoto";
+    /// <summary>Ảnh CCCD của những người ở trong phòng (gắn theo phòng).</summary>
+    public const string IdentityCard = "IdentityCard";
 }
 
 /// <summary>Ảnh/chứng từ gắn với một đối tượng (EntityType + EntityId).</summary>
