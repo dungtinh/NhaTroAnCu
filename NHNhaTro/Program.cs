@@ -96,14 +96,17 @@ using (var scope = app.Services.CreateScope())
 //   NHNhaTro.exe --clear-data  xóa toàn bộ dữ liệu nghiệp vụ, giữ cấu hình và người dùng
 //   NHNhaTro.exe --import-tenants <file.xlsx>  xóa dữ liệu thử, đặt cấu hình dãy/đồ đạc thật, nhập khách đang ở từ Excel
 //   NHNhaTro.exe --seed-billing-test  thêm 2 khách thử (vào ngày 01 và ngày 20 tháng trước) có phiếu kỳ chốt đầu và kỳ sau để đối chiếu tiền
-if (args.Contains("--seed-demo") || args.Contains("--clear-data") || args.Contains("--seed-billing-test") || args.Contains("--import-tenants"))
+//   NHNhaTro.exe --setup-horn [file scan...]  nhập hợp đồng công ty Horn (HĐ gốc + phụ lục 03.2026, B3.1–B3.5), chạy một lần
+if (args.Contains("--seed-demo") || args.Contains("--clear-data") || args.Contains("--seed-billing-test") || args.Contains("--import-tenants") || args.Contains("--setup-horn"))
 {
     Console.OutputEncoding = System.Text.Encoding.UTF8;
     using var scope = app.Services.CreateScope();
     try
     {
         var importIdx = Array.IndexOf(args, "--import-tenants");
-        var message = importIdx >= 0 ? await TenantImporter.RunAsync(scope.ServiceProvider, importIdx + 1 < args.Length ? args[importIdx + 1] : "")
+        var hornIdx = Array.IndexOf(args, "--setup-horn");
+        var message = hornIdx >= 0 ? await HornSetup.RunAsync(scope.ServiceProvider, args.Skip(hornIdx + 1).TakeWhile(a => !a.StartsWith("--")))
+            : importIdx >= 0 ? await TenantImporter.RunAsync(scope.ServiceProvider, importIdx + 1 < args.Length ? args[importIdx + 1] : "")
             : args.Contains("--clear-data") ? await DemoDataSeeder.ClearAsync(scope.ServiceProvider)
             : args.Contains("--seed-billing-test") ? await DemoDataSeeder.SeedBillingTestAsync(scope.ServiceProvider)
             : await DemoDataSeeder.SeedAsync(scope.ServiceProvider);
