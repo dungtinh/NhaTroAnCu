@@ -22,6 +22,9 @@ namespace NHNhaTro.Data
         public DbSet<Repair> Repairs => Set<Repair>();
         public DbSet<Purchase> Purchases => Set<Purchase>();
         public DbSet<UtilityBill> UtilityBills => Set<UtilityBill>();
+        public DbSet<CompanyContract> CompanyContracts => Set<CompanyContract>();
+        public DbSet<ContractTerm> ContractTerms => Set<ContractTerm>();
+        public DbSet<ContractPeriod> ContractPeriods => Set<ContractPeriod>();
         public DbSet<Attachment> Attachments => Set<Attachment>();
         public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
         public DbSet<ChatRead> ChatReads => Set<ChatRead>();
@@ -95,6 +98,7 @@ namespace NHNhaTro.Data
                 e.Property(x => x.FurnitureWarnings).HasMaxLength(1000);
                 e.Property(x => x.CreatedBy).HasMaxLength(256);
                 e.HasOne(x => x.Room).WithMany(x => x.Leases).HasForeignKey(x => x.RoomId);
+                e.HasOne(x => x.CompanyContract).WithMany(x => x.Leases).HasForeignKey(x => x.CompanyContractId);
                 e.HasIndex(x => new { x.RoomId, x.Status });
             });
 
@@ -134,6 +138,7 @@ namespace NHNhaTro.Data
                 e.Property(x => x.Note).HasMaxLength(500);
                 e.Property(x => x.CreatedBy).HasMaxLength(256);
                 e.HasOne(x => x.Lease).WithMany(x => x.Bills).HasForeignKey(x => x.LeaseId);
+                e.HasOne(x => x.ContractPeriod).WithMany().HasForeignKey(x => x.ContractPeriodId);
                 e.HasIndex(x => new { x.LeaseId, x.Year, x.Month, x.Kind });
             });
 
@@ -170,6 +175,41 @@ namespace NHNhaTro.Data
                 e.Property(x => x.CreatedBy).HasMaxLength(256);
                 e.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId);
                 e.HasIndex(x => new { x.Year, x.Month }).IsUnique();
+            });
+
+            builder.Entity<CompanyContract>(e =>
+            {
+                e.Property(x => x.CompanyName).HasMaxLength(200).IsRequired();
+                e.Property(x => x.ShortName).HasMaxLength(30).IsRequired();
+                e.Property(x => x.TaxCode).HasMaxLength(30);
+                e.Property(x => x.Address).HasMaxLength(500);
+                e.Property(x => x.Representative).HasMaxLength(100);
+                e.Property(x => x.RepresentativeTitle).HasMaxLength(100);
+                e.Property(x => x.Phone).HasMaxLength(30);
+                e.Property(x => x.BankAccount).HasMaxLength(200);
+                e.Property(x => x.ContractNo).HasMaxLength(50);
+                e.Property(x => x.SignedDate).HasColumnType("date");
+                e.Property(x => x.Note).HasMaxLength(2000);
+                e.Property(x => x.CreatedBy).HasMaxLength(256);
+            });
+            builder.Entity<ContractTerm>(e =>
+            {
+                e.Property(x => x.DocumentNo).HasMaxLength(100).IsRequired();
+                e.Property(x => x.SignedDate).HasColumnType("date");
+                e.Property(x => x.FromDate).HasColumnType("date");
+                e.Property(x => x.ToDate).HasColumnType("date");
+                e.Property(x => x.RoomCodes).HasMaxLength(500);
+                e.Property(x => x.Note).HasMaxLength(1000);
+                e.HasOne(x => x.CompanyContract).WithMany(x => x.Terms).HasForeignKey(x => x.CompanyContractId);
+            });
+            builder.Entity<ContractPeriod>(e =>
+            {
+                e.Property(x => x.From).HasColumnType("date");
+                e.Property(x => x.To).HasColumnType("date");
+                e.Property(x => x.PayFrom).HasColumnType("date");
+                e.Property(x => x.PayTo).HasColumnType("date");
+                e.Property(x => x.Note).HasMaxLength(500);
+                e.HasOne(x => x.Term).WithMany(x => x.Periods).HasForeignKey(x => x.ContractTermId);
             });
 
             builder.Entity<Repair>(e =>
@@ -215,7 +255,7 @@ namespace NHNhaTro.Data
             });
 
             // Không xóa dây chuyền (trừ các bảng con thuần túy): mọi xóa do nghiệp vụ xử lý có kiểm soát.
-            Type[] cascadeChildren = [typeof(BlockFurniture), typeof(RoomFurniture), typeof(LeaseTenant), typeof(LeasePenalty)];
+            Type[] cascadeChildren = [typeof(BlockFurniture), typeof(RoomFurniture), typeof(LeaseTenant), typeof(LeasePenalty), typeof(ContractPeriod)];
             foreach (var fk in builder.Model.GetEntityTypes()
                          .Where(t => t.ClrType.Namespace == typeof(Room).Namespace && !cascadeChildren.Contains(t.ClrType))
                          .SelectMany(t => t.GetForeignKeys()))

@@ -86,6 +86,20 @@ Những chỗ yêu cầu chưa nói rõ được ghi là **Giả định**; đ�
   nhưng báo cáo vẫn tính đủ doanh thu.
 - Chốt: hợp đồng kết thúc, phòng chuyển **trống**.
 
+## 2b. Hợp đồng công ty (22/10/2026)
+
+Chi tiết và lý do thiết kế: `docs/KHACH-CONG-TY.md`. Tóm tắt quy tắc:
+- Một **hợp đồng công ty** (VD Công ty TNHH Horn) bao nhiều lượt thuê phòng; mỗi phòng vẫn là một hợp đồng phòng riêng gắn vào hợp đồng công ty.
+- Hợp đồng có các **thời hạn** (hợp đồng gốc, phụ lục): ngày, giá/phòng, cọc/phòng, danh sách phòng. Mỗi thời hạn chia thành **kỳ N tháng**
+  (Horn 3 tháng) có cửa sổ nộp tiền (mặc định 15 ngày đầu kỳ, sửa từng kỳ). Kỳ đã qua hạn nộp lúc nhập ghi là **đã thu ngoài phần mềm**.
+- Từ **ngày đầu kỳ** phần mềm tự lập **phiếu tiền phòng kỳ** cho mỗi phòng đang gắn: tháng tròn × giá + ngày lẻ × giá ÷ 30 (phòng vào giữa kỳ tính từ ngày vào).
+  Thu gộp một lần chuyển khoản: chia lần lượt vào phiếu từng phòng theo thứ tự phòng, mỗi phiếu một dòng thu cùng chứng từ, mặc định TK hộ kinh doanh.
+- **Phiếu tháng** (mồng 10) của phòng công ty: tiền phòng 0, điện = số × giá điện, **nước cố định/phòng** (Horn 100.000đ), không có kỳ chốt đầu lẻ.
+- **Nhận phòng** chọn "Hợp đồng công ty": giá, cọc, tối đa số người theo hợp đồng; không thu tháng trả trước; người chưa có giấy tờ ghi tạm
+  "Nhân viên Horn (chưa có tên)".
+- **Trả phòng**: không áp dụng quy định ở đủ 3 tháng; cọc hoàn sau khi trừ các khoản; tiền phòng kỳ đã nộp không hoàn; phạt giảm phòng năm đầu nhập ở mục phạt.
+- Nhắc ở trang chính: kỳ còn nợ (quá hạn nộp thì đỏ) và kỳ sắp đến trong 15 ngày.
+
 ## 3. Sửa chữa
 - Chọn **phòng** hoặc **khu vực chung** (ghi rõ vị trí), nội dung sửa, người/thợ thực hiện, số tiền.
 - **Bắt buộc** có ảnh (trước và/hoặc sau khi sửa) và **chứng từ chuyển khoản**.

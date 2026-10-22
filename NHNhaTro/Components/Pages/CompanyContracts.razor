@@ -1,0 +1,84 @@
+@page "/hop-dong-cong-ty"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject CompanyService Companies
+
+<PageTitle>Hợp đồng công ty</PageTitle>
+
+<div class="nh-page-title">
+    <h2><i class="fas fa-building"></i> Hợp đồng công ty</h2>
+    @if (isAdmin)
+    {
+        <button type="button" class="btn btn-primary" @onclick="() => adding = !adding"><i class="fas @(adding ? "fa-times" : "fa-plus")"></i> @(adding ? "Đóng" : "Thêm hợp đồng")</button>
+    }
+</div>
+
+<div class="small text-muted mb-3">
+    Công ty thuê nhiều phòng cho nhân viên ở: tiền phòng thu theo kỳ (VD 3 tháng) theo hợp đồng và phụ lục, phiếu tháng chỉ còn điện và nước cố định theo phòng.
+    Người ở đổi thì sửa ở trang hợp đồng từng phòng.
+</div>
+
+@if (adding)
+{
+    <div class="nh-card">
+        <h5><i class="fas fa-plus"></i> Hợp đồng công ty mới</h5>
+        <div class="row g-2">
+            <div class="col-md-6"><label class="form-label">Tên công ty</label><input class="form-control" maxlength="200" placeholder="Công ty TNHH Horn (Việt Nam)" @bind="form.CompanyName" /></div>
+            <div class="col-6 col-md-3"><label class="form-label">Tên ngắn</label><input class="form-control" maxlength="30" placeholder="Horn" @bind="form.ShortName" /></div>
+            <div class="col-6 col-md-3"><label class="form-label">Số hợp đồng</label><input class="form-control" maxlength="50" placeholder="01/HĐTN-Horn" @bind="form.ContractNo" /></div>
+            <div class="col-6 col-md-3"><label class="form-label">Ngày ký</label><input type="date" class="form-control" @bind="form.SignedDate" /></div>
+            <div class="col-6 col-md-3"><label class="form-label">Số tháng mỗi kỳ tiền phòng</label><input type="number" min="1" max="12" class="form-control" @bind="form.RentMonthsPerPeriod" /></div>
+            <div class="col-6 col-md-3"><label class="form-label">Nước/phòng/tháng</label><MoneyInput @bind-Value="form.WaterPerRoom" /></div>
+            <div class="col-6 col-md-3"><label class="form-label">Tối đa người/phòng</label><input type="number" min="1" max="20" class="form-control" @bind="form.MaxOccupantsPerRoom" /></div>
+        </div>
+        <div class="small text-muted mt-2">Lưu xong thì thêm thời hạn (hợp đồng gốc, phụ lục), gắn các phòng và tải bản scan ở trang chi tiết.</div>
+        <button type="button" class="btn btn-primary mt-2" disabled="@Busy" @onclick="CreateAsync"><i class="fas fa-save"></i> Lưu hợp đồng</button>
+    </div>
+}
+
+@if (list == null)
+{
+    <div class="nh-skeleton nh-card"></div>
+}
+else if (list.Count == 0)
+{
+    <div class="nh-card"><div class="nh-empty-hint"><i class="fas fa-building"></i>Chưa có hợp đồng công ty nào.</div></div>
+}
+else
+{
+    <div class="nh-card p-0">
+        @foreach (var c in list)
+        {
+            <a class="nh-list-row" href="@($"hop-dong-cong-ty/{c.Id}")">
+                <div class="flex-grow-1 min-w-0">
+                    <div class="fw-bold">@c.ShortName <span class="fw-normal text-muted">· @c.CompanyName</span>
+                        @if (!c.IsActive) { <span class="chip chip-slate">Đã kết thúc</span> }</div>
+                    <div class="small text-muted">@c.RoomCount phòng đang ở@(c.CurrentTerm != null ? " · " + c.CurrentTerm : " · chưa có thời hạn")</div>
+                </div>
+                @if (c.Due > 0) { <span class="chip chip-red">Còn nợ @Fmt.Money(c.Due)</span> }
+                <i class="fas fa-chevron-right text-muted"></i>
+            </a>
+        }
+    </div>
+}
+
+@code {
+    private List<CompanySummary>? list;
+    private bool isAdmin, adding;
+    private CompanyContract form = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isAdmin = await IsAdminAsync();
+        list = await Companies.ListAsync();
+    }
+
+    private async Task CreateAsync()
+    {
+        int id = 0;
+        var user = await GetUserNameAsync();
+        if (await RunAsync(async () => id = await Companies.SaveContractAsync(form, user), "Đã lưu hợp đồng công ty."))
+            Nav.NavigateTo($"hop-dong-cong-ty/{id}");
+    }
+}

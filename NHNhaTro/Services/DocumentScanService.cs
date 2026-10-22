@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -41,6 +41,9 @@ public class DocumentScanService(IDbContextFactory<ApplicationDbContext> dbFacto
         {"id": "số CCCD/CMND/hộ chiếu", "name": "họ và tên, viết hoa chữ cái đầu mỗi từ", "dob": "dd/MM/yyyy",
          "sex": "Nam hoặc Nữ", "nationality": "quốc tịch, ví dụ Việt Nam", "ethnicity": "dân tộc nếu có",
          "address": "nơi thường trú / nơi cư trú"}
+        Hộ chiếu nước ngoài (ví dụ Trung Quốc): "id" là số hộ chiếu (Passport No.), "name" là họ tên chữ Latin (pinyin) theo thứ tự
+        trên hộ chiếu (họ trước), "nationality" ghi bằng tiếng Việt (CHN/CHINESE → "Trung Quốc"), "ethnicity" null,
+        "address" là nơi sinh (Place of birth) nếu không có địa chỉ.
         Trường nào không đọc được thì để null. Giữ nguyên dấu tiếng Việt.
         """;
 

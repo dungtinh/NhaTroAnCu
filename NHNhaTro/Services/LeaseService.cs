@@ -41,6 +41,8 @@ public class CheckInForm
     public List<TenantInput> Tenants { get; set; } = [new()];
 
     // Thu tiền ngay khi nhận phòng
+    /// <summary>Phòng thuộc hợp đồng công ty: giá, cọc theo hợp đồng, không thu 1 tháng trả trước (tiền phòng thu theo kỳ hợp đồng).</summary>
+    public int? CompanyContractId { get; set; }
     public decimal DepositPaid { get; set; }
     public decimal FirstPaymentPaid { get; set; }
     public DateTime PaymentDate { get; set; } = DateTime.Today;
@@ -105,7 +107,8 @@ public record CheckoutPreview(decimal Deposit, int UsedKwh, decimal Electricity,
 public record CardScanResult(string? Id, string? Name, DateTime? BirthDate, string? Gender, string? Address, string? Ethnicity, string? Nationality);
 
 public record ResidentRow(int LeaseId, string RoomCode, string FullName, string IdentityCard, DateTime? BirthDate, string? Gender, string? Phone,
-    string? Ethnicity, string? Nationality, string? PermanentAddress, string? VehiclePlate, DateTime MoveInDate, DateTime? MoveOutDate, bool IsRepresentative, string? Photo);
+    string? Ethnicity, string? Nationality, string? PermanentAddress, string? VehiclePlate, DateTime MoveInDate, DateTime? MoveOutDate, bool IsRepresentative, string? Photo,
+    string? Company = null);
 
 public static class Nationality
 {
@@ -158,6 +161,8 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
     {
         BillKind.MoveIn => $"1 tháng trả trước khi vào, tính cho {bill.PeriodFrom:dd/MM} → {bill.PeriodTo:dd/MM}",
         BillKind.MoveOut => $"Kỳ chưa lập phiếu, tính đủ tháng {bill.PeriodFrom:dd/MM} → {bill.PeriodTo:dd/MM}",
+        BillKind.ContractRent => CompanyService.ContractRentDetail(bill, lease.MonthlyRent),
+        _ when lease.CompanyContractId != null && bill.RentAmount == 0 => "Điện, nước tháng · tiền phòng thu theo kỳ hợp đồng công ty",
         _ => RentDetail(bill.PeriodFrom, bill.PeriodTo, lease.StartDate, lease.MonthlyRent, billingDay)
     };
 
@@ -224,16 +229,38 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         return tenant;
     }
 
+    /// <summary>
+    /// Người ở phòng hợp đồng công ty chưa có giấy tờ: điền tên, số giấy tờ tạm để bổ sung sau (công ty hay đổi người).
+    /// Không nhập ai thì tạo một người tạm.
+    /// </summary>
+    public static void FillCompanyPlaceholders(List<TenantInput> tenants, string roomCode, string shortName, DateTime date)
+    {
+        if (!tenants.Any(t => !t.IsEmpty)) tenants.Insert(0, new TenantInput { FullName = $"Nhân viên {shortName} (chưa có tên)", Nationality = null, Ethnicity = null });
+        int i = 0;
+        foreach (var t in tenants.Where(t => !t.IsEmpty))
+        {
+            i++;
+            if (string.IsNullOrWhiteSpace(t.FullName)) t.FullName = $"Nhân viên {shortName} (chưa có tên)";
+            if (string.IsNullOrWhiteSpace(t.IdentityCard)) t.IdentityCard = $"CHUA-CO-{roomCode}-{date:yyMMdd}-{i}";
+        }
+    }
+
     public async Task<int> CheckInAsync(CheckInForm form, string? user)
     {
+        await using var db = await dbFactory.CreateDbContextAsync();
+        var settings = await db.Settings.FirstAsync();
+        var room = await db.Rooms.FirstOrDefaultAsync(r => r.Id == form.RoomId) ?? throw new InvalidOperationException("Không tìm thấy phòng.");
+        CompanyContract? company = null;
+        if (form.CompanyContractId is int cid)
+        {
+            company = await db.CompanyContracts.FirstOrDefaultAsync(c => c.Id == cid && c.IsActive) ?? throw new InvalidOperationException("Không tìm thấy hợp đồng công ty.");
+            FillCompanyPlaceholders(form.Tenants, room.Code, company.ShortName, form.MoveInDate);
+            form.FirstPaymentPaid = 0;
+        }
         var tenants = form.Tenants.Where(t => !t.IsEmpty).ToList();
         ValidateTenants(tenants);
         if (form.MonthlyRent <= 0) throw new InvalidOperationException("Giá thuê phải lớn hơn 0.");
         if (form.Deposit < 0 || form.DepositPaid < 0 || form.FirstPaymentPaid < 0) throw new InvalidOperationException("Số tiền không được âm.");
-
-        await using var db = await dbFactory.CreateDbContextAsync();
-        var settings = await db.Settings.FirstAsync();
-        var room = await db.Rooms.FirstOrDefaultAsync(r => r.Id == form.RoomId) ?? throw new InvalidOperationException("Không tìm thấy phòng.");
         if (room.Status == RoomStatus.Occupied || await db.Leases.AnyAsync(l => l.RoomId == room.Id && l.Status == LeaseStatus.Active))
             throw new InvalidOperationException($"Phòng {room.Code} đang có người thuê.");
         if (room.Status == RoomStatus.Maintenance)
@@ -253,7 +280,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         var lease = new Lease
         {
             RoomId = room.Id, StartDate = form.MoveInDate.Date, MonthlyRent = form.MonthlyRent, Deposit = form.Deposit,
-            Note = form.Note, Status = LeaseStatus.Active, CreatedAt = DateTime.Now, CreatedBy = user
+            Note = form.Note, Status = LeaseStatus.Active, CreatedAt = DateTime.Now, CreatedBy = user, CompanyContractId = company?.Id
         };
         db.Leases.Add(lease);
         bool first = true;
@@ -266,8 +293,9 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
 
         // Thu đủ 1 tháng tiền phòng khi vào: tháng này tính cho kỳ tròn tháng đầu [chốt đầu, chốt đầu + 1 tháng).
         // Đoạn lẻ từ ngày vào đến ngày chốt đầu, điện và nước thu ở kỳ chốt đầu (Thu tiền tháng).
+        // Hợp đồng công ty: không thu tháng trả trước, tiền phòng lập theo kỳ hợp đồng (phòng vào giữa kỳ tính từ ngày vào).
         var stub = CalculateStubPeriod(form.MonthlyRent, lease.StartDate, settings.BillingDay);
-        var bill = new Bill
+        var bill = company != null ? null : new Bill
         {
             Lease = lease, Kind = BillKind.MoveIn, Month = lease.StartDate.Month, Year = lease.StartDate.Year,
             PeriodFrom = stub.To, PeriodTo = stub.To.AddMonths(1), RentAmount = form.MonthlyRent, PersonCount = tenants.Count, TotalAmount = form.MonthlyRent,
@@ -276,10 +304,11 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
                 : $"1 tháng tiền phòng trả trước khi nhận phòng đúng ngày chốt {lease.StartDate:dd/MM/yyyy}, tính cho {stub.To:dd/MM} - {stub.To.AddMonths(1):dd/MM/yyyy}. Từ kỳ chốt {stub.To.AddMonths(1):dd/MM/yyyy} thu đủ tháng + điện + nước.",
             CreatedAt = DateTime.Now, CreatedBy = user
         };
-        db.Bills.Add(bill);
+        if (bill != null) db.Bills.Add(bill);
 
         room.Status = RoomStatus.Occupied;
         room.Rent = form.MonthlyRent;
+        if (company != null) room.MaxOccupants = company.MaxOccupantsPerRoom;
         await db.SaveChangesAsync();
 
         if (form.DepositPaid > 0)
@@ -293,7 +322,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
             await db.SaveChangesAsync();
             AttachmentService.Attach(db, AttachmentOwner.Transaction, dep.Id, form.DepositReceipts, user);
         }
-        if (form.FirstPaymentPaid > 0)
+        if (form.FirstPaymentPaid > 0 && bill != null)
         {
             var pay = new MoneyTransaction
             {
@@ -315,6 +344,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         return await db.Leases.AsNoTracking()
             .Include(l => l.Room).ThenInclude(r => r.Block)
             .Include(l => l.Tenants).ThenInclude(t => t.Tenant)
+            .Include(l => l.CompanyContract)
             .Include(l => l.Penalties)
             .Include(l => l.Bills).ThenInclude(b => b.Payments)
             .AsSplitQuery()
@@ -415,6 +445,8 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
             .Include(l => l.Room).ThenInclude(r => r.Block).ThenInclude(b => b.DefaultFurniture)
             .Include(l => l.Tenants)
             .FirstAsync(l => l.Id == form.LeaseId);
+        // Đọc riêng: gộp thêm JOIN hợp đồng công ty vào câu trên làm SQL Server chọn kế hoạch rất chậm (~25 giây).
+        var company = lease.CompanyContractId is int cid ? await db.CompanyContracts.AsNoTracking().FirstOrDefaultAsync(c => c.Id == cid) : null;
         var bills = await db.Bills.AsNoTracking().Where(b => b.LeaseId == lease.Id)
             .Select(b => new { Bill = b, Paid = b.Payments.Sum(p => (decimal?)p.Amount) ?? 0 }).ToListAsync();
 
@@ -445,16 +477,20 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
             var due = RoomService.BillingDate(d.Month, d.Year, settings.BillingDay);
             if (due > form.EndDate.Date || !RoomService.NeedsMonthlyBill(lease, d.Month, d.Year, settings.BillingDay)) continue;
             if (bills.Any(b => b.Bill.Kind == BillKind.Monthly && b.Bill.Month == d.Month && b.Bill.Year == d.Year)) continue;
-            var (from, to, rent) = RoomService.IsFirstBillingMonth(lease.StartDate, d.Month, d.Year, settings.BillingDay)
+            var (from, to, rent) = company != null ? (due, due.AddMonths(1), 0m)
+                : RoomService.IsFirstBillingMonth(lease.StartDate, d.Month, d.Year, settings.BillingDay)
                 ? (lease.StartDate, due, CalculateStubPeriod(lease.MonthlyRent, lease.StartDate, settings.BillingDay).Rent)
                 : (due, due.AddMonths(1), lease.MonthlyRent);
-            missing.Add(new MissingPeriod(d.Month, d.Year, from, to, rent, persons * settings.WaterPricePerPerson, persons));
+            // Hợp đồng công ty: tiền phòng thu theo kỳ hợp đồng, nước cố định theo phòng.
+            var water = company is { WaterPerRoom: > 0 } ? company.WaterPerRoom : persons * settings.WaterPricePerPerson;
+            missing.Add(new MissingPeriod(d.Month, d.Year, from, to, rent, water, persons));
         }
 
         // Chỉ trả lại cọc khi khách ở đủ số tháng tối thiểu (Cấu hình, mặc định 3 tháng); ở ít hơn thì cọc không hoàn trả.
         int minMonths = Math.Max(0, settings.MinStayMonthsForDepositRefund);
         var eligibleFrom = lease.StartDate.AddMonths(minMonths);
-        bool refundable = minMonths == 0 || lease.IsExistingTenant || form.EndDate.Date >= eligibleFrom;
+        // Hợp đồng công ty: cọc hoàn theo hợp đồng (phạt giảm phòng năm đầu nhập ở mục phạt), không áp quy định ở đủ số tháng.
+        bool refundable = minMonths == 0 || lease.IsExistingTenant || company != null || form.EndDate.Date >= eligibleFrom;
         int stayDays = Math.Max(0, (form.EndDate.Date - lease.StartDate).Days);
 
         // Khách xin ở thêm vài ngày để thu xếp: tiền phòng theo ngày = giá tháng ÷ 30, làm tròn nghìn.
@@ -634,14 +670,16 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         if (!string.IsNullOrWhiteSpace(search))
         {
             var s = search.Trim();
-            q = q.Where(lt => lt.Tenant.FullName.Contains(s) || lt.Tenant.IdentityCard.Contains(s) || lt.Lease.Room.Code.Contains(s) || (lt.Tenant.Phone != null && lt.Tenant.Phone.Contains(s)));
+            q = q.Where(lt => lt.Tenant.FullName.Contains(s) || lt.Tenant.IdentityCard.Contains(s) || lt.Lease.Room.Code.Contains(s) || (lt.Tenant.Phone != null && lt.Tenant.Phone.Contains(s))
+                || (lt.Lease.CompanyContract != null && (lt.Lease.CompanyContract.ShortName.Contains(s) || lt.Lease.CompanyContract.CompanyName.Contains(s))));
         }
         var rows = await q.OrderBy(lt => lt.Lease.Room.Block.Code).ThenBy(lt => lt.Lease.Room.Floor).ThenBy(lt => lt.Lease.Room.Number)
             .ThenByDescending(lt => lt.IsRepresentative).ThenBy(lt => lt.MoveInDate)
-            .Select(lt => new { lt.LeaseId, lt.Lease.Room.Code, lt.Tenant, lt.MoveInDate, lt.MoveOutDate, lt.IsRepresentative })
+            .Select(lt => new { lt.LeaseId, lt.Lease.Room.Code, lt.Tenant, lt.MoveInDate, lt.MoveOutDate, lt.IsRepresentative,
+                Company = lt.Lease.CompanyContract != null ? lt.Lease.CompanyContract.ShortName : null })
             .Take(2000).ToListAsync();
         return rows.Select(r => new ResidentRow(r.LeaseId, r.Code, r.Tenant.FullName, r.Tenant.IdentityCard, r.Tenant.BirthDate, r.Tenant.Gender, r.Tenant.Phone,
             r.Tenant.Ethnicity, r.Tenant.Nationality, r.Tenant.PermanentAddress, r.Tenant.VehiclePlate, r.MoveInDate, r.MoveOutDate, r.IsRepresentative,
-            r.Tenant.Portrait ?? r.Tenant.PhotoList.FirstOrDefault())).ToList();
+            r.Tenant.Portrait ?? r.Tenant.PhotoList.FirstOrDefault(), r.Company)).ToList();
     }
 }

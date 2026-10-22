@@ -63,6 +63,7 @@ builder.Services.AddScoped<DocumentScanService>();
 builder.Services.AddSingleton<ChatHub>();
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<BillingService>();
+builder.Services.AddScoped<CompanyService>();
 builder.Services.AddScoped<UtilityService>();
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<ExpenseService>();

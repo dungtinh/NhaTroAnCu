@@ -1,0 +1,577 @@
+@page "/hop-dong-cong-ty/{Id:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inherits NhPage
+@inject CompanyService Companies
+@inject SetupService Setup
+@inject AttachmentService Attachments
+
+<PageTitle>HĐ công ty @d?.Contract.ShortName</PageTitle>
+
+@if (d == null)
+{
+    <div class="nh-loading">@(notFound ? "Không tìm thấy hợp đồng." : "Đang tải...")</div>
+}
+else
+{
+    var c = d.Contract;
+    var term = d.CurrentTerm;
+    var totalDue = d.Rooms.Sum(r => r.Outstanding);
+    var depositHeld = d.Rooms.Sum(r => r.DepositHeld);
+    var depositNeed = d.Rooms.Sum(r => r.Lease.Deposit);
+    var today = DateTime.Today;
+
+    <div class="nh-hero-room @(totalDue > 0 ? "st-debt" : "") @(c.IsActive ? "" : "st-ended")">
+        <div class="top">
+            <div class="min-w-0">
+                <div class="code"><i class="fas fa-building"></i> @c.ShortName</div>
+                <div class="sub">@c.CompanyName@(c.ContractNo != null ? " · HĐ " + c.ContractNo : "")@(c.SignedDate != null ? " ký " + Fmt.Date(c.SignedDate) : "")</div>
+            </div>
+            <div class="tags">
+                <span class="tag">@(c.IsActive ? "Đang hiệu lực" : "Đã kết thúc")</span>
+                <span class="tag">Kỳ @c.RentMonthsPerPeriod tháng</span>
+                <span class="tag">Nước @Fmt.Money(c.WaterPerRoom)/phòng</span>
+            </div>
+        </div>
+        <div class="nh-hero-stats">
+            <div><div class="l">Phòng đang ở</div><div class="v">@d.Rooms.Count</div></div>
+            <div><div class="l">Giá/phòng/tháng</div><div class="v">@(term != null ? Fmt.Money(term.RentPerRoom) : "—")</div></div>
+            <div><div class="l">Còn nợ</div><div class="v">@Fmt.Money(totalDue)</div></div>
+        </div>
+    </div>
+
+    @foreach (var w in d.Warnings)
+    {
+        <div class="alert alert-warning small py-2 mb-2"><i class="fas fa-exclamation-triangle"></i> @w</div>
+    }
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            @* ===== Kỳ tiền phòng ===== *@
+            <div class="nh-sec t-green">
+                <div class="nh-sec-h">
+                    <span class="ic"><i class="fas fa-calendar-alt"></i></span>
+                    <h5>Kỳ tiền phòng <small>lập phiếu tự động từ ngày đầu kỳ, mỗi phòng một phiếu</small></h5>
+                </div>
+                <div class="nh-sec-b p0">
+                    @if (d.Periods.Count == 0) { <div class="p-3 text-muted small">Chưa có kỳ nào: thêm thời hạn hợp đồng ở bên phải.</div> }
+                    @foreach (var g in d.Periods.GroupBy(p => p.Term.Id))
+                    {
+                        var t = g.First().Term;
+                        <div class="px-3 pt-2 small fw-bold text-secondary">@t.DocumentNo · @Fmt.Date(t.FromDate) → @Fmt.Date(t.ToDate) · @Fmt.Money(t.RentPerRoom)/phòng</div>
+                        @foreach (var p in g)
+                        {
+                            var per = p.Period;
+                            bool open = expanded.Contains(per.Id);
+                            <div class="nh-list-row align-items-start flex-wrap" @key="per.Id">
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="fw-bold">Kỳ @per.Number: @Fmt.Date(per.From) → @Fmt.Date(per.To.AddDays(-1))</div>
+                                    <div class="small text-muted">Nộp @per.PayFrom.ToString("dd/MM") – @Fmt.Date(per.PayTo)
+                                        @if (!string.IsNullOrEmpty(per.Note)) { <span> · @per.Note</span> }</div>
+                                    @if (p.Generated) { <div class="small">@p.Bills.Count phiếu · tổng <strong>@Fmt.Vnd(p.Total)</strong> · đã thu @Fmt.Money(p.Paid)</div> }
+                                    else if (!per.SettledOutside) { <div class="small text-muted">Dự tính @Fmt.Vnd(p.Estimate) (@d.Rooms.Count phòng), lập phiếu ngày @Fmt.Date(per.From)</div> }
+                                </div>
+                                <div class="d-flex flex-wrap gap-1 align-items-center justify-content-end">
+                                    @if (per.SettledOutside) { <span class="chip chip-slate">Đã thu ngoài phần mềm</span> }
+                                    else if (!p.Generated) { <span class="chip chip-blue">Chưa đến kỳ</span> }
+                                    else if (p.Due <= 0) { <span class="chip chip-green"><i class="fas fa-check"></i> Đã thu đủ</span> }
+                                    else if (p.Overdue(today)) { <span class="chip chip-red">Quá hạn · còn @Fmt.Money(p.Due)</span> }
+                                    else { <span class="chip chip-amber">Còn @Fmt.Money(p.Due)</span> }
+                                    @if (p.Generated && p.Due > 0)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-success" @onclick="() => OpenCollect(p.Bills, CollectLabel(per))"><i class="fas fa-hand-holding-usd"></i> Thu gộp</button>
+                                    }
+                                    @if (p.Generated) { <button type="button" class="btn btn-sm btn-light" title="Phiếu từng phòng" @onclick="() => Toggle(per.Id)"><i class="fas @(open ? "fa-chevron-up" : "fa-list")"></i></button> }
+                                    @if (isAdmin) { <button type="button" class="btn btn-sm btn-light" title="Sửa hạn nộp" @onclick="() => EditPeriod(per)"><i class="fas fa-pen"></i></button> }
+                                </div>
+                                @if (open)
+                                {
+                                    <div class="w-100">
+                                        @foreach (var b in p.Bills)
+                                        {
+                                            <div class="d-flex gap-2 small border-top py-1 align-items-center">
+                                                <a href="@($"phong/{b.RoomCode}")" class="fw-bold" style="min-width:48px">@b.RoomCode</a>
+                                                <span class="flex-grow-1 text-muted text-truncate">@CompanyService.ContractRentDetail(b.Bill, t.RentPerRoom)</span>
+                                                <span>@Fmt.Money(b.Bill.TotalAmount)</span>
+                                                <span class="chip @(b.Due <= 0 ? "chip-green" : "chip-red")">@(b.Due <= 0 ? "Đủ" : "Còn " + Fmt.Money(b.Due))</span>
+                                                <a class="btn btn-sm btn-light py-0" href="@($"files/bills/{b.Bill.Id}")" target="_blank" title="In phiếu"><i class="fas fa-print"></i></a>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                @if (editPeriod?.Id == per.Id)
+                                {
+                                    <div class="w-100 nh-sec-edit mt-2">
+                                        <div class="row g-2">
+                                            <div class="col-6"><label class="form-label">Nộp từ ngày</label><input type="date" class="form-control" @bind="payFrom" /></div>
+                                            <div class="col-6"><label class="form-label">Hạn nộp</label><input type="date" class="form-control" @bind="payTo" /></div>
+                                            <div class="col-12"><label class="form-label">Ghi chú</label><input class="form-control" maxlength="500" @bind="periodNote" /></div>
+                                            <div class="col-12 form-check ms-2">
+                                                <input class="form-check-input" type="checkbox" id="settled" @bind="settled" />
+                                                <label class="form-check-label" for="settled">Đã thu ngoài phần mềm (không lập phiếu; xóa các phiếu chưa thu của kỳ)</label>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex gap-2 mt-2">
+                                            <button type="button" class="btn btn-primary btn-sm" disabled="@Busy" @onclick="SavePeriodAsync"><i class="fas fa-save"></i> Lưu</button>
+                                            <button type="button" class="btn btn-secondary btn-sm" @onclick="() => editPeriod = null">Hủy</button>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+
+            @* ===== Điện nước tháng ===== *@
+            <div class="nh-sec t-blue">
+                <div class="nh-sec-h">
+                    <span class="ic"><i class="fas fa-bolt"></i></span>
+                    <h5>Điện, nước kỳ @month.ToString("00")/@year <small>ghi số điện ở trang Ghi số điện như mọi phòng</small></h5>
+                    <div class="nh-month ms-auto">
+                        <button type="button" class="btn btn-sm" title="Kỳ trước" @onclick="() => ShiftAsync(-1)"><i class="fas fa-chevron-left"></i></button>
+                        <button type="button" class="btn btn-sm" title="Kỳ sau" @onclick="() => ShiftAsync(1)"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                <div class="nh-sec-b @(d.MonthlyBills.Count > 0 ? "p0" : "")">
+                    @if (d.MonthlyBills.Count == 0)
+                    {
+                        <div class="small text-muted">Chưa lập phiếu tháng này cho phòng nào của @c.ShortName. <a href="so-dien">Ghi số điện</a>.</div>
+                    }
+                    else
+                    {
+                        var mDue = d.MonthlyBills.Sum(b => b.Due);
+                        @foreach (var b in d.MonthlyBills)
+                        {
+                            <div class="nh-list-row">
+                                <a href="@($"phong/{b.RoomCode}")" class="fw-bold" style="min-width:48px">@b.RoomCode</a>
+                                <div class="flex-grow-1 small text-muted">Điện @b.Bill.ElectricityKwh số = @Fmt.Money(b.Bill.ElectricityAmount) · nước @Fmt.Money(b.Bill.WaterAmount)</div>
+                                <strong>@Fmt.Money(b.Bill.TotalAmount)</strong>
+                                <span class="chip @(b.Due <= 0 ? "chip-green" : "chip-red")">@(b.Due <= 0 ? "Đủ" : "Còn " + Fmt.Money(b.Due))</span>
+                            </div>
+                        }
+                        <div class="nh-list-row">
+                            <div class="flex-grow-1 fw-bold">Tổng @Fmt.Vnd(d.MonthlyBills.Sum(b => b.Bill.TotalAmount)) · còn @Fmt.Vnd(mDue)</div>
+                            @if (mDue > 0)
+                            {
+                                <button type="button" class="btn btn-sm btn-success" @onclick="() => OpenCollect(d.MonthlyBills, CollectMonthLabel())"><i class="fas fa-hand-holding-usd"></i> Thu gộp điện nước</button>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @* ===== Phòng ===== *@
+            <div class="nh-sec t-violet">
+                <div class="nh-sec-h">
+                    <span class="ic"><i class="fas fa-door-closed"></i></span>
+                    <h5>Phòng của @c.ShortName <small>@d.Rooms.Count phòng · @d.Rooms.Sum(r => r.PersonCount) người</small></h5>
+                    @if (isAdmin) { <button type="button" class="btn btn-sm btn-outline-primary" @onclick="ToggleAttachAsync"><i class="fas @(attaching ? "fa-times" : "fa-link")"></i> @(attaching ? "Đóng" : "Gắn phòng")</button> }
+                </div>
+                <div class="nh-sec-b @(d.Rooms.Count > 0 ? "p0" : "")">
+                    @if (d.Rooms.Count == 0) { <div class="small text-muted">Chưa gắn phòng nào. Nhận phòng mới thì chọn "Hợp đồng công ty @c.ShortName"; phòng đang thuê thì bấm Gắn phòng.</div> }
+                    @foreach (var r in d.Rooms)
+                    {
+                        <div class="nh-list-row">
+                            <a href="@($"hop-dong/{r.Lease.Id}")" class="fw-bold" style="min-width:48px">@r.RoomCode</a>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="text-truncate">@(r.Representative ?? "—") <span class="text-muted small">· @r.PersonCount người · từ @Fmt.Date(r.Lease.StartDate)</span></div>
+                                <div class="small text-muted">Cọc @Fmt.Money(r.DepositHeld)/@Fmt.Money(r.Lease.Deposit)@(r.Outstanding > 0 ? " · còn nợ " + Fmt.Money(r.Outstanding) : "")</div>
+                            </div>
+                            @if (isAdmin) { <button type="button" class="btn btn-sm btn-link text-danger p-0" title="Bỏ phòng khỏi hợp đồng (không trả phòng)" @onclick="() => DetachAsync(r)">Bỏ</button> }
+                        </div>
+                    }
+                </div>
+                @if (attaching)
+                {
+                    <div class="nh-sec-edit">
+                        <div class="small mb-2">Chọn phòng đang thuê để gắn vào hợp đồng: giá, cọc theo @(term?.DocumentNo ?? "thời hạn hiện hành"), tối đa @c.MaxOccupantsPerRoom người/phòng.</div>
+                        <div class="nh-chips mb-2">
+                            @foreach (var a in attachable)
+                            {
+                                bool on = attachIds.Contains(a.LeaseId);
+                                <button type="button" class="btn btn-sm @(on ? "btn-primary" : "btn-outline-secondary")" title="@a.Representative" @onclick="() => { if (!attachIds.Remove(a.LeaseId)) attachIds.Add(a.LeaseId); }">@a.RoomCode</button>
+                            }
+                        </div>
+                        <button type="button" class="btn btn-primary w-100" disabled="@(Busy || attachIds.Count == 0)" @onclick="AttachAsync"><i class="fas fa-link"></i> Gắn @attachIds.Count phòng</button>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            @* ===== Cọc ===== *@
+            <div class="nh-sec t-amber">
+                <div class="nh-sec-h">
+                    <span class="ic"><i class="fas fa-piggy-bank"></i></span>
+                    <h5>Tiền cọc <small>đang giữ @Fmt.Vnd(depositHeld) / theo HĐ @Fmt.Vnd(depositNeed)</small></h5>
+                </div>
+                @if (d.DepositShortage > 0)
+                {
+                    <div class="nh-sec-edit">
+                        <div class="small mb-2">Còn thiếu <strong class="text-danger">@Fmt.Vnd(d.DepositShortage)</strong>
+                            (@string.Join(", ", d.Rooms.Where(r => r.Lease.Deposit > r.DepositHeld).Select(r => $"{r.RoomCode} {Fmt.Money(r.Lease.Deposit - r.DepositHeld)}"))).
+                            Ghi phần còn thiếu của từng phòng:</div>
+                        <div class="row g-2">
+                            <div class="col-6"><label class="form-label">Ngày</label><input type="date" class="form-control" @bind="depositDate" /></div>
+                            <div class="col-6">
+                                <label class="form-label">Tài khoản</label>
+                                <select class="form-select" @bind="depositAccount">@foreach (var a in accounts) { <option value="@a.Id">@a.Name</option> }</select>
+                            </div>
+                        </div>
+                        <div class="mt-2"><FileUpload Kind="Receipts" ButtonText="Chứng từ" @bind-Files="depositFiles" /></div>
+                        <button type="button" class="btn btn-warning w-100 mt-2 fw-bold" disabled="@Busy" @onclick="CollectDepositsAsync"><i class="fas fa-hand-holding-usd"></i> Ghi cọc @Fmt.Vnd(d.DepositShortage)</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="nh-sec-b small text-muted">@(d.Rooms.Count > 0 ? "Đủ cọc theo hợp đồng." : "Chưa có phòng.")</div>
+                }
+            </div>
+
+            @* ===== Thời hạn, phụ lục ===== *@
+            <div class="nh-sec t-rose">
+                <div class="nh-sec-h">
+                    <span class="ic"><i class="fas fa-file-signature"></i></span>
+                    <h5>Thời hạn &amp; phụ lục <small>@c.Terms.Count văn bản</small></h5>
+                    @if (isAdmin) { <button type="button" class="btn btn-sm btn-outline-primary" @onclick="NewTerm"><i class="fas fa-plus"></i> Thêm</button> }
+                </div>
+                <div class="nh-sec-b @(c.Terms.Count > 0 ? "p0" : "")">
+                    @if (c.Terms.Count == 0) { <div class="small text-muted">Chưa có thời hạn. Thêm hợp đồng gốc hoặc phụ lục đang hiệu lực.</div> }
+                    @foreach (var t in c.Terms.OrderByDescending(t => t.FromDate))
+                    {
+                        <div class="nh-list-row align-items-start">
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="fw-bold">@t.DocumentNo @if (t == term) { <span class="chip chip-green">Hiện hành</span> }</div>
+                                <div class="small">@Fmt.Date(t.FromDate) → @Fmt.Date(t.ToDate) · @Fmt.Money(t.RentPerRoom)/phòng · cọc @Fmt.Money(t.DepositPerRoom)/phòng</div>
+                                @if (!string.IsNullOrEmpty(t.RoomCodes)) { <div class="small text-muted">Phòng: @t.RoomCodes</div> }
+                                @if (!string.IsNullOrEmpty(t.Note)) { <div class="small text-muted">@t.Note</div> }
+                            </div>
+                            @if (isAdmin)
+                            {
+                                <button type="button" class="btn btn-sm btn-light" title="Sửa" @onclick="() => EditTerm(t)"><i class="fas fa-pen"></i></button>
+                                <button type="button" class="btn btn-sm btn-light text-danger" title="Xóa" @onclick="() => DeleteTermAsync(t)"><i class="fas fa-trash"></i></button>
+                            }
+                        </div>
+                    }
+                </div>
+                @if (termForm != null)
+                {
+                    <div class="nh-sec-edit">
+                        <div class="row g-2">
+                            <div class="col-7"><label class="form-label">Số HĐ / phụ lục</label><input class="form-control" maxlength="100" placeholder="PL 03.2026/Horn-TND" @bind="termForm.DocumentNo" /></div>
+                            <div class="col-5"><label class="form-label">Ngày ký</label><input type="date" class="form-control" @bind="termForm.SignedDate" /></div>
+                            <div class="col-6"><label class="form-label">Từ ngày</label><input type="date" class="form-control" disabled="@(termForm.Id != 0)" @bind="termForm.FromDate" /></div>
+                            <div class="col-6"><label class="form-label">Đến hết ngày</label><input type="date" class="form-control" disabled="@(termForm.Id != 0)" @bind="termForm.ToDate" /></div>
+                            <div class="col-6"><label class="form-label">Giá/phòng/tháng</label><MoneyInput @bind-Value="termForm.RentPerRoom" /></div>
+                            <div class="col-6"><label class="form-label">Cọc/phòng</label><MoneyInput @bind-Value="termForm.DepositPerRoom" /></div>
+                            <div class="col-12"><label class="form-label">Các phòng</label><input class="form-control" maxlength="500" placeholder="B3.1, B3.2, B3.3, B3.4, B3.5" @bind="termForm.RoomCodes" /></div>
+                            <div class="col-12"><label class="form-label">Ghi chú</label><input class="form-control" maxlength="1000" @bind="termForm.Note" /></div>
+                            <div class="col-12 form-check ms-2">
+                                <input class="form-check-input" type="checkbox" id="applyTerm" @bind="termForm.ApplyToLeases" />
+                                <label class="form-check-label" for="applyTerm">Đặt giá thuê, cọc của các phòng đang gắn theo văn bản này</label>
+                            </div>
+                        </div>
+                        @if (termForm.Id == 0)
+                        {
+                            <div class="small text-muted mt-1">Phần mềm chia thành các kỳ @c.RentMonthsPerPeriod tháng, hạn nộp mặc định 15 ngày đầu kỳ (sửa từng kỳ được). Kỳ đã quá hạn nộp ghi là đã thu ngoài phần mềm.</div>
+                        }
+                        <div class="d-flex gap-2 mt-2">
+                            <button type="button" class="btn btn-primary" disabled="@Busy" @onclick="SaveTermAsync"><i class="fas fa-save"></i> Lưu</button>
+                            <button type="button" class="btn btn-secondary" @onclick="() => termForm = null">Hủy</button>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @* ===== Thông tin công ty, bản scan ===== *@
+            <div class="nh-sec t-slate">
+                <div class="nh-sec-h">
+                    <span class="ic"><i class="fas fa-id-card"></i></span>
+                    <h5>Thông tin công ty</h5>
+                    @if (isAdmin) { <button type="button" class="btn btn-sm @(editInfo ? "btn-secondary" : "btn-outline-secondary")" @onclick="ToggleInfo"><i class="fas @(editInfo ? "fa-times" : "fa-pen")"></i> @(editInfo ? "Đóng" : "Sửa")</button> }
+                </div>
+                @if (!editInfo)
+                {
+                    <div class="nh-sec-b">
+                        <div class="nh-kv">
+                            <div><div class="l">Mã số thuế</div><div class="v">@(c.TaxCode ?? "—")</div></div>
+                            <div><div class="l">Đại diện</div><div class="v">@(c.Representative ?? "—")@(c.RepresentativeTitle != null ? ", " + c.RepresentativeTitle : "")</div></div>
+                            <div><div class="l">Điện thoại</div><div class="v">@(c.Phone ?? "—")</div></div>
+                            <div><div class="l">Tài khoản</div><div class="v">@(c.BankAccount ?? "—")</div></div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(c.Address)) { <div class="small mt-2"><i class="fas fa-map-marker-alt text-muted"></i> @c.Address</div> }
+                        @if (!string.IsNullOrEmpty(c.Note)) { <div class="small mt-1 text-muted"><i class="fas fa-sticky-note"></i> @c.Note</div> }
+                        <div class="small fw-bold mt-3 mb-1"><i class="fas fa-file-signature text-secondary"></i> Hợp đồng, phụ lục đã ký (scan)</div>
+                        <AttachmentList EntityType="@AttachmentOwner.Company" EntityId="c.Id" CanDelete="isAdmin" Version="version" />
+                        <div class="mt-2"><FileUpload Kind="Contracts" ButtonText="Tải bản scan" Files="scanFiles" Uploaded="OnScanUploadedAsync" /></div>
+                    </div>
+                }
+                else
+                {
+                    <div class="nh-sec-edit">
+                        <div class="row g-2">
+                            <div class="col-12"><label class="form-label">Tên công ty</label><input class="form-control" maxlength="200" @bind="info.CompanyName" /></div>
+                            <div class="col-6"><label class="form-label">Tên ngắn</label><input class="form-control" maxlength="30" @bind="info.ShortName" /></div>
+                            <div class="col-6"><label class="form-label">Mã số thuế</label><input class="form-control" maxlength="30" @bind="info.TaxCode" /></div>
+                            <div class="col-6"><label class="form-label">Số hợp đồng</label><input class="form-control" maxlength="50" @bind="info.ContractNo" /></div>
+                            <div class="col-6"><label class="form-label">Ngày ký</label><input type="date" class="form-control" @bind="info.SignedDate" /></div>
+                            <div class="col-6"><label class="form-label">Người đại diện</label><input class="form-control" maxlength="100" @bind="info.Representative" /></div>
+                            <div class="col-6"><label class="form-label">Chức vụ</label><input class="form-control" maxlength="100" @bind="info.RepresentativeTitle" /></div>
+                            <div class="col-6"><label class="form-label">Điện thoại</label><input class="form-control" maxlength="30" @bind="info.Phone" /></div>
+                            <div class="col-6"><label class="form-label">Tài khoản ngân hàng</label><input class="form-control" maxlength="200" @bind="info.BankAccount" /></div>
+                            <div class="col-12"><label class="form-label">Địa chỉ</label><input class="form-control" maxlength="500" @bind="info.Address" /></div>
+                            <div class="col-4"><label class="form-label">Tháng/kỳ</label><input type="number" min="1" max="12" class="form-control" @bind="info.RentMonthsPerPeriod" /></div>
+                            <div class="col-4"><label class="form-label">Nước/phòng</label><MoneyInput @bind-Value="info.WaterPerRoom" /></div>
+                            <div class="col-4"><label class="form-label">Người/phòng</label><input type="number" min="1" max="20" class="form-control" @bind="info.MaxOccupantsPerRoom" /></div>
+                            <div class="col-12"><label class="form-label">Ghi chú</label><textarea class="form-control" rows="3" maxlength="2000" @bind="info.Note"></textarea></div>
+                            <div class="col-12 form-check ms-2">
+                                <input class="form-check-input" type="checkbox" id="active" @bind="info.IsActive" />
+                                <label class="form-check-label" for="active">Đang hiệu lực (bỏ chọn khi công ty trả hết phòng)</label>
+                            </div>
+                        </div>
+                        <div class="small text-muted mt-1">Đổi số tháng/kỳ chỉ áp dụng cho thời hạn thêm sau.</div>
+                        <button type="button" class="btn btn-primary w-100 mt-2" disabled="@Busy" @onclick="SaveInfoAsync"><i class="fas fa-save"></i> Lưu thông tin</button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (collectBills != null)
+    {
+        var due = collectBills.Sum(b => b.Due);
+        <div class="nh-modal-backdrop" @onclick="() => collectBills = null">
+            <div class="nh-modal" style="max-width: 560px" @onclick:stopPropagation="true">
+                <div class="nh-modal-header bg-success">
+                    <h5><i class="fas fa-hand-holding-usd"></i> @collectLabel</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => collectBills = null"></button>
+                </div>
+                <div class="nh-modal-body">
+                    @foreach (var b in collectBills.Where(b => b.Due > 0))
+                    {
+                        <div class="d-flex justify-content-between small"><span>Phòng @b.RoomCode</span><span>@Fmt.Vnd(b.Due)</span></div>
+                    }
+                    <div class="d-flex justify-content-between my-2 text-danger border-top pt-2"><span>Còn phải thu</span><strong>@Fmt.Vnd(due)</strong></div>
+                    <div class="row g-2">
+                        <div class="col-6"><label class="form-label">Số tiền nhận</label><MoneyInput @bind-Value="collect.Amount" /></div>
+                        <div class="col-6"><label class="form-label">Ngày</label><input type="date" class="form-control" @bind="collect.Date" /></div>
+                        <div class="col-12">
+                            <label class="form-label">Vào tài khoản</label>
+                            <select class="form-select" @bind="collect.AccountId">@foreach (var a in accounts) { <option value="@a.Id">@a.Name</option> }</select>
+                        </div>
+                        <div class="col-12"><label class="form-label">Ghi chú</label><input class="form-control" maxlength="200" @bind="collect.Note" /></div>
+                        <div class="col-12"><FileUpload Kind="Receipts" Label="Chứng từ chuyển khoản (tự quét số tiền)" @bind-Files="collect.Receipts" Scanned="r => { if (r.Amount is decimal a) collect.Amount = a; if (r.Date is DateTime dt) collect.Date = dt; }" /></div>
+                    </div>
+                    <div class="small text-muted mt-2">Số tiền chia lần lượt vào phiếu từng phòng theo thứ tự phòng; thu thiếu thì phòng cuối còn nợ.</div>
+                    <div class="text-end mt-3">
+                        <button type="button" class="btn btn-secondary me-2" @onclick="() => collectBills = null">Hủy</button>
+                        <button type="button" class="btn btn-success" disabled="@Busy" @onclick="CollectAsync"><i class="fas fa-check"></i> Ghi nhận @Fmt.Vnd(collect.Amount)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private CompanyDetails? d;
+    private bool notFound, isAdmin, attaching, editInfo;
+    private int month, year, version;
+    private List<MoneyAccount> accounts = [];
+    private AppSetting? settings;
+    private readonly HashSet<int> expanded = [];
+
+    private ContractPeriod? editPeriod;
+    private DateTime payFrom, payTo;
+    private bool settled;
+    private string? periodNote;
+
+    private List<AttachableLease> attachable = [];
+    private readonly HashSet<int> attachIds = [];
+
+    private TermForm? termForm;
+    private CompanyContract info = new();
+    private List<PendingFile> scanFiles = [];
+
+    private DateTime depositDate = DateTime.Today;
+    private int depositAccount;
+    private List<PendingFile> depositFiles = [];
+
+    private List<PeriodBill>? collectBills;
+    private string collectLabel = "";
+    private CollectForm collect = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isAdmin = await IsAdminAsync();
+        settings = await Setup.GetSettingsAsync();
+        accounts = (await Setup.GetAccountsAsync()).Where(a => a.IsActive).ToList();
+        depositAccount = settings.PersonalAccountId;
+        (month, year) = RoomService.CurrentBillingPeriod(settings.BillingDay);
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        d = await Companies.GetAsync(Id, month, year);
+        notFound = d == null;
+        version++;
+    }
+
+    private async Task ShiftAsync(int delta)
+    {
+        var m = new DateTime(year, month, 1).AddMonths(delta);
+        (month, year) = (m.Month, m.Year);
+        await LoadAsync();
+    }
+
+    private void Toggle(int periodId)
+    {
+        if (!expanded.Remove(periodId)) expanded.Add(periodId);
+    }
+
+    private string CollectLabel(ContractPeriod p) => $"Thu tiền phòng {d!.Contract.ShortName} kỳ {p.From:dd/MM/yyyy} → {p.To.AddDays(-1):dd/MM/yyyy}";
+    private string CollectMonthLabel() => $"Thu điện nước {d!.Contract.ShortName} kỳ {month:00}/{year}";
+
+    private void OpenCollect(List<PeriodBill> bills, string label)
+    {
+        collectBills = bills;
+        collectLabel = label;
+        collect = new CollectForm { BillIds = bills.Where(b => b.Due > 0).Select(b => b.Bill.Id).ToList(), Amount = bills.Sum(b => b.Due), AccountId = settings!.BusinessAccountId };
+    }
+
+    private async Task CollectAsync()
+    {
+        var user = await GetUserNameAsync();
+        if (await RunAsync(() => Companies.CollectBillsAsync(collect, collectLabel, user), "Đã ghi nhận khoản thu."))
+        {
+            collectBills = null;
+            await LoadAsync();
+        }
+    }
+
+    private void EditPeriod(ContractPeriod p)
+    {
+        editPeriod = p;
+        payFrom = p.PayFrom;
+        payTo = p.PayTo;
+        settled = p.SettledOutside;
+        periodNote = p.Note;
+    }
+
+    private async Task SavePeriodAsync()
+    {
+        if (settled && !editPeriod!.SettledOutside && !await ConfirmAsync("Đánh dấu kỳ này đã thu ngoài phần mềm? Các phiếu chưa thu của kỳ sẽ bị xóa.")) return;
+        if (await RunAsync(() => Companies.UpdatePeriodAsync(editPeriod!.Id, payFrom, payTo, settled, periodNote), "Đã lưu kỳ."))
+        {
+            editPeriod = null;
+            await LoadAsync();
+        }
+    }
+
+    private async Task ToggleAttachAsync()
+    {
+        attaching = !attaching;
+        attachIds.Clear();
+        if (attaching)
+        {
+            attachable = await Companies.ListAttachableLeasesAsync();
+            var codes = d?.CurrentTerm?.RoomList ?? [];
+            foreach (var a in attachable.Where(a => codes.Contains(a.RoomCode))) attachIds.Add(a.LeaseId);
+        }
+    }
+
+    private async Task AttachAsync()
+    {
+        if (await RunAsync(() => Companies.AttachLeasesAsync(Id, attachIds.ToList()), "Đã gắn phòng vào hợp đồng."))
+        {
+            attaching = false;
+            await LoadAsync();
+        }
+    }
+
+    private async Task DetachAsync(CompanyRoom r)
+    {
+        if (!await ConfirmAsync($"Bỏ phòng {r.RoomCode} khỏi hợp đồng {d!.Contract.ShortName}? Phòng vẫn đang thuê, các kỳ sau tính như khách lẻ. Muốn trả phòng thì dùng Trả phòng.")) return;
+        if (await RunAsync(() => Companies.DetachLeaseAsync(r.Lease.Id), "Đã bỏ phòng khỏi hợp đồng.")) await LoadAsync();
+    }
+
+    private async Task CollectDepositsAsync()
+    {
+        var user = await GetUserNameAsync();
+        if (await RunAsync(() => Companies.CollectDepositsAsync(Id, depositAccount, depositDate, depositFiles, user), "Đã ghi tiền cọc."))
+        {
+            depositFiles = [];
+            await LoadAsync();
+        }
+    }
+
+    private void NewTerm()
+    {
+        var last = d!.Contract.Terms.OrderByDescending(t => t.ToDate).FirstOrDefault();
+        var from = last?.ToDate.AddDays(1) ?? DateTime.Today;
+        termForm = new TermForm
+        {
+            FromDate = from, ToDate = from.AddYears(1).AddDays(-1),
+            RentPerRoom = last?.RentPerRoom ?? 0, DepositPerRoom = last?.DepositPerRoom ?? 0, RoomCodes = last?.RoomCodes
+        };
+    }
+
+    private void EditTerm(ContractTerm t) => termForm = new TermForm
+    {
+        Id = t.Id, DocumentNo = t.DocumentNo, SignedDate = t.SignedDate, FromDate = t.FromDate, ToDate = t.ToDate,
+        RentPerRoom = t.RentPerRoom, DepositPerRoom = t.DepositPerRoom, RoomCodes = t.RoomCodes, Note = t.Note, ApplyToLeases = t == d!.CurrentTerm
+    };
+
+    private async Task SaveTermAsync()
+    {
+        var f = termForm!;
+        if (await RunAsync(() => f.Id == 0 ? Companies.AddTermAsync(Id, f) : Companies.UpdateTermAsync(f), "Đã lưu thời hạn hợp đồng."))
+        {
+            termForm = null;
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeleteTermAsync(ContractTerm t)
+    {
+        if (!await ConfirmAsync($"Xóa {t.DocumentNo} và các kỳ của nó?")) return;
+        if (await RunAsync(() => Companies.DeleteTermAsync(t.Id), "Đã xóa.")) await LoadAsync();
+    }
+
+    private void ToggleInfo()
+    {
+        editInfo = !editInfo;
+        if (!editInfo || d == null) return;
+        var c = d.Contract;
+        info = new CompanyContract
+        {
+            Id = c.Id, CompanyName = c.CompanyName, ShortName = c.ShortName, TaxCode = c.TaxCode, Address = c.Address, Representative = c.Representative,
+            RepresentativeTitle = c.RepresentativeTitle, Phone = c.Phone, BankAccount = c.BankAccount, ContractNo = c.ContractNo, SignedDate = c.SignedDate,
+            RentMonthsPerPeriod = c.RentMonthsPerPeriod, WaterPerRoom = c.WaterPerRoom, MaxOccupantsPerRoom = c.MaxOccupantsPerRoom, IsActive = c.IsActive, Note = c.Note
+        };
+    }
+
+    private async Task SaveInfoAsync()
+    {
+        var user = await GetUserNameAsync();
+        if (await RunAsync(() => Companies.SaveContractAsync(info, user), "Đã lưu thông tin công ty."))
+        {
+            editInfo = false;
+            await LoadAsync();
+        }
+    }
+
+    private async Task OnScanUploadedAsync(PendingFile f)
+    {
+        var user = await GetUserNameAsync();
+        if (await RunAsync(() => Attachments.AddAsync(AttachmentOwner.Company, Id, [f with { Kind = AttachmentKind.ContractScan }], user), "Đã lưu bản scan."))
+        {
+            scanFiles.Clear();
+            await LoadAsync();
+        }
+    }
+}

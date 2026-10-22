@@ -397,6 +397,9 @@ namespace NHNhaTro.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("ContractPeriodId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -459,6 +462,8 @@ namespace NHNhaTro.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ContractPeriodId");
 
                     b.HasIndex("LeaseId", "Year", "Month", "Kind");
 
@@ -581,6 +586,172 @@ namespace NHNhaTro.Migrations
                     b.ToTable("ChatReads");
                 });
 
+            modelBuilder.Entity("NHNhaTro.Data.Entities.CompanyContract", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("BankAccount")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("CompanyName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ContractNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MaxOccupantsPerRoom")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("RentMonthsPerPeriod")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Representative")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("RepresentativeTitle")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ShortName")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("SignedDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("TaxCode")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<decimal>("WaterPerRoom")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CompanyContracts");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.ContractPeriod", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ContractTermId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("From")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PayFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("PayTo")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("SettledOutside")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("To")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContractTermId");
+
+                    b.ToTable("ContractPeriods");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.ContractTerm", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CompanyContractId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DepositPerRoom")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<string>("DocumentNo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("FromDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<decimal>("RentPerRoom")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<string>("RoomCodes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("SignedDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("ToDate")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyContractId");
+
+                    b.ToTable("ContractTerms");
+                });
+
             modelBuilder.Entity("NHNhaTro.Data.Entities.FurnitureItem", b =>
                 {
                     b.Property<int>("Id")
@@ -633,6 +804,9 @@ namespace NHNhaTro.Migrations
                         .HasPrecision(18)
                         .HasColumnType("decimal(18,0)");
 
+                    b.Property<int?>("CompanyContractId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ContractScanPath")
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
@@ -682,6 +856,8 @@ namespace NHNhaTro.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompanyContractId");
 
                     b.HasIndex("RoomId", "Status");
 
@@ -1263,11 +1439,18 @@ namespace NHNhaTro.Migrations
 
             modelBuilder.Entity("NHNhaTro.Data.Entities.Bill", b =>
                 {
+                    b.HasOne("NHNhaTro.Data.Entities.ContractPeriod", "ContractPeriod")
+                        .WithMany()
+                        .HasForeignKey("ContractPeriodId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NHNhaTro.Data.Entities.Lease", "Lease")
                         .WithMany("Bills")
                         .HasForeignKey("LeaseId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("ContractPeriod");
 
                     b.Navigation("Lease");
                 });
@@ -1301,13 +1484,42 @@ namespace NHNhaTro.Migrations
                     b.Navigation("Room");
                 });
 
+            modelBuilder.Entity("NHNhaTro.Data.Entities.ContractPeriod", b =>
+                {
+                    b.HasOne("NHNhaTro.Data.Entities.ContractTerm", "Term")
+                        .WithMany("Periods")
+                        .HasForeignKey("ContractTermId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Term");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.ContractTerm", b =>
+                {
+                    b.HasOne("NHNhaTro.Data.Entities.CompanyContract", "CompanyContract")
+                        .WithMany("Terms")
+                        .HasForeignKey("CompanyContractId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CompanyContract");
+                });
+
             modelBuilder.Entity("NHNhaTro.Data.Entities.Lease", b =>
                 {
+                    b.HasOne("NHNhaTro.Data.Entities.CompanyContract", "CompanyContract")
+                        .WithMany("Leases")
+                        .HasForeignKey("CompanyContractId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NHNhaTro.Data.Entities.Room", "Room")
                         .WithMany("Leases")
                         .HasForeignKey("RoomId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("CompanyContract");
 
                     b.Navigation("Room");
                 });
@@ -1487,6 +1699,18 @@ namespace NHNhaTro.Migrations
                     b.Navigation("DefaultFurniture");
 
                     b.Navigation("Rooms");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.CompanyContract", b =>
+                {
+                    b.Navigation("Leases");
+
+                    b.Navigation("Terms");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.ContractTerm", b =>
+                {
+                    b.Navigation("Periods");
                 });
 
             modelBuilder.Entity("NHNhaTro.Data.Entities.Lease", b =>

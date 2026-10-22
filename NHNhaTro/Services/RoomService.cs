@@ -64,6 +64,7 @@ public class RoomService(IDbContextFactory<ApplicationDbContext> dbFactory)
     public async Task<RoomMap> GetMapAsync()
     {
         await using var db = await dbFactory.CreateDbContextAsync();
+        await CompanyService.EnsureBillsAsync(db, DateTime.Today);
         var settings = await db.Settings.AsNoTracking().FirstAsync();
         var (bm, by) = CurrentBillingPeriod(settings.BillingDay);
 
@@ -112,7 +113,7 @@ public class RoomService(IDbContextFactory<ApplicationDbContext> dbFactory)
             room.Block.DefaultFurniture.ToDictionary(d => d.FurnitureItemId, d => d.Quantity));
 
         var leases = await db.Leases.AsNoTracking().Where(l => l.RoomId == room.Id)
-            .Include(l => l.Tenants).ThenInclude(t => t.Tenant).Include(l => l.Penalties)
+            .Include(l => l.Tenants).ThenInclude(t => t.Tenant).Include(l => l.Penalties).Include(l => l.CompanyContract)
             .OrderByDescending(l => l.StartDate).AsSplitQuery().ToListAsync();
         var current = leases.FirstOrDefault(l => l.Status == LeaseStatus.Active);
 

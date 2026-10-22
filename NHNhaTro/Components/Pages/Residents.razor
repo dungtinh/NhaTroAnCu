@@ -16,7 +16,7 @@
 
 <div class="nh-card">
     <div class="d-flex flex-wrap gap-2 mb-3">
-        <input class="form-control" style="max-width: 320px" placeholder="Tìm tên, CCCD, phòng, điện thoại" @bind="search" @bind:event="oninput" @bind:after="LoadAsync" />
+        <input class="form-control" style="max-width: 320px" placeholder="Tìm tên, CCCD, phòng, điện thoại, công ty" @bind="search" @bind:event="oninput" @bind:after="LoadAsync" />
         <select class="form-select" style="max-width: 220px" @bind="currentOnly" @bind:after="LoadAsync">
             <option value="true">Đang ở</option>
             <option value="false">Tất cả (kể cả đã chuyển đi)</option>
@@ -33,6 +33,7 @@
                     <div class="d-flex justify-content-between"><strong class="text-truncate">@r.FullName</strong><span class="fw-bold text-primary">@r.RoomCode</span></div>
                     <div class="small text-muted text-truncate">@r.IdentityCard · @r.Phone
                         @if (r.IsRepresentative) {<span class="badge bg-info">Đại diện</span>}
+                        @if (r.Company != null) {<span class="badge bg-info-subtle text-info-emphasis">HĐ @r.Company</span>}
                         @if (Nationality.IsForeign(r.Nationality, r.Ethnicity)) {<span class="badge bg-warning text-dark">@r.Nationality</span>}</div>
                     <div class="small text-muted">Vào @Fmt.Date(r.MoveInDate)@(r.MoveOutDate != null ? " · ra " + Fmt.Date(r.MoveOutDate) : "")</div>
                 </div>
@@ -50,6 +51,7 @@
                         <td>@if (r.Photo != null) { <a href="@r.Photo" target="_blank"><img src="@r.Photo" alt="" class="nh-mini-thumb" /></a> }</td>
                         <td><a href="@($"hop-dong/{r.LeaseId}")" class="fw-bold">@r.RoomCode</a></td>
                         <td>@r.FullName @if (r.IsRepresentative) {<span class="badge bg-info">Đại diện</span>}
+                            @if (r.Company != null) {<span class="badge bg-info-subtle text-info-emphasis">HĐ @r.Company</span>}
                             @if (Nationality.IsForeign(r.Nationality, r.Ethnicity)) {<span class="badge bg-warning text-dark">@r.Nationality</span>}</td>
                         <td>@r.IdentityCard</td><td>@Fmt.Date(r.BirthDate)</td><td>@r.Gender</td><td>@r.Phone</td>
                         <td class="small">@r.PermanentAddress</td><td>@r.VehiclePlate</td><td>@Fmt.Date(r.MoveInDate)</td><td>@Fmt.Date(r.MoveOutDate)</td>

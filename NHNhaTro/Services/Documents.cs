@@ -30,9 +30,12 @@ public class Documents(IDbContextFactory<ApplicationDbContext> dbFactory, IWebHo
         var bill = await db.Bills.AsNoTracking().Include(b => b.Payments).ThenInclude(p => p.Account)
             .Include(b => b.Lease).ThenInclude(l => l.Room)
             .Include(b => b.Lease).ThenInclude(l => l.Tenants).ThenInclude(t => t.Tenant)
+            .Include(b => b.Lease).ThenInclude(l => l.CompanyContract)
             .AsSplitQuery().FirstOrDefaultAsync(b => b.Id == billId);
         if (bill == null) return null;
-        var rep = bill.Lease.Tenants.OrderByDescending(t => t.IsRepresentative).Select(t => t.Tenant.FullName).FirstOrDefault() ?? "";
+        var company = bill.Lease.CompanyContract;
+        var rep = company != null ? $"{company.CompanyName} (phòng {bill.Lease.Room.Code})"
+            : bill.Lease.Tenants.OrderByDescending(t => t.IsRepresentative).Select(t => t.Tenant.FullName).FirstOrDefault() ?? "";
         decimal paid = bill.Payments.Sum(p => p.Amount);
         var lines = new List<(string Item, string Detail, decimal Amount)>();
         if (bill.RentAmount != 0)
@@ -40,13 +43,15 @@ public class Documents(IDbContextFactory<ApplicationDbContext> dbFactory, IWebHo
             {
                 BillKind.MoveIn => $"1 tháng trả trước, kỳ {bill.PeriodFrom:dd/MM/yyyy} - {bill.PeriodTo:dd/MM/yyyy}",
                 BillKind.MoveOut => $"Kỳ chưa lập phiếu, tính đủ tháng ({bill.PeriodFrom:dd/MM/yyyy} - {bill.PeriodTo:dd/MM/yyyy})",
+                BillKind.ContractRent => CompanyService.ContractRentDetail(bill, bill.Lease.MonthlyRent) + "đ",
                 _ => LeaseService.IsStubBill(bill.PeriodFrom, bill.PeriodTo, bill.Lease.StartDate, s.BillingDay)
                     ? $"Kỳ đầu từ ngày vào {bill.PeriodFrom:dd/MM/yyyy} đến ngày chốt {bill.PeriodTo:dd/MM/yyyy}: {LeaseService.CalculateStubPeriod(0, bill.Lease.StartDate, s.BillingDay).Days} ngày × {Fmt.Money(bill.Lease.MonthlyRent)}đ ÷ 30"
                     : $"Tròn tháng {bill.PeriodFrom:dd/MM/yyyy} - {bill.PeriodTo:dd/MM/yyyy}"
             }, bill.RentAmount));
         if (bill.ElectricityKwh != 0 || bill.ElectricityAmount != 0)
             lines.Add(("Tiền điện", $"{bill.ElectricityKwh} số × {Fmt.Money(s.ElectricityPrice)}đ", bill.ElectricityAmount));
-        if (bill.WaterAmount != 0) lines.Add(("Tiền nước", $"{bill.PersonCount} người × {Fmt.Money(s.WaterPricePerPerson)}đ", bill.WaterAmount));
+        if (bill.WaterAmount != 0) lines.Add(("Tiền nước", bill.WaterAmount != bill.PersonCount * s.WaterPricePerPerson && company is { WaterPerRoom: > 0 }
+            ? $"Cố định {Fmt.Money(company.WaterPerRoom)}đ/phòng/tháng theo hợp đồng" : $"{bill.PersonCount} người × {Fmt.Money(s.WaterPricePerPerson)}đ", bill.WaterAmount));
         if (bill.OtherAmount != 0) lines.Add(("Khoản khác", bill.Kind == BillKind.MoveOut ? "Phạt / khác khi trả phòng" : "", bill.OtherAmount));
         if (bill.Discount != 0) lines.Add(("Giảm trừ", "", -bill.Discount));
 
@@ -86,7 +91,9 @@ public class Documents(IDbContextFactory<ApplicationDbContext> dbFactory, IWebHo
                 if (!string.IsNullOrWhiteSpace(bill.Note)) col.Item().Text($"Ghi chú: {bill.Note}").FontSize(10);
                 foreach (var p in bill.Payments.OrderBy(p => p.Date))
                     col.Item().Text($"• Thu {Fmt.Date(p.Date)}: {Fmt.Vnd(p.Amount)} ({p.Account.Name})").FontSize(9);
-                col.Item().PaddingTop(4).Text($"Hạn đóng kỳ sau: ngày {s.BillingDay:00} hằng tháng. Điện {Fmt.Money(s.ElectricityPrice)}đ/số, nước {Fmt.Money(s.WaterPricePerPerson)}đ/người/tháng.").FontSize(9);
+                col.Item().PaddingTop(4).Text(company != null
+                    ? $"Theo hợp đồng {company.ContractNo ?? company.ShortName}: tiền phòng nộp theo kỳ {company.RentMonthsPerPeriod} tháng; điện {Fmt.Money(s.ElectricityPrice)}đ/số, nước {Fmt.Money(company.WaterPerRoom)}đ/phòng thu hằng tháng ngày {s.BillingDay:00}."
+                    : $"Hạn đóng kỳ sau: ngày {s.BillingDay:00} hằng tháng. Điện {Fmt.Money(s.ElectricityPrice)}đ/số, nước {Fmt.Money(s.WaterPricePerPerson)}đ/người/tháng.").FontSize(9);
                 col.Item().PaddingTop(18).Row(r =>
                 {
                     r.RelativeItem().AlignCenter().Text("Người nộp tiền").Bold();

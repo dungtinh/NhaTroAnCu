@@ -133,6 +133,10 @@ else
                             (đủ từ @Fmt.Date(preview.RefundEligibleFrom)): <strong>không trả lại cọc</strong>. Các khoản điện, phạt, nợ khách vẫn phải nộp.
                         </div>
                     }
+                    else if (lease.CompanyContract is { } cc)
+                    {
+                        <div class="small text-success mb-2"><i class="fas fa-building"></i> Phòng thuộc hợp đồng @cc.ShortName: cọc hoàn theo hợp đồng sau khi trừ các khoản. Giảm phòng trong năm đầu thì nhập phạt (1 tháng cọc phòng) ở mục phạt. Tiền phòng kỳ đã nộp không hoàn.</div>
+                    }
                     else if (lease.IsExistingTenant && preview.MinStayMonths > 0)
                     {
                         <div class="small text-success mb-2"><i class="fas fa-check-circle"></i> Khách cũ (ở trước khi dùng phần mềm): không áp dụng quy định ở đủ @preview.MinStayMonths tháng, được trả lại cọc sau khi trừ các khoản.</div>

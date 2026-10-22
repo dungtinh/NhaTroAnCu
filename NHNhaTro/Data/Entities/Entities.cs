@@ -143,6 +143,8 @@ public class Lease
     public string? Note { get; set; }
     /// <summary>Khách đang ở trước khi dùng phần mềm (nhập ban đầu): ngày vào thật không rõ nên không áp dụng quy định ở đủ số tháng mới trả cọc.</summary>
     public bool IsExistingTenant { get; set; }
+    /// <summary>Phòng thuộc hợp đồng công ty (null = khách lẻ): tiền phòng thu theo kỳ hợp đồng, nước cố định theo phòng.</summary>
+    public int? CompanyContractId { get; set; }
 
     // Trả phòng
     public decimal? CheckoutElectricity { get; set; }
@@ -157,6 +159,7 @@ public class Lease
     public string? CreatedBy { get; set; }
 
     public Room Room { get; set; } = null!;
+    public CompanyContract? CompanyContract { get; set; }
     public List<LeaseTenant> Tenants { get; set; } = [];
     public List<Bill> Bills { get; set; } = [];
     public List<LeasePenalty> Penalties { get; set; } = [];
@@ -219,10 +222,13 @@ public static class BillKind
     public const string Monthly = "Monthly";
     /// <summary>Quyết toán khi trả phòng.</summary>
     public const string MoveOut = "MoveOut";
+    /// <summary>Tiền phòng một kỳ (nhiều tháng) của hợp đồng công ty.</summary>
+    public const string ContractRent = "ContractRent";
 
     public static string Display(string? k) => k switch
     {
         MoveIn => "Tháng đầu (trả trước)",
+        ContractRent => "Tiền phòng kỳ HĐ",
         MoveOut => "Trả phòng",
         _ => "Hằng tháng"
     };
@@ -249,10 +255,13 @@ public class Bill
     public decimal Discount { get; set; }
     public decimal TotalAmount { get; set; }
     public string? Note { get; set; }
+    /// <summary>Phiếu tiền phòng thuộc kỳ nào của hợp đồng công ty (chỉ phiếu ContractRent).</summary>
+    public int? ContractPeriodId { get; set; }
     public DateTime CreatedAt { get; set; }
     public string? CreatedBy { get; set; }
 
     public Lease Lease { get; set; } = null!;
+    public ContractPeriod? ContractPeriod { get; set; }
     public List<MoneyTransaction> Payments { get; set; } = [];
 }
 
@@ -277,6 +286,85 @@ public class UtilityBill
     public DateTime CreatedAt { get; set; }
     public string? CreatedBy { get; set; }
     public MoneyAccount Account { get; set; } = null!;
+}
+
+// ============================ HỢP ĐỒNG CÔNG TY ============================
+
+/// <summary>
+/// Hợp đồng một công ty thuê nhiều phòng cho nhân viên ở (VD: Công ty TNHH Horn thuê B3.1–B3.5).
+/// Mỗi phòng vẫn là một Lease riêng (gắn CompanyContractId); tiền phòng thu theo kỳ nhiều tháng (ContractPeriod),
+/// phiếu tháng chỉ còn điện và nước cố định theo phòng.
+/// </summary>
+public class CompanyContract
+{
+    public int Id { get; set; }
+    public string CompanyName { get; set; } = "";
+    /// <summary>Tên ngắn hiện trên thẻ phòng, phiếu (VD: Horn).</summary>
+    public string ShortName { get; set; } = "";
+    public string? TaxCode { get; set; }
+    public string? Address { get; set; }
+    public string? Representative { get; set; }
+    public string? RepresentativeTitle { get; set; }
+    public string? Phone { get; set; }
+    public string? BankAccount { get; set; }
+    public string? ContractNo { get; set; }
+    public DateTime? SignedDate { get; set; }
+    /// <summary>Số tháng mỗi kỳ tiền phòng (Horn: 3, trả theo quý).</summary>
+    public int RentMonthsPerPeriod { get; set; } = 3;
+    /// <summary>Tiền nước cố định mỗi phòng mỗi tháng; 0 = tính theo người như khách lẻ.</summary>
+    public decimal WaterPerRoom { get; set; } = 100_000;
+    public int MaxOccupantsPerRoom { get; set; } = 2;
+    public bool IsActive { get; set; } = true;
+    public string? Note { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public string? CreatedBy { get; set; }
+
+    public List<ContractTerm> Terms { get; set; } = [];
+    public List<Lease> Leases { get; set; } = [];
+}
+
+/// <summary>Một thời hạn của hợp đồng công ty: hợp đồng gốc hoặc một phụ lục (thời gian, giá, cọc, danh sách phòng).</summary>
+public class ContractTerm
+{
+    public int Id { get; set; }
+    public int CompanyContractId { get; set; }
+    /// <summary>Số văn bản: 01/HĐTN-Horn, PL 03.2026/Horn-TND...</summary>
+    public string DocumentNo { get; set; } = "";
+    public DateTime? SignedDate { get; set; }
+    public DateTime FromDate { get; set; }
+    /// <summary>Ngày cuối thời hạn (tính cả ngày này), VD 09/09/2027.</summary>
+    public DateTime ToDate { get; set; }
+    public decimal RentPerRoom { get; set; }
+    public decimal DepositPerRoom { get; set; }
+    /// <summary>Mã các phòng theo văn bản, cách nhau dấu phẩy.</summary>
+    public string? RoomCodes { get; set; }
+    public string? Note { get; set; }
+
+    public CompanyContract CompanyContract { get; set; } = null!;
+    public List<ContractPeriod> Periods { get; set; } = [];
+
+    public List<string> RoomList => string.IsNullOrWhiteSpace(RoomCodes) ? []
+        : RoomCodes.Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(c => c.ToUpperInvariant()).Distinct().ToList();
+}
+
+/// <summary>Một kỳ tiền phòng của hợp đồng công ty (VD quý 10/12/2026 – 09/03/2027, nộp 10–25/12/2026).</summary>
+public class ContractPeriod
+{
+    public int Id { get; set; }
+    public int ContractTermId { get; set; }
+    /// <summary>Kỳ thứ mấy trong thời hạn (1, 2, 3, 4).</summary>
+    public int Number { get; set; }
+    public DateTime From { get; set; }
+    /// <summary>Ngày đầu kỳ sau (không tính ngày này): kỳ 10/12 → 10/03.</summary>
+    public DateTime To { get; set; }
+    /// <summary>Cửa sổ nộp tiền theo hợp đồng.</summary>
+    public DateTime PayFrom { get; set; }
+    public DateTime PayTo { get; set; }
+    /// <summary>Đã thu ngoài phần mềm (trước khi dùng phần mềm): không lập phiếu.</summary>
+    public bool SettledOutside { get; set; }
+    public string? Note { get; set; }
+
+    public ContractTerm Term { get; set; } = null!;
 }
 
 // ============================ TÀI KHOẢN, THU CHI ============================
@@ -473,6 +561,7 @@ public static class AttachmentOwner
     public const string Utility = "Utility";
     public const string Site = "Site";
     public const string Room = "Room";
+    public const string Company = "Company";
 }
 
 

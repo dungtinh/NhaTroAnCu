@@ -1,9 +1,10 @@
-@page "/"
+﻿@page "/"
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inherits NhPage
 @inject RoomService Rooms
 @inject SetupService Setup
+@inject CompanyService Companies
 
 <PageTitle>Trang chính</PageTitle>
 
@@ -22,6 +23,22 @@
         <div class="col-4"><a class="nh-stat d-block text-decoration-none text-reset" href="so-do"><div class="v text-secondary">@map.Empty</div><div class="l">Phòng trống</div></a></div>
         <div class="col-4"><a class="nh-stat d-block text-decoration-none text-reset" href="thu-tien"><div class="v text-danger">@Fmt.Money(map.Outstanding / 1000)k</div><div class="l">Còn phải thu</div></a></div>
     </div>
+    @if (reminders.Count > 0)
+    {
+        <div class="nh-card mb-3">
+            <h5><i class="fas fa-building text-info"></i> Tiền phòng hợp đồng công ty</h5>
+            @foreach (var r in reminders)
+            {
+                <a class="nh-list-row px-0" href="@($"hop-dong-cong-ty/{r.ContractId}")">
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="fw-bold">@r.ShortName · kỳ @Fmt.Date(r.Period.From) → @Fmt.Date(r.Period.To.AddDays(-1))</div>
+                        <div class="small text-muted">@(r.Upcoming ? $"Sắp đến kỳ, nộp {r.Period.PayFrom:dd/MM} – {r.Period.PayTo:dd/MM/yyyy}" : $"Hạn nộp {r.Period.PayFrom:dd/MM} – {r.Period.PayTo:dd/MM/yyyy}")</div>
+                    </div>
+                    <span class="chip @(r.Overdue ? "chip-red" : r.Upcoming ? "chip-blue" : "chip-amber")">@(r.Overdue ? "Quá hạn" : r.Upcoming ? "Dự kiến" : "Chưa thu") @Fmt.Money(r.Amount)</span>
+                </a>
+            }
+        </div>
+    }
     @if (unpaid.Count > 0)
     {
         <div class="nh-card mb-3">
@@ -48,6 +65,7 @@
         <a href="chat"><i class="fas fa-comments"></i><span>Chat nội bộ</span></a>
         <a href="so-do"><i class="fas fa-th-large"></i><span>Sơ đồ phòng</span></a>
         <a href="khach-thue"><i class="fas fa-users"></i><span>Khách thuê</span></a>
+        <a href="hop-dong-cong-ty"><i class="fas fa-building"></i><span>HĐ công ty</span></a>
         <a href="thu-chi"><i class="fas fa-wallet"></i><span>Thu chi</span></a>
         <a href="bao-cao"><i class="fas fa-chart-bar"></i><span>Báo cáo</span></a>
         <a href="quang-cao"><i class="fas fa-bullhorn"></i><span>Quảng cáo</span></a>
@@ -62,11 +80,13 @@
     private RoomMap? map;
     private List<RoomCard> unpaid = [], noBill = [];
     private bool isAdmin;
+    private List<CompanyReminder> reminders = [];
 
     protected override async Task OnInitializedAsync()
     {
         isAdmin = await IsAdminAsync();
         map = await Rooms.GetMapAsync();
+        reminders = await Companies.GetRemindersAsync();
         unpaid = map.Rooms.Where(r => r.Outstanding > 0).OrderByDescending(r => r.Outstanding).ToList();
         noBill = map.Rooms.Where(r => r.Color == RoomColor.NoBill).ToList();
     }

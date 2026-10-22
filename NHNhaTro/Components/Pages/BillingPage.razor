@@ -120,7 +120,7 @@ else
         <div class="gr @state" @key="r.LeaseId">
             <div class="c-room"><a href="@($"phong/{r.RoomCode}")" class="room">@r.RoomCode</a></div>
             <div class="c-name">
-                <div class="name">@r.Representative</div>
+                <div class="name">@r.Representative@if (r.Company != null) { <span class="badge bg-info-subtle text-info-emphasis ms-1">HĐ @r.Company</span> }</div>
                 <div class="sub" title="@r.RentDetail">@r.RentDetail
                     @if (r.PreviousDebt > 0) { <span class="debt"> · nợ cũ @Fmt.Money(r.PreviousDebt)</span> }</div>
             </div>
@@ -128,7 +128,7 @@ else
                 <div class="c-kwh n" data-l="Số điện">@(r.Kwh is int k ? k.ToString() : "-")</div>
                 <div class="c-rent n" data-l="Phòng">@Fmt.Money(r.Rent)</div>
                 <div class="c-el n" data-l="Điện">@Fmt.Money(r.Electricity(ep))@if (r.Kwh is int kw) { <div class="sub">@kw số × @Fmt.Money(ep)</div> }</div>
-                <div class="c-wa n" data-l="Nước">@Fmt.Money(r.Water(wp))<div class="sub">@r.PersonCount người × @Fmt.Money(wp)</div></div>
+                <div class="c-wa n" data-l="Nước">@Fmt.Money(r.Water(wp))<div class="sub">@(r.WaterFixed != null ? "cố định/phòng" : $"{r.PersonCount} người × {Fmt.Money(wp)}")</div></div>
             </div>
             <div class="c-total n">@(r.BillId != null || r.SkipThisMonth ? Fmt.Money(t) : "-")</div>
             <div class="c-paid n" data-l="Đã thu">@Fmt.Money(r.Paid)</div>

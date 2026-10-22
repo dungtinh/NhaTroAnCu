@@ -5,6 +5,7 @@
 @inject RoomService Rooms
 @inject LeaseService Leases
 @inject SetupService Setup
+@inject CompanyService Companies
 
 <PageTitle>Nhận phòng</PageTitle>
 
@@ -19,7 +20,7 @@
 else
 {
     var stub = room == null ? null : LeaseService.CalculateStubPeriod(form.MonthlyRent, form.MoveInDate, settings.BillingDay);
-    decimal total = form.MonthlyRent + form.Deposit;
+    decimal total = (company == null ? form.MonthlyRent : 0) + form.Deposit;
     var people = form.Tenants.Where(t => !t.IsEmpty).ToList();
     var furDiff = furniture.Where(f => f.Quantity != f.Default).ToList();
 
@@ -40,6 +41,21 @@ else
         {
             <div class="nh-card">
                 <h5><i class="fas fa-calendar-check"></i> Ngày vào, giá, cọc</h5>
+                @if (companies.Count > 0)
+                {
+                    <div class="mb-2">
+                        <label class="form-label">Bên thuê</label>
+                        <select class="form-select" value="@(company?.Id.ToString() ?? "")" @onchange="OnCompanyChanged">
+                            <option value="">Khách lẻ</option>
+                            @foreach (var c in companies) { <option value="@c.Id">Hợp đồng công ty @c.ShortName (@c.CompanyName)</option> }
+                        </select>
+                        @if (company != null)
+                        {
+                            <div class="small text-info-emphasis mt-1"><i class="fas fa-building"></i> Phòng thuộc HĐ @company.ShortName: không thu tháng trả trước, tiền phòng thu theo kỳ @company.RentMonthsPerPeriod tháng
+                                (vào giữa kỳ tính từ ngày vào), nước @Fmt.Money(company.WaterPerRoom)đ/phòng/tháng, tối đa @company.MaxOccupantsPerRoom người.</div>
+                        }
+                    </div>
+                }
                 <div class="row g-2">
                     <div class="col-6 col-md-4"><label class="form-label">Ngày vào</label><input type="date" class="form-control" @bind="form.MoveInDate" /></div>
                     <div class="col-6 col-md-4"><label class="form-label">Tiền phòng/tháng</label><MoneyInput @bind-Value="form.MonthlyRent" /></div>
@@ -49,7 +65,7 @@ else
                 {
                     <div class="small text-warning-emphasis mt-2"><i class="fas fa-info-circle"></i> Giá phòng @room.Code sẽ đổi từ @Fmt.Vnd(details.Room.Rent) thành @Fmt.Vnd(form.MonthlyRent).</div>
                 }
-                @if (form.Deposit != settings.DefaultDeposit)
+                @if (form.Deposit != settings.DefaultDeposit && company == null)
                 {
                     <div class="small text-muted mt-1">Cọc mặc định theo cấu hình là @Fmt.Vnd(settings.DefaultDeposit).</div>
                 }
@@ -85,6 +101,11 @@ else
     {
         <div class="nh-card">
             <h5><i class="fas fa-users"></i> Khách thuê phòng @room!.Code <span class="small fw-normal text-muted">· chụp CCCD 2 mặt và ảnh chân dung, hoặc chọn ảnh có sẵn</span></h5>
+            @if (company != null)
+            {
+                <div class="small text-info-emphasis mb-2"><i class="fas fa-passport"></i> Nhân viên @company.ShortName: nhập số hộ chiếu vào ô CCCD. Chưa có giấy tờ thì để trống,
+                    phần mềm ghi tạm "Nhân viên @company.ShortName (chưa có tên)" để bổ sung sau ở trang hợp đồng.</div>
+            }
             <TenantEditor Tenants="form.Tenants" MaxPeople="maxPeople" Compact="true" Changed="StateHasChanged" />
         </div>
     }
@@ -112,7 +133,13 @@ else
                 <div class="nh-card">
                     <h5><i class="fas fa-calculator"></i> Kỳ thu tiếp theo</h5>
                     <div class="small">
-                        @if (stub!.Days > 0)
+                        @if (company != null)
+                        {
+                            <div class="mb-1">Tiền phòng: phiếu kỳ hợp đồng @company.ShortName (@company.RentMonthsPerPeriod tháng/kỳ), kỳ đang chạy tính từ ngày vào
+                                (tháng tròn × @Fmt.Money(form.MonthlyRent) + ngày lẻ ÷ 30). Thu gộp ở trang <a href="@($"hop-dong-cong-ty/{company.Id}")">Hợp đồng công ty</a>.</div>
+                            <div>Từ kỳ chốt mồng @settings.BillingDay sau ngày vào: điện (số đã dùng × @Fmt.Money(settings.ElectricityPrice)đ) + nước @Fmt.Money(company.WaterPerRoom)đ/phòng.</div>
+                        }
+                        else if (stub!.Days > 0)
                         {
                             <div class="mb-1">Tháng trả trước tính cho <strong>@Fmt.Date(stub.To) → @Fmt.Date(stub.To.AddMonths(1))</strong>.</div>
                             <div class="mb-1">Kỳ chốt đầu <strong>@Fmt.Date(stub.To)</strong> thu: tiền phòng @Fmt.Date(stub.From) → @Fmt.Date(stub.To)
@@ -133,9 +160,12 @@ else
                 <div class="nh-card">
                     <h5><i class="fas fa-hand-holding-dollar"></i> Tiền thu khi vào</h5>
                     <table class="nh-table mb-2">
-                        <tr><td>1 tháng tiền phòng <span class="small text-muted d-block">trả trước · TK hộ kinh doanh</span></td><td class="text-end fw-bold">@Fmt.Money(form.MonthlyRent)</td></tr>
+                        @if (company == null)
+                        {
+                            <tr><td>1 tháng tiền phòng <span class="small text-muted d-block">trả trước · TK hộ kinh doanh</span></td><td class="text-end fw-bold">@Fmt.Money(form.MonthlyRent)</td></tr>
+                        }
                         <tr><td>Tiền cọc <span class="small text-muted d-block">TK cá nhân</span></td><td class="text-end">@Fmt.Money(form.Deposit)</td></tr>
-                        <tr class="table-light"><td class="fw-bold">Khách phải nộp</td><td class="text-end fw-bold fs-5 text-primary">@Fmt.Vnd(total)</td></tr>
+                        <tr class="table-light"><td class="fw-bold">@(company == null ? "Khách phải nộp" : $"{company.ShortName} phải nộp")</td><td class="text-end fw-bold fs-5 text-primary">@Fmt.Vnd(total)</td></tr>
                     </table>
 
                     <div class="form-check form-switch fs-6 mb-2">
@@ -146,7 +176,7 @@ else
                     {
                         <div class="row g-2 mb-2">
                             <div class="col-6"><label class="form-label">Đã thu cọc</label><MoneyInput @bind-Value="form.DepositPaid" /></div>
-                            <div class="col-6"><label class="form-label">Đã thu tiền phòng</label><MoneyInput @bind-Value="form.FirstPaymentPaid" /></div>
+                            @if (company == null) { <div class="col-6"><label class="form-label">Đã thu tiền phòng</label><MoneyInput @bind-Value="form.FirstPaymentPaid" /></div> }
                         </div>
                         <div class="small text-muted mb-2">Phần chưa thu sẽ hiện là còn nợ ở phòng.</div>
                     }
@@ -197,11 +227,33 @@ else
     private bool paidAll = true;
     private int maxPeople = 4;
     private int step = 1;
+    private List<CompanyContract> companies = [];
+    private CompanyContract? company;
 
     protected override async Task OnInitializedAsync()
     {
         settings = await Setup.GetSettingsAsync();
         form.Deposit = settings.DefaultDeposit;
+        companies = await Companies.ListActiveAsync();
+    }
+
+    /// <summary>Chọn bên thuê: khách lẻ hay hợp đồng công ty (giá, cọc, số người theo thời hạn hợp đồng hiện hành).</summary>
+    private void OnCompanyChanged(ChangeEventArgs e)
+    {
+        company = int.TryParse(e.Value?.ToString(), out var id) ? companies.FirstOrDefault(c => c.Id == id) : null;
+        form.CompanyContractId = company?.Id;
+        if (company != null)
+        {
+            var term = CompanyService.CurrentTerm(company.Terms, form.MoveInDate);
+            if (term != null) { form.MonthlyRent = term.RentPerRoom; form.Deposit = term.DepositPerRoom; }
+            maxPeople = company.MaxOccupantsPerRoom;
+        }
+        else if (details != null)
+        {
+            form.MonthlyRent = details.Room.Rent;
+            form.Deposit = settings!.DefaultDeposit;
+            maxPeople = details.Room.MaxOccupants;
+        }
     }
 
     private async Task OnPicked(RoomCard? r)
@@ -216,6 +268,7 @@ else
         form.MonthlyRent = details.Room.Rent;
         form.Deposit = settings!.DefaultDeposit;
         maxPeople = details.Room.MaxOccupants;
+        if (company != null) OnCompanyChanged(new ChangeEventArgs { Value = company.Id.ToString() });
         furniture = details.Furniture.Select(f => new FurnitureEdit { ItemId = f.ItemId, Name = f.Name, Quantity = f.Quantity, Default = f.DefaultQuantity }).ToList();
     }
 
@@ -225,7 +278,7 @@ else
         if (s == 3)
         {
             var people = form.Tenants.Where(t => !t.IsEmpty).ToList();
-            if (people.Count == 0 || people.Any(t => string.IsNullOrWhiteSpace(t.FullName) || string.IsNullOrWhiteSpace(t.IdentityCard)))
+            if (company == null && (people.Count == 0 || people.Any(t => string.IsNullOrWhiteSpace(t.FullName) || string.IsNullOrWhiteSpace(t.IdentityCard))))
             {
                 Toast.Warning("Nhập họ tên và số CCCD của người thuê trước.");
                 step = 2;
@@ -245,7 +298,7 @@ else
     private void FillAll()
     {
         form.DepositPaid = form.Deposit;
-        form.FirstPaymentPaid = form.MonthlyRent;
+        form.FirstPaymentPaid = company == null ? form.MonthlyRent : 0;
     }
 
     private bool RoomConfigChanged => details != null

@@ -33,6 +33,7 @@ else
             <div class="tags">
                 <span class="tag">@(lease != null ? "Đang thuê" : RoomStatus.Display(d.Room.Status))</span>
                 @if (lease?.IsExistingTenant == true) { <span class="tag">Khách cũ</span> }
+                @if (lease?.CompanyContract is { } cc) { <a class="tag text-decoration-none" href="@($"hop-dong-cong-ty/{cc.Id}")" title="Tiền phòng thu theo kỳ hợp đồng, nước cố định theo phòng"><i class="fas fa-building"></i> HĐ @cc.ShortName</a> }
                 @if (furDiff.Count > 0) { <span class="tag warn"><i class="fas fa-exclamation-triangle"></i> Đồ đạc khác</span> }
             </div>
         </div>
