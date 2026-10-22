@@ -164,6 +164,7 @@ else
                 {
                     <div class="nh-sec-edit">
                         <div class="row g-2">
+                            <div class="col-12"><label class="form-label">Ngày vào</label><input type="date" class="form-control" @bind="startDate" /></div>
                             <div class="col-6"><label class="form-label">Giá thuê</label><MoneyInput @bind-Value="rent" /></div>
                             <div class="col-6"><label class="form-label">Tiền cọc</label><MoneyInput @bind-Value="deposit" disabled="@(!isAdmin)" /></div>
                             <div class="col-12"><label class="form-label">Ghi chú</label><textarea class="form-control" rows="2" @bind="note"></textarea></div>
@@ -239,6 +240,7 @@ else
     private bool notFound, isAdmin, editPeople, editTerms;
     private decimal rent, deposit;
     private string? note;
+    private DateTime startDate = DateTime.Today;
     private List<TenantInput> tenants = [];
     private DateTime changeDate = DateTime.Today;
     private List<PendingFile> scanFiles = [];
@@ -265,6 +267,7 @@ else
         rent = lease.MonthlyRent;
         deposit = lease.Deposit;
         note = lease.Note;
+        startDate = lease.StartDate.Date;
         tenants = lease.Tenants.Where(t => t.MoveOutDate == null).OrderByDescending(t => t.IsRepresentative).Select(t => TenantInput.From(t.Tenant)).ToList();
         if (tenants.Count == 0) tenants.Add(new TenantInput());
         var page = await Accounts.GetLedgerAsync(new LedgerFilter { LeaseId = lease.Id, PageSize = 200 });
@@ -286,7 +289,7 @@ else
 
     private async Task SaveTermsAsync()
     {
-        if (await RunAsync(() => Leases.UpdateLeaseTermsAsync(Id, rent, deposit, note), "Đã lưu.")) { editTerms = false; await LoadAsync(); }
+        if (await RunAsync(() => Leases.UpdateLeaseTermsAsync(Id, rent, deposit, note, startDate), "Đã lưu.")) { editTerms = false; await LoadAsync(); }
     }
 
     private async Task SaveTenantsAsync()

@@ -396,11 +396,19 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         await db.SaveChangesAsync();
     }
 
-    public async Task UpdateLeaseTermsAsync(int leaseId, decimal monthlyRent, decimal deposit, string? note)
+    public async Task UpdateLeaseTermsAsync(int leaseId, decimal monthlyRent, decimal deposit, string? note, DateTime? startDate = null)
     {
         if (monthlyRent <= 0 || deposit < 0) throw new InvalidOperationException("Số tiền không hợp lệ.");
         await using var db = await dbFactory.CreateDbContextAsync();
-        var lease = await db.Leases.Include(l => l.Room).FirstAsync(l => l.Id == leaseId);
+        var lease = await db.Leases.Include(l => l.Room).Include(l => l.Tenants).FirstAsync(l => l.Id == leaseId);
+        if (startDate is { } sd && sd.Date != lease.StartDate.Date)
+        {
+            if (sd.Date > DateTime.Today.AddDays(1)) throw new InvalidOperationException("Ngày vào không được ở tương lai.");
+            if (lease.EndDate is { } end && sd.Date > end.Date) throw new InvalidOperationException("Ngày vào sau ngày trả phòng.");
+            // Người ở cùng ngày vào cũ thì đi theo ngày vào mới.
+            foreach (var t in lease.Tenants.Where(t => t.MoveInDate.Date == lease.StartDate.Date)) t.MoveInDate = sd.Date;
+            lease.StartDate = sd.Date;
+        }
         lease.MonthlyRent = monthlyRent;
         lease.Deposit = deposit;
         lease.Note = note;
