@@ -106,7 +106,9 @@ Giữ phiếu theo phòng để **doanh thu theo phòng**, màu nợ trên sơ �
 
 **Đã làm xong tính năng ngày 22/10/2026** (migration `CompanyContracts`, `CompanyService`, trang `/hop-dong-cong-ty`), thử trên LocalDB.
 Khác bản nghiên cứu: không có nút "Lập phiếu ngay"; muốn đổi ngày của một thời hạn thì xóa và thêm lại (chỉ được khi chưa có phiếu).
-Sau khi triển khai, làm trên giao diện (Thông tin → HĐ công ty), không cần lệnh máy chủ:
+**Đã nhập lên máy chủ ngày 22/10/2026** bằng lệnh `Run-ServerCommand.ps1 -Command setup-horn -File <HĐ.pdf>,<PL.pdf>` (chạy một lần,
+chạy lại sẽ từ chối), đúng các bước dưới đây. Kỳ quý 2 (10/12/2026 → 09/03/2027, nộp 10–25/12/2026) là kỳ đầu thu trên phần mềm.
+Các bước tương ứng nếu làm tay trên giao diện (Thông tin → HĐ công ty):
 
 1. Tạo hợp đồng Horn, thời hạn 1 = hợp đồng gốc (20 phòng, đã hết hạn 09/09/2026, mọi kỳ tự ghi đã thu ngoài), thời hạn 2 = phụ lục
    (B3.1–B3.5, 10/09/2026–09/09/2027, 2.200.000, cọc 6.600.000/phòng). Kỳ 1 của phụ lục: sửa cửa sổ nộp thành 20/09–05/10/2026.

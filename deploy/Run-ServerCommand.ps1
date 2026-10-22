@@ -18,6 +18,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $cred = Import-Clixml $CredentialFile
 $remoteFiles = @()
+# Gọi qua "powershell -File" thì "a.pdf,b.pdf" đến đây thành một chuỗi: tách theo dấu phẩy.
+$File = @($File | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
 if ($File) {
     $s = New-PSSession -ComputerName $Server -Credential $cred
     try {
