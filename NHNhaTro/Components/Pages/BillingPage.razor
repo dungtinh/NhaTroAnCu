@@ -146,6 +146,7 @@ else
                 @if (r.BillId == null && !r.SkipThisMonth)
                 {
                     <a class="btn btn-sm btn-warning" href="so-dien"><i class="fas fa-bolt"></i> Ghi số điện</a>
+                    <button type="button" class="btn btn-sm btn-light" title="Sửa phiếu (sạc xe, số người...)" @onclick="() => edit = r"><i class="fas fa-pen"></i></button>
                 }
                 @if (r.BillId != null && !isDone)
                 {

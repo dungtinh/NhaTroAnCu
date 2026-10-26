@@ -396,7 +396,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         await db.SaveChangesAsync();
     }
 
-    public async Task UpdateLeaseTermsAsync(int leaseId, decimal monthlyRent, decimal deposit, string? note, DateTime? startDate = null)
+    public async Task UpdateLeaseTermsAsync(int leaseId, decimal monthlyRent, decimal deposit, string? note, DateTime? startDate = null, bool? evCharging = null)
     {
         if (monthlyRent <= 0 || deposit < 0) throw new InvalidOperationException("Số tiền không hợp lệ.");
         await using var db = await dbFactory.CreateDbContextAsync();
@@ -412,6 +412,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         lease.MonthlyRent = monthlyRent;
         lease.Deposit = deposit;
         lease.Note = note;
+        if (evCharging is bool ev) lease.EvCharging = ev;
         lease.Room.Rent = monthlyRent;
         await db.SaveChangesAsync();
     }

@@ -376,13 +376,10 @@ button.nh-step:disabled { opacity: .55; }
 .nh-steps-lg .nh-step { white-space: nowrap; min-width: 0; font-size: .9rem; padding: 9px 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; }
 .nh-steps-lg .nh-step span { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,.35); font-size: .78rem; }
 .nh-steps-lg .nh-step:not(.on):not(.done) span { background: #fff; }
-.nh-fur-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-@media (min-width: 768px) { .nh-fur-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (min-width: 1200px) { .nh-fur-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-.nh-fur { display: flex; flex-direction: column; align-items: stretch; gap: 6px; border: 1px solid var(--nh-border); border-radius: 12px; padding: 8px 10px; background: #fff; }
-@media (min-width: 768px) { .nh-fur { flex-direction: row; justify-content: space-between; align-items: center; } }
+.nh-fur-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.nh-fur { display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 0; border: 1px solid var(--nh-border); border-radius: 12px; padding: 8px 10px; background: #fff; }
 .nh-fur.diff { border-color: #f59e0b; background: #fffbeb; }
-.nh-fur .name { font-weight: 600; min-width: 0; overflow: hidden; }
+.nh-fur .name { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 .nh-fur .name small { display: block; color: var(--nh-muted); font-weight: 400; font-size: .7rem; white-space: nowrap; }
 .nh-fur .qty { display: flex; align-items: center; justify-content: center; gap: 4px; flex: 0 0 auto; }
 .nh-fur .qty input { width: 52px; padding: 4px; min-height: 36px; font-size: 1rem; }

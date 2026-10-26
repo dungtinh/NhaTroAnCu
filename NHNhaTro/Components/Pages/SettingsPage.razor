@@ -50,7 +50,7 @@
                             <div class="col-md-3"><label class="form-label small">Ngày đầu kỳ</label><input type="date" class="form-control" @bind="a.OpeningDate" /></div>
                             <div class="col-md-4"><label class="form-label small">Ngân hàng</label><input class="form-control" @bind="a.BankName" /></div>
                             <div class="col-md-4"><label class="form-label small">Số tài khoản</label><input class="form-control" @bind="a.AccountNumber" /></div>
-                            <div class="col-md-4"><label class="form-label small">Chủ tài khoản</label><input class="form-control" @bind="a.AccountHolder" /></div>
+                            <div class="col-md-4"><label class="form-label small">Chủ tài khoản</label><input class="form-control" autocomplete="off" @bind="a.AccountHolder" /></div>
                         </div>
                         <button type="button" class="btn btn-sm btn-primary mt-2" @onclick="() => SaveAccountAsync(a)"><i class="fas fa-save"></i> Lưu tài khoản</button>
                     </div>
@@ -75,11 +75,11 @@
                         Claude: <strong>@(string.IsNullOrEmpty(s.ClaudeApiKey) ? "chưa có key" : "đã có key")</strong>
                     </div>
                     <div class="col-md-8"><label class="form-label small">API key Gemini</label>
-                        <input type="password" class="form-control" autocomplete="off" placeholder="@(string.IsNullOrEmpty(s.GeminiApiKey) ? "Dán key" : "Để trống để giữ key cũ")" @bind="geminiKey" /></div>
+                        <input type="password" class="form-control" autocomplete="new-password" placeholder="@(string.IsNullOrEmpty(s.GeminiApiKey) ? "Dán key" : "Để trống để giữ key cũ")" @bind="geminiKey" /></div>
                     <div class="col-md-4"><label class="form-label small">Mô hình Gemini</label>
                         <input class="form-control" placeholder="@ScanProvider.DefaultGeminiModel" @bind="geminiModel" /></div>
                     <div class="col-md-8"><label class="form-label small">API key Claude</label>
-                        <input type="password" class="form-control" autocomplete="off" placeholder="@(string.IsNullOrEmpty(s.ClaudeApiKey) ? "Dán key" : "Để trống để giữ key cũ")" @bind="claudeKey" /></div>
+                        <input type="password" class="form-control" autocomplete="new-password" placeholder="@(string.IsNullOrEmpty(s.ClaudeApiKey) ? "Dán key" : "Để trống để giữ key cũ")" @bind="claudeKey" /></div>
                     <div class="col-md-4"><label class="form-label small">Mô hình Claude</label>
                         <input class="form-control" placeholder="@ScanProvider.DefaultClaudeModel" @bind="claudeModel" /></div>
                 </div>

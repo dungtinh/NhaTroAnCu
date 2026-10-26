@@ -147,6 +147,7 @@ else
                         @if (!active) { <div><div class="l">Ngày trả</div><div class="v">@Fmt.Date(lease.EndDate)</div></div> }
                         <div><div class="l">Giá thuê/tháng</div><div class="v">@Fmt.Vnd(lease.MonthlyRent)</div></div>
                         <div><div class="l">Cọc theo hợp đồng</div><div class="v">@Fmt.Vnd(lease.Deposit)</div></div>
+                        <div><div class="l">Sạc xe điện</div><div class="v">@(lease.EvCharging ? "Có" : "Không")</div></div>
                     </div>
                     @if (!string.IsNullOrEmpty(lease.Note)) { <div class="small mt-2 text-muted"><i class="fas fa-sticky-note"></i> @lease.Note</div> }
                     <div class="mt-3">
@@ -167,6 +168,7 @@ else
                             <div class="col-12"><label class="form-label">Ngày vào</label><input type="date" class="form-control" @bind="startDate" /></div>
                             <div class="col-6"><label class="form-label">Giá thuê</label><MoneyInput @bind-Value="rent" /></div>
                             <div class="col-6"><label class="form-label">Tiền cọc</label><MoneyInput @bind-Value="deposit" disabled="@(!isAdmin)" /></div>
+                            <div class="col-12"><label class="form-check"><input type="checkbox" class="form-check-input" @bind="evCharging" /> <span class="form-check-label"><i class="fas fa-charging-station"></i> Có sạc xe điện (thu thêm hằng tháng)</span></label></div>
                             <div class="col-12"><label class="form-label">Ghi chú</label><textarea class="form-control" rows="2" @bind="note"></textarea></div>
                         </div>
                         <button type="button" class="btn btn-primary w-100 mt-2" disabled="@Busy" @onclick="SaveTermsAsync"><i class="fas fa-save"></i> Lưu hợp đồng</button>
@@ -237,7 +239,7 @@ else
     private Lease? lease;
     private int billingDay = 10;
     private string RentDetail(Bill b) => lease == null ? "" : LeaseService.RentDetail(b, lease, billingDay);
-    private bool notFound, isAdmin, editPeople, editTerms;
+    private bool notFound, isAdmin, editPeople, editTerms, evCharging;
     private decimal rent, deposit;
     private string? note;
     private DateTime startDate = DateTime.Today;
@@ -267,6 +269,7 @@ else
         rent = lease.MonthlyRent;
         deposit = lease.Deposit;
         note = lease.Note;
+        evCharging = lease.EvCharging;
         startDate = lease.StartDate.Date;
         tenants = lease.Tenants.Where(t => t.MoveOutDate == null).OrderByDescending(t => t.IsRepresentative).Select(t => TenantInput.From(t.Tenant)).ToList();
         if (tenants.Count == 0) tenants.Add(new TenantInput());
@@ -289,7 +292,7 @@ else
 
     private async Task SaveTermsAsync()
     {
-        if (await RunAsync(() => Leases.UpdateLeaseTermsAsync(Id, rent, deposit, note, startDate), "Đã lưu.")) { editTerms = false; await LoadAsync(); }
+        if (await RunAsync(() => Leases.UpdateLeaseTermsAsync(Id, rent, deposit, note, startDate, evCharging), "Đã lưu.")) { editTerms = false; await LoadAsync(); }
     }
 
     private async Task SaveTenantsAsync()
