@@ -10,6 +10,8 @@ public class AppSetting
     public decimal ElectricityPrice { get; set; } = 3500;
     /// <summary>Tiền nước mỗi người mỗi tháng.</summary>
     public decimal WaterPricePerPerson { get; set; } = 80000;
+    /// <summary>Phí sạc xe điện mỗi phòng mỗi tháng (chỉ phòng có đăng ký sạc).</summary>
+    public decimal EvChargingFee { get; set; } = 100000;
     /// <summary>Ngày thu tiền hằng tháng.</summary>
     public int BillingDay { get; set; } = 10;
     /// <summary>Tiền cọc mặc định cho mọi khách (sửa được từng hợp đồng).</summary>
@@ -137,6 +139,8 @@ public class Lease
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public decimal MonthlyRent { get; set; }
+    /// <summary>Phòng có sạc xe điện: mỗi phiếu tháng tự thu thêm phí sạc.</summary>
+    public bool EvCharging { get; set; }
     public decimal Deposit { get; set; }
     public string Status { get; set; } = LeaseStatus.Active;
     public string? ContractScanPath { get; set; }
@@ -251,6 +255,8 @@ public class Bill
     public decimal ElectricityAmount { get; set; }
     public int PersonCount { get; set; }
     public decimal WaterAmount { get; set; }
+    /// <summary>Phí sạc xe điện của kỳ (0 = phòng không sạc).</summary>
+    public decimal EvChargeAmount { get; set; }
     public decimal OtherAmount { get; set; }
     public decimal Discount { get; set; }
     public decimal TotalAmount { get; set; }

@@ -38,14 +38,17 @@ public class BillingRow
     /// <summary>Tiền nước cố định cả phòng (hợp đồng công ty); null = tính theo người.</summary>
     public decimal? WaterFixed { get; set; }
 
+    /// <summary>Phí sạc xe điện của phiếu (0 = phòng không sạc).</summary>
+    public decimal EvCharge { get; set; }
+
     public decimal Electricity(decimal price) => Math.Max(0, Kwh ?? 0) * price;
     public decimal Water(decimal perPerson) => WaterFixed ?? PersonCount * perPerson;
-    public decimal Total(decimal price, decimal perPerson) => Math.Max(0, Rent + Electricity(price) + Water(perPerson) + OtherAmount - Discount);
+    public decimal Total(decimal price, decimal perPerson) => Math.Max(0, Rent + Electricity(price) + Water(perPerson) + EvCharge + OtherAmount - Discount);
     /// <summary>Đã lập phiếu và thu đủ.</summary>
     public bool IsPaid(decimal price, decimal perPerson) => BillId != null && Paid >= Total(price, perPerson);
 }
 
-public record BillingSheet(int Month, int Year, DateTime DueDate, decimal ElectricityPrice, decimal WaterPerPerson, List<BillingRow> Rows);
+public record BillingSheet(int Month, int Year, DateTime DueDate, decimal ElectricityPrice, decimal WaterPerPerson, decimal EvChargingFee, List<BillingRow> Rows);
 
 public class PaymentForm
 {
@@ -94,6 +97,7 @@ public class BillingService(IDbContextFactory<ApplicationDbContext> dbFactory)
                 PeriodFrom = current?.Bill.PeriodFrom ?? from, PeriodTo = current?.Bill.PeriodTo ?? to,
                 Company = l.CompanyContract?.ShortName,
                 WaterFixed = CompanyWater(l),
+                EvCharge = current != null ? current.Bill.EvChargeAmount : l.EvCharging ? s.EvChargingFee : 0,
                 RentDetail = l.CompanyContract != null
                     ? $"HĐ {l.CompanyContract.ShortName}: tiền phòng thu theo kỳ {l.CompanyContract.RentMonthsPerPeriod} tháng, phiếu tháng chỉ điện, nước"
                     : needs
@@ -103,7 +107,7 @@ public class BillingService(IDbContextFactory<ApplicationDbContext> dbFactory)
             };
         }).ToList();
 
-        return new BillingSheet(month, year, due, s.ElectricityPrice, s.WaterPricePerPerson, rows);
+        return new BillingSheet(month, year, due, s.ElectricityPrice, s.WaterPricePerPerson, s.EvChargingFee, rows);
     }
 
     /// <summary>
@@ -124,7 +128,7 @@ public class BillingService(IDbContextFactory<ApplicationDbContext> dbFactory)
     {
         if (row.Kwh is not int kwh) throw new InvalidOperationException($"Phòng {row.RoomCode}: nhập số điện đã dùng (kWh).");
         if (kwh < 0) throw new InvalidOperationException($"Phòng {row.RoomCode}: số điện không được âm.");
-        if (row.Rent < 0 || row.OtherAmount < 0 || row.Discount < 0) throw new InvalidOperationException($"Phòng {row.RoomCode}: số tiền không được âm.");
+        if (row.Rent < 0 || row.OtherAmount < 0 || row.Discount < 0 || row.EvCharge < 0) throw new InvalidOperationException($"Phòng {row.RoomCode}: số tiền không được âm.");
 
         await using var db = await dbFactory.CreateDbContextAsync();
         var s = await db.Settings.AsNoTracking().FirstAsync();
@@ -149,6 +153,8 @@ public class BillingService(IDbContextFactory<ApplicationDbContext> dbFactory)
         bill.ElectricityAmount = row.Electricity(s.ElectricityPrice);
         bill.PersonCount = row.PersonCount;
         bill.WaterAmount = row.Water(s.WaterPricePerPerson);
+        bill.EvChargeAmount = row.EvCharge;
+        lease.EvCharging = row.EvCharge > 0;
         bill.OtherAmount = row.OtherAmount;
         bill.Discount = row.Discount;
         bill.TotalAmount = row.Total(s.ElectricityPrice, s.WaterPricePerPerson);

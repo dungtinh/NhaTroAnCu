@@ -85,6 +85,10 @@ else
                         <label class="nh-field"><span>Tiền phòng kỳ này</span><MoneyInput @bind-Value="edit.Rent" /></label>
                         <label class="nh-field"><span>Số người</span><input type="number" min="0" class="form-control" @bind="edit.PersonCount" /></label>
                         <label class="nh-field"><span>Số điện (kWh)</span><input type="number" min="0" class="form-control" @bind="edit.Kwh" /></label>
+                        <label class="nh-field wide"><span>Sạc xe điện (@Fmt.Money(sheet.EvChargingFee)đ/phòng/tháng)</span>
+                            <select class="form-select" value="@(edit.EvCharge > 0 ? "1" : "0")" @onchange="SetEvCharge">
+                                <option value="0">Không sạc</option><option value="1">Có sạc xe điện</option>
+                            </select></label>
                         <label class="nh-field wide"><span>Ghi chú</span><input class="form-control" maxlength="200" @bind="edit.Note" /></label>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mt-3">
@@ -128,7 +132,7 @@ else
                 <div class="c-kwh n" data-l="Số điện">@(r.Kwh is int k ? k.ToString() : "-")</div>
                 <div class="c-rent n" data-l="Phòng">@Fmt.Money(r.Rent)</div>
                 <div class="c-el n" data-l="Điện">@Fmt.Money(r.Electricity(ep))@if (r.Kwh is int kw) { <div class="sub">@kw số × @Fmt.Money(ep)</div> }</div>
-                <div class="c-wa n" data-l="Nước">@Fmt.Money(r.Water(wp))<div class="sub">@(r.WaterFixed != null ? "cố định/phòng" : $"{r.PersonCount} người × {Fmt.Money(wp)}")</div></div>
+                <div class="c-wa n" data-l="Nước">@Fmt.Money(r.Water(wp))<div class="sub">@(r.WaterFixed != null ? "cố định/phòng" : $"{r.PersonCount} người × {Fmt.Money(wp)}")</div>@if (r.EvCharge > 0) { <div class="sub"><i class="fas fa-charging-station"></i> + sạc xe @Fmt.Money(r.EvCharge)</div> }</div>
             </div>
             <div class="c-total n">@(r.BillId != null || r.SkipThisMonth ? Fmt.Money(t) : "-")</div>
             <div class="c-paid n" data-l="Đã thu">@Fmt.Money(r.Paid)</div>
@@ -181,6 +185,11 @@ else
             sheet = null;
             await LoadAsync();
         }
+    }
+
+    private void SetEvCharge(ChangeEventArgs e)
+    {
+        if (edit != null && sheet != null) edit.EvCharge = e.Value?.ToString() == "1" ? sheet.EvChargingFee : 0;
     }
 
     private async Task SaveEditAsync()

@@ -52,6 +52,7 @@ public class Documents(IDbContextFactory<ApplicationDbContext> dbFactory, IWebHo
             lines.Add(("Tiền điện", $"{bill.ElectricityKwh} số × {Fmt.Money(s.ElectricityPrice)}đ", bill.ElectricityAmount));
         if (bill.WaterAmount != 0) lines.Add(("Tiền nước", bill.WaterAmount != bill.PersonCount * s.WaterPricePerPerson && company is { WaterPerRoom: > 0 }
             ? $"Cố định {Fmt.Money(company.WaterPerRoom)}đ/phòng/tháng theo hợp đồng" : $"{bill.PersonCount} người × {Fmt.Money(s.WaterPricePerPerson)}đ", bill.WaterAmount));
+        if (bill.EvChargeAmount != 0) lines.Add(("Sạc xe điện", "Theo phòng, thu hằng tháng", bill.EvChargeAmount));
         if (bill.OtherAmount != 0) lines.Add(("Khoản khác", bill.Kind == BillKind.MoveOut ? "Phạt / khác khi trả phòng" : "", bill.OtherAmount));
         if (bill.Discount != 0) lines.Add(("Giảm trừ", "", -bill.Discount));
 

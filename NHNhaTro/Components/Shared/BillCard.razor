@@ -21,7 +21,7 @@
         <div><div class="l">Phòng</div><div class="v">@Fmt.Money(Bill.RentAmount)</div></div>
         <div><div class="l">Điện</div><div class="v">@Fmt.Money(Bill.ElectricityAmount)</div>@if (Bill.ElectricityKwh > 0) { <div class="s">@Bill.ElectricityKwh số</div> }</div>
         <div><div class="l">Nước</div><div class="v">@Fmt.Money(Bill.WaterAmount)</div>@if (Bill.WaterAmount > 0) { <div class="s">@Bill.PersonCount người</div> }</div>
-        <div><div class="l">Khác</div><div class="v">@Fmt.Money(Bill.OtherAmount - Bill.Discount)</div></div>
+        <div><div class="l">Khác</div><div class="v">@Fmt.Money(Bill.OtherAmount + Bill.EvChargeAmount - Bill.Discount)</div>@if (Bill.EvChargeAmount > 0) { <div class="s">gồm sạc xe</div> }</div>
     </div>
     @if (ShowNote && !string.IsNullOrEmpty(Bill.Note)) { <div class="note">@Bill.Note</div> }
     <div class="ft">

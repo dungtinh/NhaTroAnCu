@@ -280,6 +280,10 @@ namespace NHNhaTro.Migrations
                         .HasPrecision(18)
                         .HasColumnType("decimal(18,0)");
 
+                    b.Property<decimal>("EvChargingFee")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
                     b.Property<string>("GeminiApiKey")
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
@@ -417,6 +421,10 @@ namespace NHNhaTro.Migrations
 
                     b.Property<int>("ElectricityKwh")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("EvChargeAmount")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
 
                     b.Property<string>("Kind")
                         .IsRequired()
@@ -828,6 +836,9 @@ namespace NHNhaTro.Migrations
 
                     b.Property<DateTime?>("EndDate")
                         .HasColumnType("date");
+
+                    b.Property<bool>("EvCharging")
+                        .HasColumnType("bit");
 
                     b.Property<string>("FurnitureWarnings")
                         .HasMaxLength(1000)
