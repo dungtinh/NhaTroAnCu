@@ -29,12 +29,24 @@ else
     <div class="row g-3">
         <div class="col-lg-7">
             <div class="nh-card">
-                <h5>1. Ngày trả và điện kỳ cuối</h5>
+                <h5>1. Ngày trả, điện và nước kỳ cuối</h5>
                 <div class="row g-2">
                     <div class="col-6 col-md-4"><label class="form-label">Ngày trả phòng</label><input type="date" class="form-control" @bind="form.EndDate" @bind:after="RefreshAsync" /></div>
                     <div class="col-6 col-md-4"><label class="form-label">Số điện đã dùng (kWh) <span class="text-danger">*</span></label>
                         <input type="number" inputmode="numeric" min="0" class="form-control nh-meter" @bind="form.Kwh" @bind:after="RefreshAsync" /></div>
                     <div class="col-md-4 small text-muted pt-md-4">Từ kỳ chốt trước đến ngày trả.<br />@preview?.UsedKwh số × @Fmt.Money(electricityPrice)đ = @Fmt.Money(preview?.Electricity ?? 0)đ</div>
+                    @if (preview != null)
+                    {
+                        <div class="col-6 col-md-4"><label class="form-label">Tiền nước (đ)</label>
+                            <MoneyInput Value="preview.MissingWater" ValueChanged="async v => { form.WaterOverride = v; await RefreshAsync(); }" /></div>
+                        <div class="col-6 col-md-8 small text-muted pt-md-4">
+                            Tự tính: <strong>@Fmt.Vnd(preview.AutoWater)</strong> (@WaterAutoDetail()). Sửa ở ô bên cạnh nếu thực tế khác.
+                            @if (form.WaterOverride != null)
+                            {
+                                <button type="button" class="btn btn-sm btn-link p-0 ms-1" @onclick="async () => { form.WaterOverride = null; await RefreshAsync(); }">Tính lại tự động</button>
+                            }
+                        </div>
+                    }
                     <div class="col-6 col-md-4"><label class="form-label">Số ngày xin ở thêm</label>
                         <input type="number" inputmode="numeric" min="0" max="60" class="form-control" @bind="form.ExtraDays" @bind:after="RefreshAsync" /></div>
                     <div class="col-6 col-md-8 small text-muted pt-md-4">
@@ -105,20 +117,6 @@ else
                         <MoneyInput Value="form.OtherAmount" ValueChanged="async v => { form.OtherAmount = v; await RefreshAsync(); }" /></div>
                     <div class="col-md-8"><label class="form-label">Nội dung khoản khác</label><input class="form-control" @bind="form.OtherNote" /></div>
                 </div>
-                @if (preview != null)
-                {
-                    <div class="row g-2 mt-1">
-                        <div class="col-md-4"><label class="form-label">Tiền nước thu khi trả phòng</label>
-                            <MoneyInput Value="preview.MissingWater" ValueChanged="async v => { form.WaterOverride = v; await RefreshAsync(); }" /></div>
-                        <div class="col-md-8 small text-muted align-self-end">
-                            Tự tính: <strong>@Fmt.Vnd(preview.AutoWater)</strong> (@WaterAutoDetail()). Sửa số bên cạnh nếu thực tế khác.
-                            @if (form.WaterOverride != null)
-                            {
-                                <button type="button" class="btn btn-sm btn-link p-0 ms-1" @onclick="async () => { form.WaterOverride = null; await RefreshAsync(); }">Tính lại tự động</button>
-                            }
-                        </div>
-                    </div>
-                }
             </div>
 
             <div class="nh-card">
