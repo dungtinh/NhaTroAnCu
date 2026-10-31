@@ -74,6 +74,10 @@ Những chỗ yêu cầu chưa nói rõ được ghi là **Giả định**; đ�
 - **Tiền phòng và tiền nước tính đủ tháng**: kỳ chốt nào đã tới ngày thu mà chưa lập phiếu thì tính **trọn tháng** tiền phòng
   và tiền nước vào phiếu trả phòng (không chia ngày); kỳ đã lập phiếu thì chỉ lấy phần còn nợ. Không hoàn tiền phòng đã đóng
   trước cho những ngày chưa ở (muốn hoàn thì nhập âm ở "khoản khác").
+- **Nước kỳ cuối** (31/10/2026, theo chủ nhà): nước thu theo tháng đã qua. Trả phòng sau ngày chốt gần nhất (hoặc sau ngày vào nếu chưa có
+  ngày chốt nào) thì **thu thêm đủ 1 tháng nước** (số người × 80.000, không chia ngày), kể cả trả trước mồng 10 của tháng đó. Cộng với nước
+  của kỳ chưa lập phiếu (nếu có). Trả đúng ngày chốt thì không thu thêm. Hợp đồng công ty giữ nguyên.
+  Ví dụ vào 01/09, đã thu phiếu 10/09, 10/10: trả 31/10 hoặc 05/11 → thu thêm 160.000; trả 25/11 chưa lập phiếu 10/11 → 160.000 (phiếu 10/11) + 160.000 (kỳ cuối).
 - **Ở thêm vài ngày** (19/10/2026): khách xin ở lại thu xếp thì nhập số ngày ở thêm; tiền = giá tháng × số ngày ÷ 30, làm tròn nghìn,
   cộng vào phiếu trả phòng (tiền phòng) và quyết toán. Ngày trả phòng vẫn là ngày quyết toán.
 - **Chỉ trả lại cọc khi khách ở đủ 3 tháng trở lên** (Cấu hình "Ở đủ mấy tháng mới trả lại cọc", mặc định 3; cập nhật 19/10/2026).

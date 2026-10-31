@@ -74,6 +74,8 @@ public class CheckoutForm
     /// <summary>Khoản khác: dương = khách phải trả thêm, âm = hoàn lại khách.</summary>
     public decimal OtherAmount { get; set; }
     public string? OtherNote { get; set; }
+    /// <summary>Tiền nước thu khi trả phòng do chủ nhà sửa tay; null = lấy theo tính tự động.</summary>
+    public decimal? WaterOverride { get; set; }
     public string? Note { get; set; }
     /// <summary>Số lượng đồ đạc thực tế khi kiểm.</summary>
     public Dictionary<int, int> FurnitureActual { get; set; } = [];
@@ -90,10 +92,14 @@ public record MissingPeriod(int Month, int Year, DateTime From, DateTime To, dec
 public record CheckoutPreview(decimal Deposit, int UsedKwh, decimal Electricity, decimal Penalties, decimal Other,
     decimal UnpaidBills, List<(Bill Bill, decimal Due)> UnpaidList, List<string> FurnitureWarnings, List<MissingPeriod> Missing,
     bool DepositRefundable, int MinStayMonths, DateTime RefundEligibleFrom, int StayDays,
-    int ExtraDays = 0, decimal ExtraDayRate = 0, decimal ExtraStay = 0)
+    int ExtraDays = 0, decimal ExtraDayRate = 0, decimal ExtraStay = 0,
+    decimal FinalWater = 0, DateTime? FinalWaterFrom = null, int FinalWaterPersons = 0, decimal? WaterOverride = null)
 {
     public decimal MissingRent => Missing.Sum(m => m.Rent);
-    public decimal MissingWater => Missing.Sum(m => m.Water);
+    /// <summary>Tiền nước tự tính: các kỳ chưa lập phiếu + nước kỳ cuối.</summary>
+    public decimal AutoWater => Missing.Sum(m => m.Water) + FinalWater;
+    /// <summary>Tiền nước thu khi trả phòng: số chủ nhà sửa tay nếu có, không thì số tự tính.</summary>
+    public decimal MissingWater => WaterOverride ?? AutoWater;
     /// <summary>Tổng các khoản khách phải trả khi ra: điện kỳ cuối, phạt, khoản khác, nợ cũ, tiền phòng/nước kỳ chưa lập.</summary>
     public decimal Deductions => Electricity + Penalties + Other + UnpaidBills + MissingRent + MissingWater + ExtraStay;
     /// <summary>Cọc được tính vào quyết toán: ở chưa đủ số tháng tối thiểu thì cọc không hoàn trả (0).</summary>
@@ -507,8 +513,23 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         decimal dayRate = RoundMoney(lease.MonthlyRent / 30m);
         decimal extraStay = RoundMoney(lease.MonthlyRent * extraDays / 30m);
 
+        // Nước thu theo tháng đã qua (phiếu 10/M thu nước của tháng kết thúc ngày 10/M). Trả phòng sau ngày chốt gần nhất (hoặc sau ngày vào
+        // nếu chưa có ngày chốt nào) thì thu thêm đủ 1 tháng nước cho đoạn cuối, không chia ngày. Hợp đồng công ty giữ nguyên.
+        decimal finalWater = 0;
+        DateTime? finalFrom = null;
+        if (company == null)
+        {
+            var lastDue = lease.StartDate.Date;
+            for (var d = new DateTime(lease.StartDate.Year, lease.StartDate.Month, 1); d <= form.EndDate.Date; d = d.AddMonths(1))
+            {
+                var due = RoomService.BillingDate(d.Month, d.Year, settings.BillingDay);
+                if (due <= form.EndDate.Date && RoomService.NeedsMonthlyBill(lease, d.Month, d.Year, settings.BillingDay) && due > lastDue) lastDue = due;
+            }
+            if (form.EndDate.Date > lastDue) { finalWater = persons * settings.WaterPricePerPerson; finalFrom = lastDue; }
+        }
+
         return new CheckoutPreview(Math.Max(0, held), used, used * settings.ElectricityPrice, form.Penalties.Sum(p => p.Amount), form.OtherAmount,
-            unpaid.Sum(u => u.Item2), unpaid, warnings, missing, refundable, minMonths, eligibleFrom, stayDays, extraDays, dayRate, extraStay);
+            unpaid.Sum(u => u.Item2), unpaid, warnings, missing, refundable, minMonths, eligibleFrom, stayDays, extraDays, dayRate, extraStay, finalWater, finalFrom, persons, form.WaterOverride);
     }
 
     public async Task CheckoutAsync(CheckoutForm form, string? user)
@@ -517,6 +538,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         if (form.Penalties.Any(p => p.Amount < 0 || (p.Amount > 0 && string.IsNullOrWhiteSpace(p.Description))))
             throw new InvalidOperationException("Mỗi khoản phạt cần nội dung và số tiền không âm.");
 
+        if (form.WaterOverride < 0) throw new InvalidOperationException("Tiền nước không được âm.");
         if (form.Kwh < 0) throw new InvalidOperationException("Số điện đã dùng không được âm.");
         if (form.ExtraDays < 0 || form.ExtraDays > 60) throw new InvalidOperationException("Số ngày ở thêm phải từ 0 đến 60.");
         var preview = await PreviewCheckoutAsync(form);
@@ -536,9 +558,11 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         // Phiếu quyết toán: điện kỳ cuối + phạt + khoản khác + tiền phòng, nước đủ tháng của kỳ đã đến ngày thu mà chưa lập phiếu
         Bill? moveOut = null;
         decimal moveOutTotal = preview.Electricity + preview.Penalties + form.OtherAmount + preview.MissingRent + preview.MissingWater + preview.ExtraStay;
-        if (preview.Electricity != 0 || penalties.Count > 0 || form.OtherAmount != 0 || preview.Missing.Count > 0 || preview.ExtraStay != 0)
+        if (preview.Electricity != 0 || penalties.Count > 0 || form.OtherAmount != 0 || preview.Missing.Count > 0 || preview.ExtraStay != 0 || preview.MissingWater != 0)
         {
             var notes = preview.Missing.Select(m => $"Kỳ {m.Month:00}/{m.Year} chưa lập phiếu, tính đủ tháng: phòng {Fmt.Vnd(m.Rent)}, nước {m.PersonCount} người {Fmt.Vnd(m.Water)}")
+                .Append(preview.FinalWater != 0 ? $"Nước kỳ cuối từ {preview.FinalWaterFrom:dd/MM/yyyy} đến {date:dd/MM/yyyy}, tính đủ tháng: {preview.FinalWaterPersons} người {Fmt.Vnd(preview.FinalWater)}" : null)
+                .Append(preview.WaterOverride is { } wo ? $"Tiền nước thu khi trả phòng sửa tay: {Fmt.Vnd(wo)} (tự tính {Fmt.Vnd(preview.AutoWater)})" : null)
                 .Append(preview.ExtraStay != 0 ? $"Ở thêm {preview.ExtraDays} ngày sau {date:dd/MM/yyyy}: {preview.ExtraDays} × {Fmt.Money(lease.MonthlyRent)} ÷ 30 = {Fmt.Vnd(preview.ExtraStay)}" : null)
                 .Concat(penalties.Select(p => $"{p.Description}: {Fmt.Vnd(p.Amount)}"))
                 .Append(form.OtherAmount != 0 ? $"{form.OtherNote ?? "Khoản khác"}: {Fmt.Vnd(form.OtherAmount)}" : null).Where(s => s != null);
@@ -547,7 +571,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
                 LeaseId = lease.Id, Kind = BillKind.MoveOut, Month = date.Month, Year = date.Year,
                 PeriodFrom = preview.Missing.Count > 0 ? preview.Missing.Min(m => m.From) : date,
                 PeriodTo = preview.Missing.Count > 0 ? preview.Missing.Max(m => m.To) : date,
-                RentAmount = preview.MissingRent + preview.ExtraStay, WaterAmount = preview.MissingWater, PersonCount = preview.Missing.Count > 0 ? preview.Missing[0].PersonCount : 0,
+                RentAmount = preview.MissingRent + preview.ExtraStay, WaterAmount = preview.MissingWater, PersonCount = preview.Missing.Count > 0 ? preview.Missing[0].PersonCount : preview.FinalWater != 0 ? preview.FinalWaterPersons : 0,
                 ElectricityKwh = preview.UsedKwh, ElectricityAmount = preview.Electricity,
                 OtherAmount = preview.Penalties + form.OtherAmount, TotalAmount = moveOutTotal,
                 Note = string.Join("; ", notes),

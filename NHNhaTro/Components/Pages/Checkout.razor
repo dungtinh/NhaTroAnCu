@@ -105,6 +105,20 @@ else
                         <MoneyInput Value="form.OtherAmount" ValueChanged="async v => { form.OtherAmount = v; await RefreshAsync(); }" /></div>
                     <div class="col-md-8"><label class="form-label">Nội dung khoản khác</label><input class="form-control" @bind="form.OtherNote" /></div>
                 </div>
+                @if (preview != null)
+                {
+                    <div class="row g-2 mt-1">
+                        <div class="col-md-4"><label class="form-label">Tiền nước thu khi trả phòng</label>
+                            <MoneyInput Value="preview.MissingWater" ValueChanged="async v => { form.WaterOverride = v; await RefreshAsync(); }" /></div>
+                        <div class="col-md-8 small text-muted align-self-end">
+                            Tự tính: <strong>@Fmt.Vnd(preview.AutoWater)</strong> (@WaterAutoDetail()). Sửa số bên cạnh nếu thực tế khác.
+                            @if (form.WaterOverride != null)
+                            {
+                                <button type="button" class="btn btn-sm btn-link p-0 ms-1" @onclick="async () => { form.WaterOverride = null; await RefreshAsync(); }">Tính lại tự động</button>
+                            }
+                        </div>
+                    </div>
+                }
             </div>
 
             <div class="nh-card">
@@ -159,7 +173,11 @@ else
                         @foreach (var m in preview.Missing)
                         {
                             <tr><td>− Tiền phòng kỳ @m.Month.ToString("00")/@m.Year (đủ tháng) <span class="small text-muted d-block">@Fmt.Date(m.From) → @Fmt.Date(m.To)</span></td><td class="text-end">@Fmt.Money(m.Rent)</td></tr>
-                            <tr><td>− Tiền nước kỳ @m.Month.ToString("00")/@m.Year (@m.PersonCount người)</td><td class="text-end">@Fmt.Money(m.Water)</td></tr>
+                        }
+                        @if (preview.MissingWater != 0 || preview.WaterOverride != null)
+                        {
+                            <tr><td>− Tiền nước@(preview.WaterOverride != null ? " (sửa tay)" : "")
+                                <span class="small text-muted d-block">@WaterDetail()</span></td><td class="text-end">@Fmt.Money(preview.MissingWater)</td></tr>
                         }
                         @if (preview.ExtraStay > 0)
                         {
@@ -169,7 +187,8 @@ else
                         @if (preview.Other != 0) { <tr><td>− Khoản khác</td><td class="text-end">@Fmt.Money(preview.Other)</td></tr> }
                         @foreach (var u in preview.UnpaidList)
                         {
-                            <tr><td>− Còn nợ @BillKind.Display(u.Bill.Kind) @u.Bill.Month.ToString("00")/@u.Bill.Year</td><td class="text-end">@Fmt.Money(u.Due)</td></tr>
+                            <tr><td>− Còn nợ @BillKind.Display(u.Bill.Kind) @u.Bill.Month.ToString("00")/@u.Bill.Year
+                                @if (u.Bill.WaterAmount > 0) { <span class="small text-muted d-block">gồm tiền nước @Fmt.Vnd(u.Bill.WaterAmount) (@u.Bill.PersonCount người)</span> }</td><td class="text-end">@Fmt.Money(u.Due)</td></tr>
                         }
                         <tr class="table-light">
                             <td class="fw-bold">@(preview.Balance >= 0 ? "Trả lại khách" : "Khách phải nộp thêm")</td>
@@ -267,6 +286,15 @@ else
         if (int.TryParse(e.Value?.ToString(), out var q) && q >= 0) form.FurnitureActual[itemId] = q;
         await RefreshAsync();
     }
+
+    private string WaterAutoDetail()
+    {
+        var parts = preview!.Missing.Select(m => $"kỳ {m.Month:00}/{m.Year}: {m.PersonCount} người × giá nước").ToList();
+        if (preview.FinalWater > 0) parts.Add($"kỳ cuối sau {Fmt.Date(preview.FinalWaterFrom ?? form.EndDate)}: {preview.FinalWaterPersons} người × giá nước, đủ tháng");
+        return parts.Count == 0 ? "không có kỳ nào cần thu" : string.Join("; ", parts);
+    }
+
+    private string WaterDetail() => preview!.WaterOverride != null ? $"tự tính {Fmt.Vnd(preview.AutoWater)}" : WaterAutoDetail();
 
     private void FillSuggested()
     {
