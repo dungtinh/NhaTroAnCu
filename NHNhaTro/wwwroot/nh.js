@@ -135,3 +135,16 @@ document.addEventListener('input', function (e) {
     while (pos < out.length && seen < digitsBefore) { if (/\d/.test(out[pos])) seen++; pos++; }
     try { el.setSelectionRange(pos, pos); } catch (err) { }
 });
+
+// Gửi link cho khách: điện thoại có bảng chia sẻ (Zalo, Messenger...) thì mở bảng; không có thì sao chép vào bộ nhớ tạm.
+window.nhShare = async function (title, url) {
+    try {
+        if (navigator.share) { await navigator.share({ title: title, text: title, url: url }); return 'shared'; }
+    } catch (e) { if (e && e.name === 'AbortError') return 'cancelled'; }
+    try { await navigator.clipboard.writeText(url); return 'copied'; }
+    catch (e) {
+        var ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select();
+        try { if (document.execCommand('copy')) { document.body.removeChild(ta); return 'copied'; } } catch (e2) { }
+        document.body.removeChild(ta); return 'failed';
+    }
+};

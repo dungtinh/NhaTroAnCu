@@ -619,3 +619,50 @@ body:has(.nh-chat) .nh-main { flex: 1; min-height: 0; display: flex; flex-direct
 .nh-list-row .amt { font-weight: 700; white-space: nowrap; }
 .nh-empty-hint { text-align: center; color: var(--nh-muted); padding: 18px 10px; }
 .nh-empty-hint i { font-size: 2rem; opacity: .5; display: block; margin-bottom: 6px; }
+
+/* ---- Ghi số điện: nhập từ ảnh công tơ ---- */
+.nh-import-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; max-height: 420px; overflow: auto; }
+.nh-import-list .it { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--nh-border); border-left-width: 4px; border-radius: 12px; padding: 8px; background: #fff; }
+.nh-import-list .it.ok { border-left-color: #22c55e; } .nh-import-list .it.warn { border-left-color: #f59e0b; background: #fffbeb; } .nh-import-list .it.err { border-left-color: #ef4444; background: #fff1f2; }
+.nh-import-list .pic { flex: 0 0 54px; }
+.nh-import-list .pic img { width: 54px; height: 90px; object-fit: cover; object-position: top; border-radius: 8px; border: 1px solid var(--nh-border); background: #0f172a; }
+.nh-import-list .t { font-size: .9rem; line-height: 1.3; }
+.nh-import-list .t .room { display: inline-block; font-weight: 800; color: #1e3a5f; background: #eef2ff; border-radius: 8px; padding: 1px 8px; margin-right: 2px; }
+.nh-import-list .s { font-size: .76rem; color: var(--nh-muted); margin-top: 2px; }
+.nh-gtable a.nh-meter-pic { display: inline-flex; align-items: center; gap: 4px; color: #6d28d9; text-decoration: none; }
+.nh-gtable a.nh-meter-pic:hover { text-decoration: underline; }
+
+/* ---- Link cho khách (trang Phòng) ---- */
+.nh-tenant-link { display: flex; gap: 12px; align-items: flex-start; }
+.nh-tenant-link img { border: 1px solid var(--nh-border); border-radius: 10px; flex: 0 0 auto; }
+.nh-tenant-link input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8rem; }
+
+/* ---- Trang khách tự kiểm tra (/khach/{token}) ---- */
+.nh-portal { max-width: 760px; margin: 0 auto; }
+.nh-portal .nh-hero-room { margin-bottom: 14px; }
+.nh-portal .nh-hero-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.nh-portal .nh-hero-stats .v { font-size: .95rem; white-space: normal; line-height: 1.25; }
+.nh-portal-calc { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.nh-portal-calc td, .nh-portal-calc th { padding: 7px 6px; border-bottom: 1px solid #eef2f7; vertical-align: top; }
+.nh-portal-calc td:first-child { font-weight: 600; white-space: nowrap; }
+.nh-portal-calc .d { color: var(--nh-muted); font-size: .82rem; }
+.nh-portal-calc .n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 600; }
+.nh-portal-calc tfoot th { border-bottom: 0; font-size: 1rem; padding-top: 10px; }
+.nh-portal-bank { display: grid; gap: 8px; }
+.nh-portal-bank > div { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.nh-portal-bank .l { color: var(--nh-muted); font-size: .85rem; }
+.nh-portal-bank .acc { font-size: 1.25rem; letter-spacing: .04em; font-variant-numeric: tabular-nums; user-select: all; }
+.nh-portal-meters { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.nh-portal-meters figure { margin: 0; border: 1px solid var(--nh-border); border-radius: 14px; overflow: hidden; background: #fff; }
+.nh-portal-meters img { display: block; width: 100%; aspect-ratio: 9 / 12; object-fit: cover; object-position: top; background: #0f172a; }
+.nh-portal-meters figcaption { padding: 8px 10px; font-size: .8rem; color: var(--nh-muted); display: grid; gap: 2px; }
+.nh-portal-meters figcaption b { color: #0f172a; font-size: .9rem; }
+.nh-portal-meters figcaption .k { color: #166534; font-weight: 700; }
+.nh-portal .nh-bill .parts .s { font-size: .7rem; }
+@media (max-width: 575.98px) {
+  .nh-portal .nh-hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .nh-portal-calc .d { display: block; }
+  .nh-portal-calc td:first-child { white-space: normal; }
+  .nh-portal-meters { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .nh-tenant-link { flex-direction: column; }
+}

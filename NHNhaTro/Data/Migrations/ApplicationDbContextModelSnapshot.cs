@@ -855,6 +855,10 @@ namespace NHNhaTro.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<string>("PublicToken")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
                     b.Property<int>("RoomId")
                         .HasColumnType("int");
 
@@ -872,6 +876,10 @@ namespace NHNhaTro.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CompanyContractId");
+
+                    b.HasIndex("PublicToken")
+                        .IsUnique()
+                        .HasFilter("[PublicToken] IS NOT NULL");
 
                     b.HasIndex("RoomId", "Status");
 
@@ -935,6 +943,66 @@ namespace NHNhaTro.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("LeaseTenants");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.MeterReading", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ImagePath")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<decimal>("Kwh")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int?>("LeaseId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Month")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("NewReading")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<decimal?>("OldReading")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<DateTime?>("PeriodFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("PeriodTo")
+                        .HasColumnType("date");
+
+                    b.Property<int>("RoomId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LeaseId");
+
+                    b.HasIndex("RoomId", "Year", "Month")
+                        .IsUnique();
+
+                    b.ToTable("MeterReadings");
                 });
 
             modelBuilder.Entity("NHNhaTro.Data.Entities.MoneyAccount", b =>
@@ -1566,6 +1634,24 @@ namespace NHNhaTro.Migrations
                     b.Navigation("Lease");
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("NHNhaTro.Data.Entities.MeterReading", b =>
+                {
+                    b.HasOne("NHNhaTro.Data.Entities.Lease", "Lease")
+                        .WithMany()
+                        .HasForeignKey("LeaseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NHNhaTro.Data.Entities.Room", "Room")
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Lease");
+
+                    b.Navigation("Room");
                 });
 
             modelBuilder.Entity("NHNhaTro.Data.Entities.MoneyTransaction", b =>

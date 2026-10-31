@@ -5,6 +5,7 @@
 @inject RoomService Rooms
 @inject SetupService Setup
 @inject AttachmentService Attachments
+@inject MeterService Meter
 
 <PageTitle>Phòng @Code</PageTitle>
 
@@ -109,6 +110,33 @@ else
                                 <BillCard Bill="b" Paid="paid" RentDetail="@RentDetail(b)" OnPay="() => { payBill = b; payPaid = paid; }" />
                             }
                         </div>
+                    </div>
+                </div>
+
+                <div class="nh-sec t-violet">
+                    <div class="nh-sec-h">
+                        <span class="ic"><i class="fas fa-link"></i></span>
+                        <h5>Link cho khách <small>khách tự xem ảnh công tơ, phiếu đã đóng và sắp đóng, không cần đăng nhập</small></h5>
+                    </div>
+                    <div class="nh-sec-b">
+                        @if (tenantLink == null)
+                        {
+                            <button type="button" class="btn btn-outline-primary" disabled="@Busy" @onclick="CreateLinkAsync"><i class="fas fa-link"></i> Tạo link</button>
+                        }
+                        else
+                        {
+                            <div class="nh-tenant-link">
+                                <img src="@($"qr.png?to=khach&token={tenantToken}&size=6")" alt="QR" width="96" height="96" />
+                                <div class="min-w-0 flex-grow-1">
+                                    <input class="form-control form-control-sm mb-2" readonly value="@tenantLink" onclick="this.select()" />
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button type="button" class="btn btn-sm btn-primary" @onclick="ShareLinkAsync"><i class="fas fa-share-alt"></i> Gửi Zalo / sao chép</button>
+                                        <a class="btn btn-sm btn-outline-secondary" href="@tenantLink" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Mở xem</a>
+                                        @if (isAdmin) { <button type="button" class="btn btn-sm btn-outline-danger" disabled="@Busy" @onclick="ResetLinkAsync" title="Link cũ hết hiệu lực, tạo link mới"><i class="fas fa-sync"></i> Đổi link</button> }
+                                    </div>
+                                </div>
+                            </div>
+                        }
                     </div>
                 </div>
             }
@@ -240,6 +268,31 @@ else
     private decimal payPaid;
     private List<PendingFile> cardPending = [];
     private int cardVersion;
+    private bool isAdmin;
+    private string? tenantToken, tenantLink;
+
+    private async Task CreateLinkAsync()
+    {
+        if (d?.CurrentLease == null) return;
+        tenantToken = await Meter.GetOrCreateTokenAsync(d.CurrentLease.Id);
+        tenantLink = Nav.BaseUri + "khach/" + tenantToken;
+    }
+
+    private async Task ResetLinkAsync()
+    {
+        if (d?.CurrentLease == null || !await ConfirmAsync("Đổi link? Link cũ đã gửi cho khách sẽ không xem được nữa.")) return;
+        tenantToken = await Meter.ResetTokenAsync(d.CurrentLease.Id);
+        tenantLink = Nav.BaseUri + "khach/" + tenantToken;
+        Toast.Success("Đã tạo link mới.");
+    }
+
+    private async Task ShareLinkAsync()
+    {
+        if (tenantLink == null) return;
+        var how = await JS.InvokeAsync<string>("nhShare", $"Phòng {d!.Room.Code} - xem số điện và phiếu thu", tenantLink);
+        if (how == "copied") Toast.Success("Đã sao chép link, dán vào Zalo gửi cho khách.");
+        else if (how == "failed") Toast.Warning("Không sao chép được, hãy bấm giữ ô link để chọn và sao chép.");
+    }
 
     private async Task AddCardAsync(PendingFile f)
     {
@@ -265,8 +318,11 @@ else
     {
         d = await Rooms.GetDetailsAsync(Code);
         billingDay = (await Setup.GetSettingsAsync()).BillingDay;
+        isAdmin = await IsAdminAsync();
         notFound = d == null;
         if (d == null) return;
+        tenantToken = d.CurrentLease?.PublicToken;
+        tenantLink = tenantToken == null ? null : Nav.BaseUri + "khach/" + tenantToken;
         rent = d.Room.Rent;
         maxOcc = d.Room.MaxOccupants;
         note = d.Room.Note;

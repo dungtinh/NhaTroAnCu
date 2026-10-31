@@ -63,6 +63,18 @@ Những chỗ yêu cầu chưa nói rõ được ghi là **Giả định**; đ�
 - **Ghi số điện** là bước riêng (trang Ghi số điện, cập nhật 20/10/2026): bảng mọi phòng cần thu kỳ này theo dãy, tầng;
   gõ số điện đã dùng từng phòng (Enter xuống phòng sau) hoặc **nhập từ file Excel** (tải file mẫu, điền cột "Số điện (kWh)").
   Lưu thì lập/cập nhật phiếu tháng. Màn hình Thu tiền tháng chỉ còn thu tiền, sửa phiếu, in phiếu.
+- **Nhập từ ảnh công tơ** (31/10/2026): chủ nhà chụp màn hình ứng dụng công tơ điện tử từng phòng (tiêu đề = mã phòng, khoảng ngày,
+  kWh tiêu thụ, chỉ số cũ/mới) rồi chọn một loạt ảnh trên trang Ghi số điện. AI (Gemini/Claude, cấu hình sẵn) đọc từng ảnh, tối đa 3 ảnh
+  song song; xếp vào **phòng** theo tiêu đề và vào **kỳ thu** theo khoảng ngày: lấy ngày giữa khoảng, kỳ = ngày chốt (mồng 10) đầu tiên
+  sau ngày đó (ảnh 10/10 → 31/10 hay 10/10 → 10/11 thuộc phiếu 11; ảnh 20/09 → 10/10 thuộc phiếu 10). Mỗi phòng mỗi kỳ lưu một ảnh
+  (bảng MeterReading: kWh lẻ, chỉ số cũ/mới, khoảng ngày, đường dẫn ảnh); nhập lại thì thay. Số điện lẻ **làm tròn** khi lập phiếu
+  (42,62 → 43). Phòng đã lập phiếu kỳ đó thì chỉ lưu ảnh, không đổi phiếu. Ảnh thuộc kỳ khác với kỳ đang mở thì chỉ lưu; mở kỳ đó
+  sẽ thấy số điện điền sẵn (nếu chưa lập phiếu). Ảnh đọc lỗi (AI chậm quá 90 giây) có nút đọc lại.
+- **Link cho khách tự kiểm tra** (31/10/2026): trang Phòng → "Tạo link" sinh mã bí mật theo lượt thuê (Lease.PublicToken), đường dẫn
+  `/khach/{mã}` không cần đăng nhập, có QR và nút gửi Zalo/sao chép. Trang hiện: phiếu **cần đóng** (còn nợ, diễn giải số × giá),
+  **kỳ sắp tới** chưa lập phiếu (tiền phòng, nước theo người, sạc xe, điện tạm tính theo ảnh công tơ nếu đã có), số tài khoản hộ kinh doanh
+  để chuyển khoản, **ảnh công tơ** từng kỳ (chỉ ảnh của lượt thuê đó, qua `/khach/{mã}/anh/{id}`), phiếu **đã đóng** kèm ngày đóng.
+  Quản trị đổi được link (link cũ hết hiệu lực); trả phòng thì lượt thuê kết thúc, khách mới có link khác.
 - **Tiền điện, nước tổng** của cả dãy trọ (hóa đơn điện lực, nước sạch) nhập mỗi kỳ ở trang Ghi số điện: tổng số điện (kWh),
   tiền điện, số nước (m³), tiền nước, ngày trả, tài khoản chi (mặc định hộ kinh doanh), chứng từ. Lưu thì ghi 2 khoản chi
   "Tiền điện", "Tiền nước" vào sổ thu chi; có bảng so sánh số điện, tiền điện, nước thu của khách với số trả tổng.

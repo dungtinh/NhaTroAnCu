@@ -152,6 +152,8 @@ public class Lease
     public bool StartDateConfirmed { get; set; }
     /// <summary>Phòng thuộc hợp đồng công ty (null = khách lẻ): tiền phòng thu theo kỳ hợp đồng, nước cố định theo phòng.</summary>
     public int? CompanyContractId { get; set; }
+    /// <summary>Mã bí mật của link cho khách tự xem số điện, phiếu đã đóng và sắp đóng (/khach/{token}); null = chưa tạo link.</summary>
+    public string? PublicToken { get; set; }
 
     // Trả phòng
     public decimal? CheckoutElectricity { get; set; }
@@ -272,6 +274,39 @@ public class Bill
     public Lease Lease { get; set; } = null!;
     public ContractPeriod? ContractPeriod { get; set; }
     public List<MoneyTransaction> Payments { get; set; } = [];
+}
+
+/// <summary>
+/// Ảnh chụp màn hình công tơ điện tử của một phòng cho một kỳ thu (nhập hàng loạt, AI đọc phòng, khoảng ngày, số điện).
+/// Mỗi phòng mỗi kỳ một ảnh; nhập lại thì thay ảnh và số. Số điện (kWh) điền sẵn vào trang Ghi số điện khi kỳ đó chưa lập phiếu,
+/// và hiện trên link cho khách tự kiểm tra.
+/// </summary>
+public class MeterReading
+{
+    public int Id { get; set; }
+    public int RoomId { get; set; }
+    /// <summary>Lượt thuê đang ở lúc nhập (khách chỉ xem được ảnh của lượt thuê mình).</summary>
+    public int? LeaseId { get; set; }
+    /// <summary>Kỳ thu (tháng/năm của phiếu tháng) mà số điện này thuộc về.</summary>
+    public int Month { get; set; }
+    public int Year { get; set; }
+    /// <summary>Số điện đã dùng trong kỳ theo ảnh (có thể lẻ, VD 42,62).</summary>
+    public decimal Kwh { get; set; }
+    public decimal? OldReading { get; set; }
+    public decimal? NewReading { get; set; }
+    /// <summary>Khoảng ngày trên ảnh.</summary>
+    public DateTime? PeriodFrom { get; set; }
+    public DateTime? PeriodTo { get; set; }
+    /// <summary>Đường dẫn ảnh (/Uploads/Meter/...).</summary>
+    public string ImagePath { get; set; } = "";
+    public DateTime CreatedAt { get; set; }
+    public string? CreatedBy { get; set; }
+
+    public Room Room { get; set; } = null!;
+    public Lease? Lease { get; set; }
+
+    /// <summary>Số điện làm tròn để lập phiếu (phiếu tính theo số nguyên).</summary>
+    public int KwhRounded => (int)Math.Round(Kwh, MidpointRounding.AwayFromZero);
 }
 
 /// <summary>

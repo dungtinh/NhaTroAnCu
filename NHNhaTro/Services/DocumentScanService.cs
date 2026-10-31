@@ -29,6 +29,9 @@ public record ReceiptScanResult(decimal? Amount, DateTime? Date, string? Descrip
     }.Where(s => !string.IsNullOrWhiteSpace(s)));
 }
 
+/// <summary>Kết quả đọc ảnh chụp màn hình công tơ điện tử (ứng dụng đo điện của một phòng).</summary>
+public record MeterScanResult(string? RoomCode, DateTime? From, DateTime? To, decimal? Kwh, decimal? OldReading, decimal? NewReading);
+
 /// <summary>
 /// Đọc ảnh CCCD và ảnh chứng từ bằng mô hình AI: Google Gemini (có gói miễn phí) hoặc Claude (Anthropic).
 /// Chọn nhà cung cấp và nhập API key ở trang Cấu hình; key lưu trong database, không nằm trong mã nguồn.
@@ -56,6 +59,18 @@ public class DocumentScanService(IDbContextFactory<ApplicationDbContext> dbFacto
          "payer": "người/tài khoản chuyển tiền nếu có", "payee": "người nhận hoặc cửa hàng/người bán",
          "reference": "mã giao dịch/số hóa đơn nếu có"}
         Trường nào không đọc được thì để null.
+        """;
+
+    private const string MeterPrompt = """
+        Đây là ảnh chụp màn hình ứng dụng công tơ điện tử của MỘT phòng trọ. Trên ảnh có: tên thiết bị ở tiêu đề (là MÃ PHÒNG, ví dụ "B1.8", "A0.3"),
+        khoảng thời gian đang xem (ví dụ "10-10-2026 31-10-2026" hoặc một tháng/ngày), điện năng tiêu thụ trong khoảng đó (kWh, số lớn ở giữa),
+        "Chỉ số công tơ cũ (kWh)" và "Chỉ số công tơ mới (kWh)". Có thể có thêm tiền VND, điện áp, dòng điện, biểu đồ: bỏ qua.
+        Trả về DUY NHẤT một đối tượng JSON, không giải thích:
+        {"room": "mã phòng đúng như tiêu đề, giữ dấu chấm, ví dụ B1.8",
+         "from": "dd/MM/yyyy ngày đầu khoảng thời gian", "to": "dd/MM/yyyy ngày cuối khoảng thời gian",
+         "kwh": số điện tiêu thụ trong khoảng (số thập phân, dấu chấm thập phân, ví dụ 42.62),
+         "old": chỉ số công tơ cũ (số thập phân), "new": chỉ số công tơ mới (số thập phân)}
+        Nếu chỉ hiện một tháng (ví dụ "10/2026") thì "from" là ngày 01 và "to" là ngày cuối tháng đó. Trường nào không có thì để null.
         """;
 
     public async Task<bool> IsConfiguredAsync()
@@ -93,6 +108,31 @@ public class DocumentScanService(IDbContextFactory<ApplicationDbContext> dbFacto
             if (digits.Length is > 0 and < 16) amount = decimal.Parse(digits, CultureInfo.InvariantCulture);
         }
         return new ReceiptScanResult(amount > 0 ? amount : null, ParseDate(Str(json, "date")), Str(json, "description"), Str(json, "payer"), Str(json, "payee"), Str(json, "reference"));
+    }
+
+    /// <summary>Đọc ảnh chụp màn hình công tơ điện tử: mã phòng, khoảng ngày, số điện tiêu thụ, chỉ số cũ/mới.</summary>
+    public async Task<MeterScanResult> ScanMeterAsync(string webPath)
+    {
+        var json = await AskAsync(MeterPrompt, [webPath]);
+        var room = Str(json, "room")?.ToUpperInvariant().Replace(" ", "");
+        return new MeterScanResult(room, ParseDate(Str(json, "from")), ParseDate(Str(json, "to")), Num(json, "kwh"), Num(json, "old"), Num(json, "new"));
+    }
+
+    /// <summary>Số thập phân trong JSON (chấp nhận cả số viết dạng chuỗi, dấu phẩy thập phân).</summary>
+    private static decimal? Num(JsonObject o, string name)
+    {
+        if (!o.TryGetPropertyValue(name, out var v) || v is not JsonValue jv) return null;
+        if (jv.TryGetValue<decimal>(out var d)) return d;
+        if (jv.TryGetValue<double>(out var dbl) && !double.IsNaN(dbl)) return (decimal)dbl;
+        if (jv.TryGetValue<string>(out var s))
+        {
+            s = s.Trim().Replace(" ", "");
+            // "2.034,12" (kiểu Việt) → 2034.12; "2034.12" giữ nguyên; "2,034.12" → 2034.12
+            if (s.Contains(',') && s.Contains('.')) s = s.LastIndexOf(',') > s.LastIndexOf('.') ? s.Replace(".", "").Replace(',', '.') : s.Replace(",", "");
+            else if (s.Contains(',')) s = s.Replace(',', '.');
+            if (decimal.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var p)) return p;
+        }
+        return null;
     }
 
     /// <summary>Gọi thử nhà cung cấp đang chọn bằng một câu hỏi chữ, để kiểm tra API key.</summary>
@@ -201,7 +241,15 @@ public class DocumentScanService(IDbContextFactory<ApplicationDbContext> dbFacto
 
         for (int attempt = 0; ; attempt++)
         {
-            var (status, body) = await PostAsync(Request());
+            (int status, string body) response;
+            try { response = await PostAsync(Request()); }
+            catch (TaskCanceledException)
+            {
+                // Mô hình treo quá thời gian chờ (hiếm, thường với một ảnh nhất định): chuyển sang mô hình dự phòng.
+                logger.LogWarning("Gemini {Model} quá thời gian chờ.", model);
+                throw new ProviderBusyException("Lỗi Gemini: máy chủ Google phản hồi quá chậm, đã thử mô hình dự phòng nhưng chưa được. Thử lại sau ít phút.");
+            }
+            var (status, body) = response;
             if (status is 200)
             {
                 using var doc = JsonDocument.Parse(body);

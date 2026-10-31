@@ -5,6 +5,9 @@
 @inject BillingService Billing
 @inject UtilityService Utility
 @inject SetupService Setup
+@inject MeterService Meter
+@inject AttachmentService Attachments
+@inject DocumentScanService Scanner
 
 <PageTitle>Ghi số điện</PageTitle>
 
@@ -28,15 +31,60 @@ else
     decimal collectEl = rows.Sum(r => r.Electricity(ep)), collectWa = rows.Sum(r => r.Water(sheet.WaterPerPerson));
 
     <div class="nh-toolbar">
-        <div class="hint"><i class="fas fa-keyboard"></i> Gõ số điện đã dùng từng phòng, bấm <kbd>Enter</kbd> để xuống phòng sau. Đã ghi <strong>@filled/@rows.Count</strong> phòng.</div>
+        <div class="hint"><i class="fas fa-keyboard"></i> Gõ số điện đã dùng từng phòng, bấm <kbd>Enter</kbd> để xuống phòng sau, hoặc chọn một loạt ảnh chụp màn hình công tơ: phần mềm tự đọc phòng, kỳ và số điện. Đã ghi <strong>@filled/@rows.Count</strong> phòng.</div>
         <div class="tools">
+            <label class="btn btn-primary mb-0 @(importingPhotos ? "disabled" : "")" title="Chọn nhiều ảnh chụp màn hình ứng dụng công tơ (mỗi ảnh một phòng)">
+                <i class="fas @(importingPhotos ? "fa-spinner fa-spin" : "fa-images")"></i> @(importingPhotos ? $"Đang đọc ảnh {importDone}/{importTotal}..." : "Nhập từ ảnh công tơ")
+                <InputFile class="d-none" accept="image/*" multiple OnChange="ImportPhotosAsync" disabled="@importingPhotos" />
+            </label>
             <a class="btn btn-outline-success" href="@($"files/so-dien.xlsx?month={month}&year={year}")" target="_blank"><i class="fas fa-file-excel"></i> Tải file mẫu</a>
-            <label class="btn btn-success mb-0 @(importing ? "disabled" : "")">
+            <label class="btn btn-outline-success mb-0 @(importing ? "disabled" : "")">
                 <i class="fas @(importing ? "fa-spinner fa-spin" : "fa-file-import")"></i> Nhập từ Excel
                 <InputFile class="d-none" accept=".xlsx" OnChange="ImportAsync" />
             </label>
         </div>
     </div>
+
+    @if (importItems.Count > 0)
+    {
+        var okItems = importItems.Where(i => i.Ok).ToList();
+        var otherMonths = okItems.Where(i => i.Month != month || i.Year != year).GroupBy(i => (M: i.Month!.Value, Y: i.Year!.Value)).OrderBy(g => g.Key.Y).ThenBy(g => g.Key.M).ToList();
+        int badCount = importItems.Count(i => i.Done && !i.Ok);
+        <section class="nh-card nh-import mb-3">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <h5 class="mb-0"><i class="fas fa-images text-primary"></i> Kết quả đọc ảnh công tơ
+                    <small class="text-muted fw-normal">@importItems.Count(i => i.Done)/@importItems.Count ảnh · @okItems.Count nhập được@(badCount > 0 ? $" · {badCount} lỗi" : "")</small></h5>
+                @foreach (var g in otherMonths)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => GoToAsync(g.Key.M, g.Key.Y)"><i class="fas fa-arrow-right"></i> @g.Count() ảnh thuộc kỳ @($"{g.Key.M:00}/{g.Key.Y}"): xem kỳ đó</button>
+                }
+                @if (badCount > 0 && !importingPhotos)
+                {
+                    <button type="button" class="btn btn-sm btn-warning" @onclick="RetryFailedAsync"><i class="fas fa-redo"></i> Đọc lại @badCount ảnh lỗi</button>
+                }
+                <button type="button" class="btn btn-sm btn-light ms-auto" @onclick="CloseImport"><i class="fas fa-times"></i> Đóng</button>
+            </div>
+            <div class="nh-import-list">
+                @foreach (var it in importItems)
+                {
+                    <div class="it @(it.Done ? (it.Error != null ? "err" : it.Warning != null ? "warn" : "ok") : "")">
+                        <a href="@it.File.Path" class="pic"><img src="@it.File.Path" alt="" loading="lazy" /></a>
+                        <div class="min-w-0">
+                            @if (!it.Done) { <div class="t text-muted"><i class="fas fa-spinner fa-spin"></i> Đang đọc...</div> }
+                            else if (it.Error != null) { <div class="t text-danger"><i class="fas fa-exclamation-circle"></i> @it.Error</div> }
+                            else
+                            {
+                                <div class="t"><span class="room">@it.RoomCode</span> kỳ <b>@it.Period</b> · <b>@Kwh(it.Kwh) kWh</b> → ghi <b>@Rounded(it.Kwh) số</b></div>
+                                <div class="s">@(it.From != null || it.To != null ? $"{Fmt.Date(it.From)} → {Fmt.Date(it.To)}" : "")@(it.OldReading != null ? $" · chỉ số {Kwh(it.OldReading)} → {Kwh(it.NewReading)}" : "")</div>
+                                @if (it.Warning != null) { <div class="s text-warning-emphasis"><i class="fas fa-exclamation-triangle"></i> @it.Warning</div> }
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="small text-muted mt-2">Ảnh được lưu theo phòng và kỳ; khách xem lại được trên link kiểm tra của phòng (trang Phòng → Link cho khách). Số điện lẻ được làm tròn khi lập phiếu. Kiểm tra lại rồi bấm Lưu.</div>
+        </section>
+    }
 
     <div class="nh-gwrap">
         <div class="nh-gtable meter">
@@ -52,7 +100,11 @@ else
                     <div class="gr @(changed ? "changed" : "") @(imported.Contains(r.LeaseId) ? "imported" : "")" @key="r.LeaseId">
                         <div class="c-room"><a href="@($"phong/{r.RoomCode}")" class="room">@r.RoomCode</a></div>
                         <div class="c-name"><div class="name">@r.Representative</div>
-                            @if (r.IsFirstMonth) { <div class="sub" title="@r.RentDetail">@r.RentDetail</div> }</div>
+                            @if (r.IsFirstMonth) { <div class="sub" title="@r.RentDetail">@r.RentDetail</div> }
+                            @if (photos.TryGetValue(r.RoomId, out var ph))
+                            {
+                                <a class="sub nh-meter-pic" href="@ph.ImagePath" title="@($"Ảnh công tơ kỳ này: {Kwh(ph.Kwh)} kWh" + (ph.PeriodFrom != null ? $", {Fmt.Date(ph.PeriodFrom)} → {Fmt.Date(ph.PeriodTo)}" : ""))"><i class="fas fa-image"></i> Ảnh công tơ: @Kwh(ph.Kwh) kWh</a>
+                            }</div>
                         <div class="c-ppl n">@r.PersonCount</div>
                         <div class="c-kwh n"><input type="number" min="0" inputmode="numeric" placeholder="-" class="form-control nh-kwh @(r.Kwh < 0 ? "is-invalid" : "")" @bind="r.Kwh" @bind:event="oninput" /></div>
                         <div class="c-money n">@(r.Kwh is int ? Fmt.Money(r.Electricity(ep)) : "")</div>
@@ -132,8 +184,14 @@ else
     private UtilityBillForm ub = new();
     private List<MoneyAccount> accounts = [];
     private AppSetting? settings;
-    private bool isAdmin, importing;
-    private int version;
+    private bool isAdmin, importing, importingPhotos;
+    private int version, importDone, importTotal;
+    private List<MeterImportItem> importItems = [];
+    /// <summary>Ảnh công tơ kỳ đang xem theo RoomId.</summary>
+    private Dictionary<int, MeterReading> photos = [];
+
+    private static string Kwh(decimal? v) => v is decimal d ? d.ToString("0.##", Fmt.Vi) : "?";
+    private static string Rounded(decimal? v) => v is decimal d ? Math.Round(d, MidpointRounding.AwayFromZero).ToString("0") : "?";
 
     private int ChangedCount => rows.Count(r => r.Kwh != null && r.Kwh != original.GetValueOrDefault(r.LeaseId));
 
@@ -155,6 +213,10 @@ else
         rows = sheet.Rows.Where(r => !r.SkipThisMonth).OrderBy(r => r.BlockCode).ThenBy(r => r.Floor).ThenBy(r => r.Number).ToList();
         original = rows.ToDictionary(r => r.LeaseId, r => r.Kwh);
         imported.Clear();
+        // Ảnh công tơ đã nhập cho kỳ này: điền sẵn số điện cho phòng chưa lập phiếu.
+        photos = (await Meter.ListAsync(month, year)).ToDictionary(p => p.RoomId);
+        foreach (var r in rows)
+            if (r.BillId == null && r.Kwh == null && photos.TryGetValue(r.RoomId, out var ph)) { r.Kwh = ph.KwhRounded; imported.Add(r.LeaseId); }
         utilityBill = await Utility.GetAsync(month, year);
         ub = utilityBill == null
             ? new UtilityBillForm { Month = month, Year = year, AccountId = settings!.BusinessAccountId, PaidDate = DateTime.Today }
@@ -166,13 +228,119 @@ else
         version++;
     }
 
+    /// <summary>Số phòng gõ tay chưa lưu (số điền từ ảnh nạp lại được nên không tính).</summary>
+    private int ManualChanges => rows.Count(r => r.Kwh != null && r.Kwh != original.GetValueOrDefault(r.LeaseId) && !imported.Contains(r.LeaseId));
+
     private async Task ShiftAsync(int delta)
     {
-        if (ChangedCount > 0 && !await ConfirmAsync($"Có {ChangedCount} phòng đã sửa số điện chưa lưu. Bỏ qua và chuyển kỳ?")) return;
         var d = new DateTime(year, month, 1).AddMonths(delta);
-        (month, year) = (d.Month, d.Year);
+        await GoToAsync(d.Month, d.Year);
+    }
+
+    private async Task GoToAsync(int m, int y)
+    {
+        if (ManualChanges > 0 && !await ConfirmAsync($"Có {ManualChanges} phòng đã sửa số điện chưa lưu. Bỏ qua và chuyển kỳ?")) return;
+        (month, year) = (m, y);
         sheet = null;
         await LoadAsync();
+    }
+
+    /// <summary>Nhập một loạt ảnh chụp màn hình công tơ: tải lên, AI đọc từng ảnh, xếp vào phòng và kỳ, điền số điện kỳ đang xem.</summary>
+    private async Task ImportPhotosAsync(InputFileChangeEventArgs e)
+    {
+        importingPhotos = true;
+        importItems.Clear();
+        var uploads = new List<PendingFile>();
+        try
+        {
+            if (!await Scanner.IsConfiguredAsync()) { Toast.Error("Chưa cấu hình AI đọc ảnh (Cấu hình > Quét CCCD và chứng từ)."); return; }
+            var selected = e.GetMultipleFiles(80);
+            importTotal = selected.Count; importDone = 0;
+            foreach (var file in selected)
+            {
+                if (file.Size > FileStorage.MaxFileSize) { Toast.Error($"{file.Name} vượt quá 15MB."); continue; }
+                var upload = file; var name = file.Name;
+                if (file.Size > 400 * 1024)
+                {
+                    try { upload = await file.RequestImageFileAsync("image/jpeg", 1400, 1400); name = Path.ChangeExtension(file.Name, ".jpg"); }
+                    catch (Exception) { upload = file; name = file.Name; }
+                }
+                try
+                {
+                    await using var stream = upload.OpenReadStream(FileStorage.MaxFileSize);
+                    using var buffer = new MemoryStream();
+                    await stream.CopyToAsync(buffer);
+                    buffer.Position = 0;
+                    uploads.Add(await Attachments.UploadAsync(buffer, name, MeterService.UploadKind, allowed: FileStorage.ImageExtensions));
+                }
+                catch (InvalidOperationException ex) { Toast.Error($"{file.Name}: {ex.Message}"); }
+            }
+            if (uploads.Count == 0) return;
+            importItems = uploads.Select(f => new MeterImportItem { File = f }).ToList();
+            await RunImportAsync(uploads);
+        }
+        catch (IOException) { Toast.Error("File quá lớn (tối đa 15MB)."); }
+        finally { importingPhotos = false; }
+    }
+
+    /// <summary>Đọc lại những ảnh bị lỗi (AI chậm, quá thời gian chờ); file đã tải lên nên không phải chọn lại.</summary>
+    private async Task RetryFailedAsync()
+    {
+        var failed = importItems.Where(i => i.Done && !i.Ok).Select(i => i.File).ToList();
+        if (failed.Count == 0) return;
+        importingPhotos = true;
+        try { await RunImportAsync(failed); }
+        finally { importingPhotos = false; }
+    }
+
+    private void CloseImport()
+    {
+        Attachments.Discard(importItems.Where(i => i.Done && !i.Ok).Select(i => i.File));
+        importItems.Clear();
+    }
+
+    /// <summary>Đọc các ảnh đã tải lên (toàn bộ hoặc chỉ ảnh lỗi) và cập nhật bảng kết quả, điền số điện kỳ đang xem.</summary>
+    private async Task RunImportAsync(List<PendingFile> uploads)
+    {
+        var user = await GetUserNameAsync();
+        importTotal = uploads.Count; importDone = 0;
+        foreach (var it in importItems.Where(i => uploads.Contains(i.File))) it.Done = false;
+        StateHasChanged(); // hiện bảng "Đang đọc..." ngay, không đợi ảnh đầu tiên đọc xong
+        var results = await Meter.ImportAsync(uploads, (month, year), user, item =>
+        {
+            var slot = importItems.FindIndex(i => i.File.Path == item.File.Path);
+            if (slot >= 0) importItems[slot] = item;
+            importDone++;
+            return InvokeAsync(StateHasChanged);
+        });
+        {
+            // Điền số điện cho kỳ đang xem; ảnh kỳ khác thì chỉ lưu, nạp lại khi mở kỳ đó.
+            int filledNow = 0;
+            foreach (var it in results.Where(i => i.Ok && i.Month == month && i.Year == year && i.LeaseId != null))
+            {
+                var r = rows.FirstOrDefault(x => x.LeaseId == it.LeaseId);
+                if (r == null || r.BillId != null) continue;
+                r.Kwh = (int)Math.Round(it.Kwh!.Value, MidpointRounding.AwayFromZero);
+                imported.Add(r.LeaseId);
+                filledNow++;
+            }
+            photos = (await Meter.ListAsync(month, year)).ToDictionary(p => p.RoomId);
+
+            int bad = results.Count(i => !i.Ok);
+            var others = results.Where(i => i.Ok && (i.Month != month || i.Year != year)).GroupBy(i => (M: i.Month!.Value, Y: i.Year!.Value)).ToList();
+            if (filledNow > 0) Toast.Success($"Đã điền số điện {filledNow} phòng từ ảnh. Kiểm tra rồi bấm Lưu.");
+            if (bad > 0) Toast.Warning($"{bad} ảnh không đọc được, xem chi tiết ở bảng kết quả.");
+            // Tất cả ảnh thuộc một kỳ khác (VD chụp kỳ 10/10 → 10/11 trong khi trang đang mở kỳ 10): chuyển sang kỳ đó luôn.
+            if (filledNow == 0 && others.Count == 1 && ManualChanges == 0)
+            {
+                var k = others[0].Key;
+                Toast.Info($"Ảnh thuộc kỳ {k.M:00}/{k.Y}, đã chuyển sang kỳ đó.");
+                var keep = importItems;
+                await GoToAsync(k.M, k.Y);
+                importItems = keep;
+            }
+            else if (others.Count > 0) Toast.Info($"{others.Sum(g => g.Count())} ảnh thuộc kỳ khác ({string.Join(", ", others.Select(g => $"{g.Key.M:00}/{g.Key.Y}"))}), bấm nút trên bảng kết quả để xem.");
+        }
     }
 
     private async Task OnMonthChanged(ChangeEventArgs e)

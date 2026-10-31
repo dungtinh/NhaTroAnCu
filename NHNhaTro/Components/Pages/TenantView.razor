@@ -1,0 +1,164 @@
+﻿@page "/khach/{Token}"
+@attribute [AllowAnonymous]
+@inject MeterService Meter
+
+<PageTitle>@(p == null ? "Không tìm thấy" : $"Phòng {p.Room.Code} · {p.Settings.Name}")</PageTitle>
+<HeadContent><meta name="robots" content="noindex" /></HeadContent>
+
+@if (p == null)
+{
+    <div class="nh-card text-center py-5">
+        <div class="fs-1 text-muted"><i class="fas fa-unlink"></i></div>
+        <h5 class="mt-2">Link không còn hiệu lực</h5>
+        <p class="text-muted mb-0">Hãy hỏi chủ nhà để nhận link mới.</p>
+    </div>
+}
+else
+{
+    var s = p.Settings;
+    var unpaid = p.Bills.Where(b => b.Due > 0).ToList();
+    var paid = p.Bills.Where(b => b.Due <= 0).ToList();
+    decimal owing = unpaid.Sum(b => b.Due);
+
+    <div class="nh-portal">
+        <div class="nh-hero-room @(owing > 0 ? "st-debt" : "")">
+            <div class="top">
+                <div class="min-w-0">
+                    <div class="code">Phòng @p.Room.Code</div>
+                    <div class="sub"><i class="fas fa-user"></i> @(p.Representative ?? "—") · @p.Persons người · ở từ @Fmt.Date(p.Lease.StartDate)</div>
+                    <div class="sub mt-1"><i class="fas fa-building"></i> @s.Name@(string.IsNullOrWhiteSpace(s.Address) ? "" : " · " + s.Address)</div>
+                </div>
+                <div class="tags">
+                    @if (!string.IsNullOrWhiteSpace(s.Phone)) { <a class="tag text-decoration-none" href="tel:@s.Phone"><i class="fas fa-phone"></i> @s.Phone</a> }
+                </div>
+            </div>
+            <div class="nh-hero-stats">
+                <div><div class="l">Giá phòng</div><div class="v">@Fmt.Money(p.Lease.MonthlyRent)</div></div>
+                <div><div class="l">Điện</div><div class="v">@Fmt.Money(s.ElectricityPrice)/số</div></div>
+                <div><div class="l">Nước</div><div class="v">@Fmt.Money(s.WaterPricePerPerson)/người</div></div>
+                <div><div class="l">Còn phải đóng</div><div class="v">@Fmt.Money(owing)</div></div>
+            </div>
+        </div>
+
+        @if (unpaid.Count > 0)
+        {
+            <div class="nh-sec t-rose">
+                <div class="nh-sec-h"><span class="ic"><i class="fas fa-exclamation"></i></span><h5>Cần đóng <small>@unpaid.Count phiếu · tổng @Fmt.Vnd(owing)</small></h5></div>
+                <div class="nh-sec-b"><div class="nh-bills">@foreach (var b in unpaid) { @BillView(b) }</div></div>
+            </div>
+        }
+
+        @if (p.Upcoming is { } u)
+        {
+            bool overdue = u.Due <= DateTime.Today;
+            <div class="nh-sec @(overdue ? "t-amber" : "t-blue")">
+                <div class="nh-sec-h"><span class="ic"><i class="fas fa-calendar-day"></i></span>
+                    <h5>Kỳ @(overdue ? "đến hạn" : "sắp tới"): tháng @u.Month.ToString("00")/@u.Year <small>chốt ngày @Fmt.Date(u.Due) · chủ nhà chưa lập phiếu, số dưới đây là tạm tính</small></h5></div>
+                <div class="nh-sec-b">
+                    <table class="nh-portal-calc">
+                        <tbody>
+                            @if (u.Rent > 0) { <tr><td>Tiền phòng</td><td class="d">@u.RentDetail</td><td class="n">@Fmt.Money(u.Rent)</td></tr> }
+                            else { <tr><td>Tiền phòng</td><td class="d">@u.RentDetail</td><td class="n">0</td></tr> }
+                            <tr><td>Tiền điện</td>
+                                <td class="d">@(u.Reading != null ? $"{u.Reading.KwhRounded} số × {Fmt.Money(s.ElectricityPrice)} (theo ảnh công tơ {Fmt.Date(u.Reading.PeriodFrom)} → {Fmt.Date(u.Reading.PeriodTo)}: {Kwh(u.Reading.Kwh)} kWh)" : "chưa chốt số điện")</td>
+                                <td class="n">@(u.Electricity is decimal el ? Fmt.Money(el) : "?")</td></tr>
+                            <tr><td>Tiền nước</td><td class="d">@(BillingService.CompanyWater(p.Lease) != null ? "cố định theo phòng" : $"{u.Persons} người × {Fmt.Money(s.WaterPricePerPerson)}")</td><td class="n">@Fmt.Money(u.Water)</td></tr>
+                            @if (u.EvCharge > 0) { <tr><td>Sạc xe điện</td><td class="d">phí tháng</td><td class="n">@Fmt.Money(u.EvCharge)</td></tr> }
+                        </tbody>
+                        <tfoot><tr><th colspan="2">Tạm tính@(u.Electricity == null ? " (chưa gồm tiền điện)" : "")</th><th class="n">@Fmt.Vnd(u.Total)</th></tr></tfoot>
+                    </table>
+                </div>
+            </div>
+        }
+
+        @if (p.BankAccount is { } bank && (owing > 0 || p.Upcoming != null))
+        {
+            <div class="nh-sec t-green">
+                <div class="nh-sec-h"><span class="ic"><i class="fas fa-university"></i></span><h5>Chuyển khoản <small>ghi nội dung: Phòng @p.Room.Code + tháng</small></h5></div>
+                <div class="nh-sec-b nh-portal-bank">
+                    <div><span class="l">Ngân hàng</span><b>@(bank.BankName ?? bank.Name)</b></div>
+                    <div><span class="l">Số tài khoản</span><b class="acc">@bank.AccountNumber</b></div>
+                    @if (!string.IsNullOrWhiteSpace(bank.AccountHolder)) { <div><span class="l">Chủ tài khoản</span><b>@bank.AccountHolder</b></div> }
+                </div>
+            </div>
+        }
+
+        <div class="nh-sec t-violet">
+            <div class="nh-sec-h"><span class="ic"><i class="fas fa-bolt"></i></span><h5>Ảnh công tơ điện <small>@(p.Readings.Count == 0 ? "chưa có ảnh" : $"{p.Readings.Count} kỳ · bấm vào ảnh để phóng to")</small></h5></div>
+            <div class="nh-sec-b">
+                @if (p.Readings.Count == 0) { <div class="nh-empty-hint"><i class="fas fa-image"></i>Chủ nhà chưa tải ảnh công tơ của phòng.</div> }
+                else
+                {
+                    <div class="nh-portal-meters">
+                        @foreach (var r in p.Readings)
+                        {
+                            var bill = p.Bills.FirstOrDefault(b => b.Bill.Kind == BillKind.Monthly && b.Bill.Month == r.Month && b.Bill.Year == r.Year);
+                            <figure>
+                                <a href="@($"khach/{Token}/anh/{r.Id}")"><img src="@($"khach/{Token}/anh/{r.Id}")" alt="Ảnh công tơ kỳ @r.Month/@r.Year" loading="lazy" /></a>
+                                <figcaption>
+                                    <b>Kỳ @r.Month.ToString("00")/@r.Year</b>
+                                    <span>@(r.PeriodFrom != null ? $"{Fmt.Date(r.PeriodFrom)} → {Fmt.Date(r.PeriodTo)}" : "")</span>
+                                    <span class="k">@Kwh(r.Kwh) kWh@(r.OldReading != null ? $" (chỉ số {Kwh(r.OldReading)} → {Kwh(r.NewReading)})" : "")</span>
+                                    @if (bill != null) { <span>Phiếu: @bill.Bill.ElectricityKwh số × @Fmt.Money(s.ElectricityPrice) = @Fmt.Vnd(bill.Bill.ElectricityAmount)</span> }
+                                </figcaption>
+                            </figure>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="nh-sec t-slate">
+            <div class="nh-sec-h"><span class="ic"><i class="fas fa-check-double"></i></span><h5>Đã đóng <small>@paid.Count phiếu</small></h5></div>
+            <div class="nh-sec-b">
+                @if (paid.Count == 0) { <div class="nh-empty-hint">Chưa có phiếu nào đã đóng đủ.</div> }
+                else { <div class="nh-bills">@foreach (var b in paid) { @BillView(b) }</div> }
+            </div>
+        </div>
+
+        <div class="text-center small text-muted py-3">
+            @s.Name@(string.IsNullOrWhiteSpace(s.Phone) ? "" : " · " + s.Phone) · Trang chỉ dành cho người thuê phòng @p.Room.Code, không chia sẻ link cho người khác.
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Token { get; set; } = "";
+    private TenantPortal? p;
+
+    private static string Kwh(decimal? v) => v is decimal d ? d.ToString("0.##", Fmt.Vi) : "?";
+
+    protected override async Task OnInitializedAsync() => p = await Meter.GetPortalAsync(Token);
+
+    private RenderFragment BillView(PortalBill pb) => __builder =>
+    {
+        var b = pb.Bill;
+        var s = p!.Settings;
+        var state = pb.Due <= 0 ? "" : pb.Paid > 0 ? "part" : "due";
+        <div class="nh-bill @state">
+            <div class="hd">
+                <div class="min-w-0">
+                    <div class="ttl">@BillKind.Display(b.Kind) · tháng @b.Month.ToString("00")/@b.Year</div>
+                    <div class="per">@pb.RentDetail</div>
+                </div>
+                <div class="tot">
+                    <b>@Fmt.Vnd(b.TotalAmount)</b>
+                    @if (pb.Due <= 0) { <span class="chip chip-green"><i class="fas fa-check"></i> Đã đóng đủ</span> }
+                    else if (pb.Paid > 0) { <span class="chip chip-amber">Còn @Fmt.Money(pb.Due)</span> }
+                    else { <span class="chip chip-red">Chưa đóng</span> }
+                </div>
+            </div>
+            <div class="parts">
+                <div><div class="l">Phòng</div><div class="v">@Fmt.Money(b.RentAmount)</div></div>
+                <div><div class="l">Điện</div><div class="v">@Fmt.Money(b.ElectricityAmount)</div>@if (b.ElectricityKwh > 0) { <div class="s">@b.ElectricityKwh số × @Fmt.Money(s.ElectricityPrice)</div> }</div>
+                <div><div class="l">Nước</div><div class="v">@Fmt.Money(b.WaterAmount)</div>@if (b.WaterAmount > 0 && BillingService.CompanyWater(p.Lease) == null) { <div class="s">@b.PersonCount người × @Fmt.Money(s.WaterPricePerPerson)</div> }</div>
+                <div><div class="l">Khác</div><div class="v">@Fmt.Money(b.OtherAmount + b.EvChargeAmount - b.Discount)</div>@if (b.EvChargeAmount > 0) { <div class="s">gồm sạc xe @Fmt.Money(b.EvChargeAmount)</div> }</div>
+            </div>
+            @if (!string.IsNullOrEmpty(b.Note)) { <div class="note">@b.Note</div> }
+            @if (pb.Payments.Count > 0)
+            {
+                <div class="ft"><span class="small text-muted">Đã đóng: @string.Join("; ", pb.Payments.Select(t => $"{Fmt.Money(t.Amount)} ngày {Fmt.Date(t.Date)}"))</span></div>
+            }
+        </div>
+    };
+}

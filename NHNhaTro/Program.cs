@@ -65,6 +65,7 @@ builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<BillingService>();
 builder.Services.AddScoped<CompanyService>();
 builder.Services.AddScoped<UtilityService>();
+builder.Services.AddScoped<MeterService>();
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<ExpenseService>();
 builder.Services.AddScoped<AttachmentService>();
@@ -184,17 +185,26 @@ files.MapGet("/so-dien.xlsx", async (int month, int year, BillingService billing
 files.MapGet("/ledger.xlsx", async ([AsParameters] LedgerQuery q, Documents docs) =>
     Results.File(await docs.LedgerAsync(q.ToFilter()), Documents.XlsxMime, $"SoThuChi_{DateTime.Now:yyyyMMdd_HHmm}.xlsx"));
 
-// Mã QR dẫn tới trang giới thiệu (in lên phướn quảng cáo)
-app.MapGet("/qr.png", (HttpContext ctx, int? size, string? to) =>
+var contentTypes = new FileExtensionContentTypeProvider();
+
+// Ảnh công tơ trên link của khách: chỉ ảnh thuộc lượt thuê có mã link đó, không cần đăng nhập.
+app.MapGet("/khach/{token}/anh/{id:int}", async (string token, int id, MeterService meters) =>
 {
-    // to = "app" cho đường link cài ứng dụng; mặc định trang giới thiệu
-    var path = to == "app" ? "app" : "gioi-thieu";
+    var physical = await meters.ResolveImageAsync(token, id);
+    if (physical == null || !File.Exists(physical)) return Results.NotFound();
+    if (!contentTypes.TryGetContentType(physical, out var type)) type = "application/octet-stream";
+    return Results.File(physical, type);
+});
+
+// Mã QR dẫn tới trang giới thiệu (in lên phướn quảng cáo), trang cài ứng dụng, hoặc link của khách (to=khach&token=...)
+app.MapGet("/qr.png", (HttpContext ctx, int? size, string? to, string? token) =>
+{
+    var path = to == "app" ? "app" : to == "khach" && token is { Length: > 0 and <= 40 } && token.All(char.IsAsciiLetterOrDigit) ? $"khach/{token}" : "gioi-thieu";
     var url = $"{ctx.Request.Scheme}://{ctx.Request.Host}/{path}";
     return Results.File(Documents.QrPng(url, Math.Clamp(size ?? 12, 4, 40)), "image/png", $"QR-{path}.png");
 });
 
 // Ảnh và chứng từ (đường dẫn /Uploads/...). Thư mục Public (ảnh quảng cáo) xem không cần đăng nhập.
-var contentTypes = new FileExtensionContentTypeProvider();
 app.MapGet("/Uploads/{**path}", (string path, FileStorage storage, HttpContext ctx) =>
 {
     if (!FileStorage.IsPublicPath(path) && ctx.User.Identity?.IsAuthenticated != true) return Results.Challenge();

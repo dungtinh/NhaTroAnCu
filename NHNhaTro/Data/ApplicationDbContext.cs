@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using NHNhaTro.Data.Entities;
 
@@ -22,6 +22,7 @@ namespace NHNhaTro.Data
         public DbSet<Repair> Repairs => Set<Repair>();
         public DbSet<Purchase> Purchases => Set<Purchase>();
         public DbSet<UtilityBill> UtilityBills => Set<UtilityBill>();
+        public DbSet<MeterReading> MeterReadings => Set<MeterReading>();
         public DbSet<CompanyContract> CompanyContracts => Set<CompanyContract>();
         public DbSet<ContractTerm> ContractTerms => Set<ContractTerm>();
         public DbSet<ContractPeriod> ContractPeriods => Set<ContractPeriod>();
@@ -100,6 +101,8 @@ namespace NHNhaTro.Data
                 e.HasOne(x => x.Room).WithMany(x => x.Leases).HasForeignKey(x => x.RoomId);
                 e.HasOne(x => x.CompanyContract).WithMany(x => x.Leases).HasForeignKey(x => x.CompanyContractId);
                 e.HasIndex(x => new { x.RoomId, x.Status });
+                e.Property(x => x.PublicToken).HasMaxLength(40);
+                e.HasIndex(x => x.PublicToken).IsUnique().HasFilter("[PublicToken] IS NOT NULL");
             });
 
             builder.Entity<Tenant>(e =>
@@ -175,6 +178,20 @@ namespace NHNhaTro.Data
                 e.Property(x => x.CreatedBy).HasMaxLength(256);
                 e.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId);
                 e.HasIndex(x => new { x.Year, x.Month }).IsUnique();
+            });
+
+            builder.Entity<MeterReading>(e =>
+            {
+                e.Property(x => x.Kwh).HasPrecision(10, 2);
+                e.Property(x => x.OldReading).HasPrecision(12, 2);
+                e.Property(x => x.NewReading).HasPrecision(12, 2);
+                e.Property(x => x.PeriodFrom).HasColumnType("date");
+                e.Property(x => x.PeriodTo).HasColumnType("date");
+                e.Property(x => x.ImagePath).HasMaxLength(300).IsRequired();
+                e.Property(x => x.CreatedBy).HasMaxLength(256);
+                e.HasOne(x => x.Room).WithMany().HasForeignKey(x => x.RoomId);
+                e.HasOne(x => x.Lease).WithMany().HasForeignKey(x => x.LeaseId).OnDelete(DeleteBehavior.SetNull);
+                e.HasIndex(x => new { x.RoomId, x.Year, x.Month }).IsUnique();
             });
 
             builder.Entity<CompanyContract>(e =>
