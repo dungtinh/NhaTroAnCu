@@ -285,7 +285,7 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         await using var tx = await db.Database.BeginTransactionAsync();
         var lease = new Lease
         {
-            RoomId = room.Id, StartDate = form.MoveInDate.Date, MonthlyRent = form.MonthlyRent, Deposit = form.Deposit,
+            RoomId = room.Id, StartDate = form.MoveInDate.Date, StartDateConfirmed = true, MonthlyRent = form.MonthlyRent, Deposit = form.Deposit,
             Note = form.Note, Status = LeaseStatus.Active, CreatedAt = DateTime.Now, CreatedBy = user, CompanyContractId = company?.Id
         };
         db.Leases.Add(lease);
@@ -414,6 +414,8 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
             // Người ở cùng ngày vào cũ thì đi theo ngày vào mới.
             foreach (var t in lease.Tenants.Where(t => t.MoveInDate.Date == lease.StartDate.Date)) t.MoveInDate = sd.Date;
             lease.StartDate = sd.Date;
+            // Khách cũ nhập ban đầu có ngày vào tạm; chủ nhà sửa lại là ngày thật → áp dụng quy định ở đủ số tháng mới trả cọc.
+            lease.StartDateConfirmed = true;
         }
         lease.MonthlyRent = monthlyRent;
         lease.Deposit = deposit;
@@ -491,6 +493,8 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         {
             var due = RoomService.BillingDate(d.Month, d.Year, settings.BillingDay);
             if (due > form.EndDate.Date || !RoomService.NeedsMonthlyBill(lease, d.Month, d.Year, settings.BillingDay)) continue;
+            // Khách cũ nhập từ trước khi dùng phần mềm: các kỳ đã đến ngày thu trước lúc nhập đã thu ngoài phần mềm, không tính thiếu phiếu.
+            if (lease.IsExistingTenant && due <= lease.CreatedAt.Date) continue;
             if (bills.Any(b => b.Bill.Kind == BillKind.Monthly && b.Bill.Month == d.Month && b.Bill.Year == d.Year)) continue;
             var (from, to, rent) = company != null ? (due, due.AddMonths(1), 0m)
                 : RoomService.IsFirstBillingMonth(lease.StartDate, d.Month, d.Year, settings.BillingDay)
@@ -504,8 +508,9 @@ public class LeaseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         // Chỉ trả lại cọc khi khách ở đủ số tháng tối thiểu (Cấu hình, mặc định 3 tháng); ở ít hơn thì cọc không hoàn trả.
         int minMonths = Math.Max(0, settings.MinStayMonthsForDepositRefund);
         var eligibleFrom = lease.StartDate.AddMonths(minMonths);
+        // Khách cũ còn mang ngày vào tạm (chưa sửa): không rõ ngày vào thật nên không áp quy định; đã sửa ngày vào thì tính như khách mới.
         // Hợp đồng công ty: cọc hoàn theo hợp đồng (phạt giảm phòng năm đầu nhập ở mục phạt), không áp quy định ở đủ số tháng.
-        bool refundable = minMonths == 0 || lease.IsExistingTenant || company != null || form.EndDate.Date >= eligibleFrom;
+        bool refundable = minMonths == 0 || !lease.StartDateConfirmed || company != null || form.EndDate.Date >= eligibleFrom;
         int stayDays = Math.Max(0, (form.EndDate.Date - lease.StartDate).Days);
 
         // Khách xin ở thêm vài ngày để thu xếp: tiền phòng theo ngày = giá tháng ÷ 30, làm tròn nghìn.

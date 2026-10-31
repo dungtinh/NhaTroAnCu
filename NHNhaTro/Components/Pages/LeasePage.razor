@@ -30,7 +30,7 @@ else
             </div>
             <div class="tags">
                 <span class="tag">@(active ? "Đang thuê" : "Đã trả phòng")</span>
-                @if (lease.IsExistingTenant) { <span class="tag" title="Khách đang ở trước khi dùng phần mềm, nhập ban đầu">Khách cũ</span> }
+                @if (lease.IsExistingTenant) { <span class="tag" title="@(lease.StartDateConfirmed ? "Khách đang ở trước khi dùng phần mềm, nhập ban đầu; đã sửa ngày vào thật" : "Khách đang ở trước khi dùng phần mềm, nhập ban đầu; ngày vào là ngày tạm, không áp quy định ở đủ số tháng mới trả cọc")">Khách cũ@(lease.StartDateConfirmed ? "" : " · ngày vào tạm")</span> }
                 @if (lease.CompanyContract is { } cc) { <a class="tag text-decoration-none" href="@($"hop-dong-cong-ty/{cc.Id}")" title="Tiền phòng thu theo kỳ hợp đồng, nước cố định theo phòng"><i class="fas fa-building"></i> HĐ @cc.ShortName</a> }
                 @if (missingCards > 0) { <span class="tag warn"><i class="fas fa-id-card"></i> @missingCards người chưa có CCCD</span> }
             </div>

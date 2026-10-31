@@ -183,7 +183,7 @@ public static partial class TenantImporter
             var lease = new Lease
             {
                 RoomId = room.Id, StartDate = start, MonthlyRent = row.Rent > 0 ? row.Rent : room.Rent, Deposit = s.DefaultDeposit,
-                Status = LeaseStatus.Active, IsExistingTenant = true, CreatedAt = DateTime.Now, CreatedBy = User,
+                Status = LeaseStatus.Active, IsExistingTenant = true, StartDateConfirmed = false, CreatedAt = DateTime.Now, CreatedBy = User,
                 Note = $"Khách đang ở trước khi dùng phần mềm, nhập từ danh sách ngày {today:dd/MM/yyyy}" + (row.Note != null ? $" ({row.Note})" : "")
                        + ". Cần bổ sung số CCCD, điện thoại, ảnh."
             };

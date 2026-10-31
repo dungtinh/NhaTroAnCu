@@ -145,8 +145,11 @@ public class Lease
     public string Status { get; set; } = LeaseStatus.Active;
     public string? ContractScanPath { get; set; }
     public string? Note { get; set; }
-    /// <summary>Khách đang ở trước khi dùng phần mềm (nhập ban đầu): ngày vào thật không rõ nên không áp dụng quy định ở đủ số tháng mới trả cọc.</summary>
+    /// <summary>Khách đang ở trước khi dùng phần mềm (nhập ban đầu): các kỳ đã đến ngày thu trước lúc nhập đã thu ngoài phần mềm.</summary>
     public bool IsExistingTenant { get; set; }
+    /// <summary>Ngày vào là ngày thật. Khách cũ nhập ban đầu mang ngày vào tạm (kỳ chốt lúc nhập) nên không áp dụng quy định ở đủ số tháng mới trả cọc;
+    /// sửa lại ngày vào thì thành ngày thật và áp dụng quy định như khách mới.</summary>
+    public bool StartDateConfirmed { get; set; }
     /// <summary>Phòng thuộc hợp đồng công ty (null = khách lẻ): tiền phòng thu theo kỳ hợp đồng, nước cố định theo phòng.</summary>
     public int? CompanyContractId { get; set; }
 
